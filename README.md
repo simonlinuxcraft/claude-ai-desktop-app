@@ -23,7 +23,7 @@
 
 ---
 
-> **v1.4.17** - Send Button Fix. The thank-you badge that 1.4.16 put in the lower right corner of the page sat on top of claude.ai's send button and swallowed the click. Measured in a 1438x704 window, it covered about three quarters of the button, along with dictation, voice input and the model picker. Since the composer is centred at a maximum width of 768, this happened at any window width below roughly 1444 pixels, so on every unmaximised window and every 1366px laptop, and never on a wide monitor, which is why it survived testing. Enter still sent, so only two people ran into it: one reported that responses would not load, the other that no message went out at all. The badge is removed rather than made click-through, so it cannot cover anything else later.
+> **v1.4.18** - Screenshots and Scaling. The screenshot entry in claude.ai's plus menu did nothing, because the app turned the screen capture down. It is allowed for claude.ai now: on Wayland you pick the screen in the system dialog, on X11 the app takes the screen its window is on, and the Snap needs no extra permission for it. The composer ring sits around the input field only again, after claude.ai moved the disclaimer and model picker into the same container, and it follows the accent style: Modern and Neon show it in every colour theme, Classic shows none. Switching the style no longer reloads the page. Dialogs scale with the screen and no longer scroll, the hamburger menu no longer cuts labels off, Electron is at 41.10.7, and several security fixes are in.
 
 ---
 
@@ -41,7 +41,7 @@
 - **Clipboard Hotkey** – Separate global hotkey that opens a new chat with your clipboard text already inserted
 - **Background-Tab Response Notifications** – Optional native notification when Claude finishes a response in a tab you're not currently viewing
 - **In-App Bug Report** – Description, optional error codes, optional contact email; auto-includes app/OS info on opt-in. Includes a clear notice that this is an unofficial community wrapper (not an official Anthropic product) with a direct link to [support.anthropic.com](https://support.anthropic.com) for account/login/billing/payment questions. Since v1.4.10 a required checkbox gates the Send button. Localized in DE, EN, FR, ES, IT
-- **App Settings Window** – Configure hotkeys, minimize-to-tray, autostart, background notifications and templates from `Claude → App Settings…`
+- **App Settings Window** – Configure hotkeys, minimize-to-tray, autostart, background notifications and templates from `Claude → App Settings`
 - **Autostart** – Optional launch on system boot (Linux: writes a `.desktop` file to `~/.config/autostart/`; Snap: native autostart directive)
 - **Themes** – Dark, White, OLED and Midnight Blue, picked in a Design window that previews each one, plus three accent styles (Modern, Classic, Neon) that combine freely with any theme. The theme is applied before the first paint, so restored content appears already themed. claude.ai always runs in its dark palette; White is a GPU inversion of it, which switches in ~6ms instead of ~480ms for a real palette flip
 - **Session Restore** – Open conversations are remembered and reopened on the next start; restored tabs load on first click, not all at once
@@ -106,7 +106,7 @@ cat > ~/.local/share/applications/claude-desktop.desktop << EOF
 [Desktop Entry]
 Name=Desktop for Claude
 Comment=Unofficial desktop app for Claude AI
-Exec=/path/to/Claude-Desktop-1.4.17.AppImage --no-sandbox
+Exec=/path/to/Claude-Desktop-1.4.18.AppImage --no-sandbox
 Icon=/path/to/icon.png
 Type=Application
 Categories=Utility;
@@ -140,7 +140,7 @@ The AppImage updates itself via `electron-updater` whenever the app is **fully q
 1. **Quit the app completely** – Right-click the tray icon → Quit, or `File → Quit`. Just closing the window is not enough if minimize-to-tray is enabled.
 2. **Restart the app** – The pending update installs on next launch.
 3. **Check your Desktop shortcut** – If your `~/.local/share/applications/claude-desktop.desktop` still has a hardcoded path like `Claude-Desktop-1.2.0.AppImage`, update it to point to the new file. Since v1.3.7 the app rewrites this file on startup, so once you've launched a v1.3.7+ AppImage at least once, future updates fix the shortcut on their own.
-4. **Manual check** – `Claude → Check for Updates…` forces an immediate check and shows the result.
+4. **Manual check** – `Claude → Check for Updates` forces an immediate check and shows the result.
 
 Snap users don't need to do anything – `snapd` handles updates in the background.
 

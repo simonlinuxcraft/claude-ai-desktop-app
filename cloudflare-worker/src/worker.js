@@ -78,11 +78,13 @@ export default {
       const rawBody = await res.text();
       let data = {};
       try { data = JSON.parse(rawBody); } catch {}
+      const ok = res.ok && data.success === true;
+      // Kein Upstream-Body nach aussen: der Client braucht nur ok/nicht ok. Der volle
+      // Body steht im Worker-Log (observability), wenn etwas zu debuggen ist.
+      if (!ok) console.log('web3forms upstream', res.status, rawBody.slice(0, 500));
       return jsonResponse({
-        success: res.ok && data.success === true,
-        message: typeof data.message === 'string' ? data.message : ('HTTP ' + res.status),
-        // DIAGNOSTIC: raw upstream body fuer Debug — entfernen sobald Submit klappt
-        debug: { upstreamStatus: res.status, upstreamBody: rawBody.slice(0, 500) }
+        success: ok,
+        message: ok ? 'sent' : 'upstream rejected'
       }, res.ok ? 200 : 502);
     } catch {
       return jsonResponse({ success: false, message: 'upstream error' }, 502);

@@ -2,7 +2,7 @@ name: claude-ai-desktop
 # Der Store zeigt title statt name. Der Name bleibt, sonst verliert die Installbasis den
 # Update-Pfad; der angezeigte Titel verweist auf Claude statt sich so zu nennen.
 title: Desktop for Claude (Unofficial)
-version: '1.4.17'
+version: '1.4.18'
 summary: Desktop for Claude, an unofficial Claude AI app with tabs and tray
 description: |
   Desktop for Claude is an unofficial app that runs claude.ai on Linux
@@ -21,20 +21,21 @@ description: |
   the official app does not support, and here in the Snap Store, where there
   is no official package.
 
-  What's new in v1.4.17:
+  What's new in v1.4.18:
 
-  * The thank-you badge from 1.4.16 sat on top of claude.ai's send
-    button and swallowed the click. Below about 1444 pixels of window
-    width it covered three quarters of the button, so on any window
-    that is not maximised. Enter still sent, which is why it took two
-    reports to surface. The badge is removed.
+  * The screenshot entry in claude.ai's plus menu works. The app used
+    to turn screen capture down; on Wayland you now pick the screen in
+    the system dialog, no extra Snap permission needed.
+  * The composer ring sits around the input field only and follows the
+    accent style: Modern and Neon show it in every colour theme,
+    Classic shows none. Switching the style no longer reloads the page.
+  * Dialogs scale with the screen and no longer scroll. Electron
+    41.10.7 and several security fixes.
 
-  Highlights from v1.4.16:
+  Highlights from v1.4.17:
 
-  * A Design window shows every colour theme as a small preview of the
-    real window and page, and applies the choice immediately.
-  * New colour theme Midnight Blue and new accent style Neon. Style and
-    colour theme are separate now, so every combination is selectable.
+  * The thank-you badge from 1.4.16 covered claude.ai's send button
+    and swallowed the click. It is removed.
 
   System requirements:
 

@@ -1,3 +1,4 @@
+'use strict';
 const { contextBridge, ipcRenderer } = require('electron');
 
 // Channel-Whitelisting: nur Channels mit erlaubten Präfixen werden durchgereicht.

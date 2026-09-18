@@ -209,9 +209,10 @@
   var VAR_SCALE_RE = /-\d{2,4}$/;
 
   function buildVarsCSS() {
-    // Cache: nur neu scannen, wenn sich Design/Mode oder die Anzahl Stylesheets aendert
-    // (Letzteres faengt nachgeladenes claude.ai-CSS ab). Spart teure Rescans.
-    var key = st.design + '|' + st.mode + '|' + document.styleSheets.length;
+    // Cache: nur neu scannen, wenn sich Design/Mode/Akzent oder die Anzahl Stylesheets aendert
+    // (Letzteres faengt nachgeladenes claude.ai-CSS ab). Spart teure Rescans. Der Akzent muss
+    // rein, weil Neon und Modern beide als design="modern" laufen.
+    var key = st.design + '|' + st.mode + '|' + (st.accent && st.accent.mid) + '|' + document.styleSheets.length;
     if (key === _varsKey && document.getElementById('cd-theme-vars')) return;
     _varsKey = key;
     var modern = '', oled = '', seenM = {}, mid = st.accent.mid || '#E8524F';
@@ -295,25 +296,28 @@
   }
   function tagComposer() {
     var fs = findComposerFieldset();
-    var prev = document.querySelector('.cd-composer');
-    if (prev && prev !== fs) { prev.classList.remove('cd-composer'); prev.style.removeProperty('--cd-composer-radius'); }
+    var card = fs, br = 0;
     if (fs) {
-      if (!fs.classList.contains('cd-composer')) fs.classList.add('cd-composer');
       try {
-        var br = parseFloat(getComputedStyle(fs).borderRadius) || 0;
-        // claude.ai legt die sichtbare Rundung auf ein inneres DIV, das Fieldset selbst hat
-        // 0 (gemessen: aussen 0px, innen 20px). Ohne diese Suche faellt der Ring auf den
-        // 12px-Default und sitzt sichtbar neben den Ecken der Eingabe.
+        br = parseFloat(getComputedStyle(fs).borderRadius) || 0;
+        // claude.ai legt die sichtbare Rundung auf ein inneres DIV, das Fieldset selbst hat 0.
+        // Der Ring muss an dieses DIV: im Chat stecken Disclaimer und Modellwahl als Fusszeile
+        // im selben Fieldset, am Fieldset rahmte der Ring beides mit ein.
         if (!br) {
           var kids = fs.querySelectorAll('*');
           for (var i = 0; i < kids.length; i++) {
             if (kids[i].offsetWidth < fs.offsetWidth - 4) continue;
             var kb = parseFloat(getComputedStyle(kids[i]).borderRadius) || 0;
-            if (kb) { br = kb; break; }
+            if (kb) { card = kids[i]; br = kb; break; }
           }
         }
-        fs.style.setProperty('--cd-composer-radius', ((br || 12) + 2) + 'px');
       } catch (e) {}
+    }
+    var prev = document.querySelector('.cd-composer');
+    if (prev && prev !== card) { prev.classList.remove('cd-composer'); prev.style.removeProperty('--cd-composer-radius'); }
+    if (card) {
+      if (!card.classList.contains('cd-composer')) card.classList.add('cd-composer');
+      card.style.setProperty('--cd-composer-radius', ((br || 12) + 2) + 'px');
     }
   }
 

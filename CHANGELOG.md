@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.4.18] - 2026-09-18 - Screenshots and Scaling
+
+### Fixed
+- **The screenshot entry in claude.ai's plus menu did nothing.** claude.ai captures through `getDisplayMedia`. Electron asks the permission handler first, with an empty `mediaTypes` list, and the microphone branch turned that down as "no audio requested", so the page got `NotAllowedError`. There was no `setDisplayMediaRequestHandler` either, which is what hands over the actual source. Screen capture is now allowed for claude.ai only. On Wayland GNOME's screen share dialog picks the screen (PipeWire portal, also under XWayland); X11 has no picker, so the app takes the screen its window is on, matched through `display_id`. Tested on a Wayland session and under Snap confinement, where no new plug is needed. The camera stays blocked. Reported from Zorin OS on the Snap.
+- **The composer ring framed the disclaimer and the model picker as well.** In a chat, claude.ai now puts that footer row into the same fieldset as the input field, and the ring was attached to the fieldset. It now sits on the rounded input card. The card keeps its own surface colour through an appended `revert-layer` rule, so the existing sheet stays unchanged.
+- **The hamburger menu cut labels off.** "Export conversation" with its shortcut needs 307px per row, the 280px menu had 252. It is 340px now, measured against the longest labels in DE, EN, FR and IT. The trailing "…" on every entry is gone: next to real truncation it read as cut-off text.
+- **Switching the accent style reloaded the page.** `setDesignStyle` reloaded the tab bar and the active tab, other tabs on their next visit. In Light the page showed its dark base for a moment until the invert was back. It now switches live like the colour theme: every tab gets the new state through the theme controller, the tab bar gets accent and style label through its existing update channels. The controller's variable cache was keyed on design and mode only, and Neon and Modern both run as `design="modern"`, so the accent is part of the key now.
+- **The composer ring flickered when opening a new chat.** claude.ai rebuilds the input card twice on that navigation, measured at 93 and 141 ms after the click, and the ring only came back once `tagComposer` ran a frame later (12 and 42 ms without it). The ring now also matches claude.ai's card class `rounded-composer` in CSS and is there from the first frame. The JS tag stays as the fallback.
+
+### Changed
+- **The composer ring follows the accent style instead of the colour theme.** It only existed in OLED and Midnight Blue. Modern and Neon now show it in every theme, Light and Dark included; Classic, Anthropic's original tone, shows none in any theme, and the Design window previews drop it as well. Light is a GPU invert of the dark page, so the ring is inverted back like photos and media and keeps its real colours. The new rules are appended to the static sheet, the ring itself is one shared `RING` string now.
+- **Dialogs and the main window scale with the screen.** Dialog size and content scale by the same factor against a 1920x1080 reference, capped at 1.6 and never below 0.75, calculated on logical pixels, so 4K at 200% looks like Full HD. Dialogs are square to slightly portrait and no longer scroll: bug report 720x910, settings 660x740 in two columns, Design 640x700, What's New 700x720, About 600x620. The main window starts proportional to the screen, and a remembered size is clamped to the current work area.
+- Electron 41.7.1 to 41.10.7 through `npm audit fix`, no known vulnerabilities left in the dependency tree.
+- Release notes and bug report strings moved out of `main.js` into `release-notes.js` and `bug-report-strings.js`. Note filtering and notification filtering are pure functions now and covered by tests.
+
+### Security
+- Helper commands run through `execFile` instead of `exec`, so a path from `$HOME` never passes through a shell.
+- OAuth popup detection needs two OAuth parameters, or one plus an OAuth path, instead of a single parameter.
+- Tabs restored from the saved session are checked against the domain allowlist.
+- `window-state.json` is written to a temp file and renamed, so a crash mid-write can no longer leave a corrupt file behind.
+
 ## [1.4.17] - 2026-09-05 - Send Button Fix
 
 ### Fixed

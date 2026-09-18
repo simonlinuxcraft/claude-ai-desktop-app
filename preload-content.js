@@ -1,3 +1,4 @@
+'use strict';
 // Preload für claude.ai-Tab-Views.
 // Stellt eine schmale Bridge bereit, über die das injected notify.js den Main-Process
 // über fertige Antworten informieren kann.

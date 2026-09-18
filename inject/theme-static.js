@@ -72,6 +72,9 @@
     var M_EDGE = 'rgba(47,127,255,0.20)', M_HAIR = 'rgba(138,154,181,0.20)', M_FOCUS = 'rgba(0,229,255,0.55)';
     var M = 'html[data-cd-theme="midnight"][data-cd-surface="dark"]';
     var WAVES = wavesBg(st);
+    // Verlaufsring um die Composer-Karte, animiert. Selektor davor setzen.
+    var D = 'html[data-cd-design="modern"]';
+    var RING = '{content:"";position:absolute;inset:-2px;border-radius:var(--cd-composer-radius,14px);padding:2px;background:linear-gradient(135deg,var(--cd-accent-from),var(--cd-accent-to),var(--cd-accent-from),var(--cd-accent-to));background-size:300% 300%;animation:cdGradShift 6s ease-in-out infinite;-webkit-mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);-webkit-mask-composite:xor;mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);mask-composite:exclude;pointer-events:none;z-index:5}';
 
     // [class*="X"] matcht auch Tailwinds Opacity-Modifier "X/NN" (z.B. eine helle 5%-Toenung
     // fuer einen Preis-Chip), die sonst faelschlich volldeckend geschwaerzt wird und ihren
@@ -136,7 +139,7 @@
       // --- OLED: Composer-Gradient-Rand ---
       '@keyframes cdGradShift{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}',
       O + ' .cd-composer{position:relative;border-color:transparent !important;overflow:visible !important;background-color:' + BG + ' !important}',
-      O + ' .cd-composer::before{content:"";position:absolute;inset:-2px;border-radius:var(--cd-composer-radius,14px);padding:2px;background:linear-gradient(135deg,var(--cd-accent-from),var(--cd-accent-to),var(--cd-accent-from),var(--cd-accent-to));background-size:300% 300%;animation:cdGradShift 6s ease-in-out infinite;-webkit-mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);-webkit-mask-composite:xor;mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);mask-composite:exclude;pointer-events:none;z-index:5}',
+      O + ' .cd-composer::before' + RING,
       // --- Mitternachtsblau: gleiche Token-Gruppen wie OLED, nur auf drei Blaustufen statt
       // near-black. Kein Sternenfeld: das bleibt die Signatur von OLED. Die Stufen liegen
       // ebenfalls dicht beieinander (unter 1.5:1), Trennung laeuft darum wie dort ueber
@@ -177,12 +180,26 @@
       M + ' [role="menu"] [role="menuitem"]:hover,' + M + ' [role="menu"] button:hover,' + M + ' [role="menu"] a:hover,' + M + ' [role="listbox"] [role="option"]:hover,' + M + ' [role="menuitem"][data-highlighted]{background-color:' + MBG_TOP + ' !important}',
       M + ' input:focus,' + M + ' textarea:focus,' + M + ' [role="searchbox"]:focus,' + M + ' [role="combobox"]:focus{outline:1.5px solid ' + M_FOCUS + ' !important;outline-offset:2px !important}',
       M + ' .cd-composer{position:relative;border-color:transparent !important;overflow:visible !important;background-color:' + MBG + ' !important}',
-      M + ' .cd-composer::before{content:"";position:absolute;inset:-2px;border-radius:var(--cd-composer-radius,14px);padding:2px;background:linear-gradient(135deg,var(--cd-accent-from),var(--cd-accent-to),var(--cd-accent-from),var(--cd-accent-to));background-size:300% 300%;animation:cdGradShift 6s ease-in-out infinite;-webkit-mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);-webkit-mask-composite:xor;mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);mask-composite:exclude;pointer-events:none;z-index:5}',
+      M + ' .cd-composer::before' + RING,
       // Scrims sind die Verlaufsstreifen, die den Inhalt oben und unten in die Seitenfarbe
       // faden. claude.ai haelt darin sein eigenes Grau (gemessen rgb(21,21,21)), das auf jedem
       // eigenen Grund als Balken stehenbleibt, in OLED genauso wie in Mitternachtsblau.
       O + ' [class*="top-scrim"]{background-image:linear-gradient(' + BG + ',rgba(0,0,0,0)) !important}',
       O + ' [class*="bottom-scrim"]{background-image:linear-gradient(0deg,' + BG + ',rgba(0,0,0,0)) !important}',
+      // .cd-composer sitzt inzwischen auf der Eingabekarte statt aufs Fieldset (siehe tagComposer).
+      // Die Karte behaelt ihre eigene Flaeche aus claude.ais @layer, die Basisfarbe oben galt dem Fieldset.
+      O + ' .cd-composer,' + M + ' .cd-composer{background-color:revert-layer !important}',
+      // Der Ring haengt am Akzentstil, nicht am Farbtheme: Modern und Neon (laeuft als
+      // design="modern") zeigen ihn in jedem Theme, Classic als Anthropics Original-Ton in keinem.
+      // rounded-composer ist claude.ais Kartenklasse: per CSS steht der Ring ab dem ersten Frame.
+      // Das JS-Tag kam nach jedem Neuaufbau der Karte (Chat -> Neuer Chat) erst einen Frame spaeter.
+      // .cd-composer bleibt als Rueckfall, falls die Klasse umbenannt wird. 16px = Kartenradius 14 + 2,
+      // tagComposer ueberschreibt das inline mit dem gemessenen Wert.
+      D + ' .cd-composer,' + D + ' fieldset .rounded-composer{position:relative;overflow:visible !important;--cd-composer-radius:16px}',
+      D + ' .cd-composer::before,' + D + ' fieldset .rounded-composer::before' + RING,
+      // Hell entsteht per Invert am Wurzelknoten, der Ring wuerde mitgedreht. Zurueckdrehen wie bei Medien.
+      W + '[data-cd-design="modern"] .cd-composer::before,' + W + '[data-cd-design="modern"] fieldset .rounded-composer::before{filter:invert(1) hue-rotate(180deg)}',
+      'html[data-cd-design="classic"] .cd-composer::before{content:none !important}',
       ''
     ].join('');
   }

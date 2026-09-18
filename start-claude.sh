@@ -3,7 +3,10 @@
 # Findet und startet das AppImage automatisch
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-APPIMAGE="$SCRIPT_DIR/Claude-Desktop-1.1.4.AppImage"
+
+# Hoechste vorhandene Version, nicht die alphabetisch erste: liegen mehrere AppImages
+# nebeneinander, startete "head -1" sonst eine alte.
+APPIMAGE=$(find "$SCRIPT_DIR" -maxdepth 1 -name "Claude-Desktop-*.AppImage" -type f | sort -V | tail -1)
 
 # Sprache erkennen (de = Deutsch, sonst Englisch)
 LANG_PREFIX="${LANG%%_*}"
@@ -11,10 +14,6 @@ if [ "$LANG_PREFIX" = "de" ] || [ "${LANGUAGE%%:*}" = "de" ]; then
   IS_DE=true
 else
   IS_DE=false
-fi
-
-if [ ! -f "$APPIMAGE" ]; then
-  APPIMAGE=$(find "$SCRIPT_DIR" -name "Claude-Desktop-*.AppImage" -type f | head -1)
 fi
 
 if [ -z "$APPIMAGE" ] || [ ! -f "$APPIMAGE" ]; then
