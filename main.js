@@ -236,6 +236,7 @@ let appMenuWindow = null;
 let bugReportWindow = null;
 let appMenuJustClosedAt = 0;
 let minimizeOnClose = false;
+let trayMono = false;
 let currentHotkey = null;
 let currentClipboardHotkey = null;
 let promptTemplates = [];      // [{ id, name, prefix }]
@@ -273,6 +274,8 @@ const STATE_SCHEMA = [
     set: v => { oledIntroSeen = v === true; } },
   { key: 'minimizeOnClose', get: () => minimizeOnClose,
     set: v => { minimizeOnClose = v === true; } },
+  { key: 'trayMono', get: () => trayMono,
+    set: v => { trayMono = v === true; } },
   { key: 'hotkey', get: () => currentHotkey,
     set: v => { currentHotkey = (typeof v === 'string' && v.length > 0) ? v : null; } },
   { key: 'clipboardHotkey', get: () => currentClipboardHotkey,
@@ -506,7 +509,8 @@ function icon()   {
   if (isBeta) return path.join(__dirname, modern ? 'icon-beta.png' : 'icon-original-beta.png');
   return path.join(__dirname, modern ? 'icon.png' : 'icon-original.png');
 }
-function trayIcon() {
+function trayIcon(mono = trayMono) {
+  if (mono) return path.join(__dirname, 'icon-tray-mono.png');
   const modern = designStyle !== 'classic';
   if (isBeta) return path.join(__dirname, modern ? 'icon-tray-beta.png' : 'icon-original-tray-beta.png');
   return path.join(__dirname, modern ? 'icon-tray.png' : 'icon-original-tray.png');
@@ -1360,12 +1364,7 @@ function setThemeMode(mode) {
 // No-op und macht nur journalctl-Laerm.
 function syncDesktopIcons() {
   if (mainWindow && !mainWindow.isDestroyed()) mainWindow.setIcon(icon());
-  if (tray) {
-    try {
-      const img = nativeImage.createFromPath(trayIcon());
-      tray.setImage(img.isEmpty() ? trayIcon() : img);
-    } catch {}
-  }
+  refreshTrayImage();
   if (process.env.SNAP) return;
 
   try { fs.copyFileSync(icon(), path.join(app.getPath('home'), 'Apps', 'desktop-for-claude-icon.png')); } catch {}
@@ -2251,6 +2250,14 @@ function setupTray() {
   } catch (e) {
     tray = null;
   }
+}
+
+function refreshTrayImage() {
+  if (!tray) return;
+  try {
+    const img = nativeImage.createFromPath(trayIcon());
+    tray.setImage(img.isEmpty() ? trayIcon() : img);
+  } catch {}
 }
 
 function updateTrayMenu() {
@@ -3265,7 +3272,7 @@ function getDesignHTML() {
   const mode = currentThemeMode();
   const i18n = {
     title: 'Design',
-    subtitle: t('Farbthema und Stil', 'Colour theme and style', 'Thème de couleur et style', 'Tema colore e stile'),
+    subtitle: t('Farbthema, Stil und Tray-Symbol', 'Colour theme, style and tray icon', 'Thème de couleur, style et icône de notification', 'Tema colore, stile e icona di notifica'),
     secTheme: t('Farbthema', 'Colour theme', 'Thème de couleur', 'Tema colore'),
     secStyle: t('Stil', 'Style', 'Style', 'Stile'),
     styleNote: t(
@@ -3274,7 +3281,18 @@ function getDesignHTML() {
       'Le style définit la couleur d’accent : flèche d’envoi, motif, surbrillances et, pour Modern et Neon, la bordure du composeur. Chaque style se combine avec chaque thème.',
       'Lo stile imposta il colore d’accento: freccia di invio, motivo, evidenziazioni e, per Modern e Neon, il bordo del composer. Ogni stile si combina con ogni tema.'
     ),
+    secTray: t('Tray-Symbol', 'Tray icon', 'Icône de la zone de notification', 'Icona nell’area di notifica'),
     close: t('Schließen', 'Close', 'Fermer', 'Chiudi')
+  };
+  const TRAY_LABELS = {
+    color: {
+      name: t('Farbig', 'Colour', 'Couleur', 'Colori'),
+      hint: t('Das App-Logo mit Verlauf.', 'The app logo with its gradient.', 'Le logo de l’app avec son dégradé.', 'Il logo dell’app con la sfumatura.')
+    },
+    mono: {
+      name: t('Monochrom', 'Monochrome', 'Monochrome', 'Monocromatico'),
+      hint: t('Weiß wie die Systemsymbole.', 'White like the system icons.', 'Blanc comme les icônes système.', 'Bianco come le icone di sistema.')
+    }
   };
   const THEME_LABELS = {
     dark: {
@@ -3330,8 +3348,19 @@ function getDesignHTML() {
 </button>`;
   };
 
+  const trayCard = (key) => {
+    const mono = key === 'mono';
+    let src = '';
+    try { src = nativeImage.createFromPath(trayIcon(mono)).resize({ width: 32 }).toDataURL(); } catch {}
+    return `<button class="style-card" data-tray="${key}" aria-pressed="${mono === trayMono}">
+  <span class="swatch tray-prev"><img src="${src}" alt=""></span>
+  <span class="style-text"><span class="card-name">${TRAY_LABELS[key].name}<svg class="tick" viewBox="0 0 16 16"><path d="M3 8.5l3.2 3.2L13 5" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+  <span class="card-hint">${TRAY_LABELS[key].hint}</span></span>
+</button>`;
+  };
+
   return `<!DOCTYPE html><html><head>
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline';">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src data:; style-src 'unsafe-inline'; script-src 'unsafe-inline';">
 <style>
 *{box-sizing:border-box}
 html,body{height:100%;margin:0}
@@ -3378,6 +3407,9 @@ h1{font-size:16px;margin:0 0 2px;font-weight:600}
 [data-style="classic"] .prev-comp{background-image:none;border-color:var(--l)}
 .style-card{display:flex;align-items:center;gap:8px;min-width:0}
 .swatch{width:22px;height:22px;flex:0 0 22px;border-radius:6px;display:block}
+/* Die GNOME-Leiste ist schwarz, darum zeigt die Vorschau beide Varianten auf Schwarz */
+.tray-prev{background:#000;display:flex;align-items:center;justify-content:center}
+.tray-prev img{width:16px;height:16px}
 .style-text{min-width:0}
 .note{color:var(--tt);font-size:11px;line-height:1.5;margin-top:8px}
 .actions{padding:12px 22px;border-top:1px solid var(--bd);display:flex;justify-content:flex-end}
@@ -3406,13 +3438,22 @@ ${customTitlebarHTML('Desktop for Claude - Design')}
     <div class="grid grid3">${styleCard('modern')}${styleCard('classic')}${styleCard('neon')}</div>
     <div class="note">${i18n.styleNote}</div>
   </div>
+  <div class="section">
+    <h2>${i18n.secTray}</h2>
+    <div class="grid">${trayCard('color')}${trayCard('mono')}</div>
+  </div>
 </div>
 <div class="actions"><button class="done" id="done">${i18n.close}</button></div>
 <script>
 const r=document.documentElement.style;
 function pick(list,el){for(const b of list)b.setAttribute('aria-pressed',String(b===el));}
 const cards=[...document.querySelectorAll('.card')];
-const styles=[...document.querySelectorAll('.style-card')];
+const styles=[...document.querySelectorAll('[data-design]')];
+const trays=[...document.querySelectorAll('[data-tray]')];
+for(const b of trays)b.addEventListener('click',()=>{
+  pick(trays,b);
+  window.designAPI.setTrayMono(b.dataset.tray==='mono');
+});
 // Das Fenster faerbt sich selbst sofort um, statt bis zum naechsten Oeffnen im alten
 // Theme zu bleiben. Die Werte liegen schon in der Karte, es geht kein IPC-Roundtrip weg.
 function applyChrome(c){
@@ -3453,7 +3494,7 @@ function openDesignWindow() {
     designWindow.focus();
     return;
   }
-  const size = fitToWorkArea(640, 700);
+  const size = fitToWorkArea(640, 780);
   designWindow = new BrowserWindow({
     width: size.width, height: size.height,
     ...centerOnMainWindow(size.width, size.height),
@@ -4911,6 +4952,12 @@ ipcMain.on('design-set-mode', (event, mode) => {
 ipcMain.on('design-set-design', (event, style) => {
   if (!designWindow || designWindow.isDestroyed() || event.sender !== designWindow.webContents) return;
   setDesignStyle(style);
+});
+ipcMain.on('design-set-tray-mono', (event, on) => {
+  if (!designWindow || designWindow.isDestroyed() || event.sender !== designWindow.webContents) return;
+  trayMono = on === true;
+  refreshTrayImage();
+  saveWindowState();
 });
 ipcMain.on('design-close', (event) => {
   if (designWindow && !designWindow.isDestroyed() && event.sender === designWindow.webContents) designWindow.close();
