@@ -5270,6 +5270,10 @@ app.whenReady().then(() => {
   onlineCheckInterval = setInterval(() => handleOnlineChange(net.isOnline()), ONLINE_CHECK_MS);
   app.on('activate', () => { if (BrowserWindow.getAllWindows().length === 0) createWindow(); });
 
+  // Sonst behalten Dock und Taskleiste nach einem Update mit neuem Icon das alte bis zum
+  // naechsten Stilwechsel.
+  if (windowState.lastSeenVersion !== version) syncDesktopIcons();
+
   if (mainWindow && windowState.lastSeenVersion !== version && getFilteredNotes(version, windowState.lastSeenVersion, { isSnap }).length > 0) {
     const showWhatsNew = () => {
       if (!mainWindow || mainWindow.isDestroyed()) return;
