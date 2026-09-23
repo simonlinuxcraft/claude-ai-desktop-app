@@ -456,8 +456,15 @@
       }
     }
     var ob = new MutationObserver(function (muts) {
-      var wantSVG = (st.design === 'modern');
-      var wantVars = (!!surfaceMap(st.mode) || wantSVG);
+      // Bewusst window._cdTheme statt der Closure-Variable st: wird das Skript nach einer
+      // Navigation erneut injiziert, haelt der Guard in init() zwar die zweite Instanz auf,
+      // aber DIESER Observer gehoert weiter zur ersten und sein st bleibt auf dem Stand von
+      // damals stehen. Gemessen an der Regen-Ebene, die ein alter Observer nach dem
+      // Themewechsel sofort wieder einhaengte. Dasselbe galt latent fuer das Sheet, das er
+      // mit dem alten Theme wiederherstellte.
+      var cur = window._cdTheme || st;
+      var wantSVG = (cur.design === 'modern');
+      var wantVars = (!!surfaceMap(cur.mode) || wantSVG);
       var sheetsAdded = false;
       if (wantSVG || wantVars) {
         for (var i = 0; i < muts.length; i++) {
@@ -482,7 +489,7 @@
       if (!document.getElementById('cd-theme-static') || !document.getElementById('cd-theme-static').isConnected) setSheet('cd-theme-static', buildStaticCSS());
       // In beide Richtungen: claude.ai baut den body beim Navigieren neu, dann fehlt die
       // Ebene; und wer das Theme oder den Schalter wechselt, soll sie wieder los sein.
-      ensureRain(st.mode === 'matrix' && st.rain);
+      ensureRain(cur.mode === 'matrix' && cur.rain);
       // Modal-Flag direkt im Observer, NICHT im rAF: requestAnimationFrame pausiert bei
       // verdecktem/unsichtbarem Fenster, dann bliebe das Sternenfeld-Ausblenden aus. Der
       // MutationObserver laeuft dagegen auch dann. Frueher hielt die CSS-:has()-Regel das
