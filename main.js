@@ -46,7 +46,9 @@ if (app.isPackaged) process.env.ELECTRON_DISABLE_SECURITY_WARNINGS = 'true';
 app.commandLine.appendSwitch('no-sandbox');
 
 // Single Instance
-if (!app.requestSingleInstanceLock()) { app.quit(); }
+// exit statt quit: quit ist asynchron, der Init lief bis dahin komplett durch (Fenster,
+// Tray, claude.ai in den Tabs) und das will-quit danach nahm den globalen Hotkey mit.
+if (!app.requestSingleInstanceLock()) { app.exit(0); }
 
 // Konstanten
 
@@ -68,6 +70,7 @@ const TAB_BAR_HEIGHT = 40;
 const WINDOW_BORDER = 1; // dezenter Fensterrahmen: 1px der Tab-Bar-Border scheint im View-Inset durch
 const POOL_SIZE = 2;
 const MAX_CRASH_RELOADS = 3;
+const CRASH_WINDOW_MS = 60_000;
 const ONLINE_CHECK_MS = 60_000;
 const UPDATE_CHECK_MS = 3_600_000;
 const DOMAIN_CACHE_MAX = 50;
@@ -397,11 +400,12 @@ const saveWindowState = debounce(() => {
     const state = buildState();
     const json = JSON.stringify(state);
     if (json === lastSavedState) return;
-    lastSavedState = json;
     windowState = state;
+    // Erst nach dem Rename merken: sonst gilt ein fehlgeschlagener Write als gespeichert
+    // und der unveraenderte State wird nie wieder geschrieben.
     fs.writeFile(stateTmpFile, json, (err) => {
       if (err) return;
-      fs.rename(stateTmpFile, stateFile, () => {});
+      fs.rename(stateTmpFile, stateFile, (renameErr) => { if (!renameErr) lastSavedState = json; });
     });
   } catch {}
 }, 500);
@@ -452,10 +456,10 @@ function isOAuthDomain(url) {
 const DESIGN_STYLE_LABEL = { modern: 'Modern', classic: 'Classic', neon: 'Neon' };
 
 const THEME = {
-  dark:  { bg: '#262624', bgHover: '#333330', bgActive: '#3a3a37', text: '#9a9a96', textActive: '#e8e8e4', border: '#333330', frameHi: '#423d38', frameLo: '#2a2622' },
-  light: { bg: '#f5f2ef', bgHover: '#ede9e4', bgActive: '#faf8f6', text: '#8a7e72', textActive: '#2a2420', border: '#e8e4de', frameHi: '#ddd6cc', frameLo: '#c8c1b6' },
-  oled:  { bg: '#050306', bgHover: '#121013', bgActive: '#1c181b', text: '#9a948f', textActive: '#e8e8e4', border: '#1a1719', frameHi: '#2c2429', frameLo: '#0c090b' },
-  midnight: { bg: '#070c18', bgHover: '#0d1526', bgActive: '#151f36', text: '#8a9ab5', textActive: '#e9eff8', border: '#182238', frameHi: '#2b3f66', frameLo: '#04070f' }
+  dark:  { bg: '#262624', bgHover: '#333330', bgActive: '#3a3a37', text: '#9a9a96', textActive: '#e8e8e4', border: '#333330', frameHi: '#5c554b', frameLo: '#4a443b' },
+  light: { bg: '#f5f2ef', bgHover: '#ede9e4', bgActive: '#faf8f6', text: '#8a7e72', textActive: '#2a2420', border: '#e8e4de', frameHi: '#cbc2b5', frameLo: '#b8ad9d' },
+  oled:  { bg: '#050306', bgHover: '#121013', bgActive: '#1c181b', text: '#9a948f', textActive: '#e8e8e4', border: '#1a1719', frameHi: '#443a42', frameLo: '#332b32' },
+  midnight: { bg: '#070c18', bgHover: '#0d1526', bgActive: '#151f36', text: '#8a9ab5', textActive: '#e9eff8', border: '#182238', frameHi: '#44608f', frameLo: '#34496e' }
 };
 
 // Akzent pro Stil. Kein Theme erzwingt einen eigenen: jede Kombination aus Farbthema und
@@ -527,8 +531,8 @@ function iconDataUrl() {
   return _iconDataUrlCache[p];
 }
 
-// Das neue Spark-Logo hat bereits einen dunklen, abgerundeten Tile (OLED-tauglich),
-// daher kein zusaetzlicher Tile/Glow-Wrapper mehr noetig - Logo wird as-is genutzt.
+// Das Spark-Logo ist transparent (keine Kachel im PNG). Wer es auf farbigen Untergrund
+// setzt, muss selbst fuer Kontrast sorgen - siehe .hero-logo im About-Fenster.
 function iconDataUrlForCurrentTheme() {
   return iconDataUrl();
 }
@@ -734,13 +738,9 @@ window.tabAPI.onTabsUpdate(data=>{
   }
 });
 
-// v[6]=frameHi, v[7]=frameLo muessen mit dem THEME-Objekt oben synchron bleiben.
-const THEME_VARS={
-  light:['#f5f2ef','#ede9e4','#faf8f6','#8a7e72','#2a2420','#e8e4de','#ddd6cc','#c8c1b6'],
-  dark: ['#262624','#333330','#3a3a37','#9a9a96','#e8e8e4','#333330','#423d38','#2a2622'],
-  oled: ['#050306','#121013','#1c181b','#9a948f','#e8e8e4','#1a1719','#2c2429','#0c090b'],
-  midnight:['#070c18','#0d1526','#151f36','#8a9ab5','#e9eff8','#182238','#2b3f66','#04070f']
-};
+// Aus THEME erzeugt, damit die beiden Paletten nicht auseinanderlaufen.
+const THEME_VARS=${JSON.stringify(Object.fromEntries(Object.entries(THEME).map(
+  ([k, v]) => [k, [v.bg, v.bgHover, v.bgActive, v.text, v.textActive, v.border, v.frameHi, v.frameLo]])))};
 window.tabAPI.onThemeUpdate(u=>{
   const m=THEME_VARS[u.mode]?u.mode:'dark';
   // Weicher Wechsel: bei echtem Moduswechsel (nicht beim ersten Aufruf) kurz eine
@@ -1056,6 +1056,11 @@ function setupView(view) {
     if (details.reason === 'clean-exit' || wc.isDestroyed()) return;
     const tab = tabs.find(tb => tb.view === view);
     if (!tab) return;
+    // Gemeint ist ein Schutz gegen Crash-Schleifen. Ohne Zeitfenster summierte der Zaehler
+    // ueber Tage und der Tab blieb beim vierten Crash endgueltig leer.
+    const crashAt = Date.now();
+    if (crashAt - (tab.lastCrashAt || 0) > CRASH_WINDOW_MS) tab.crashCount = 0;
+    tab.lastCrashAt = crashAt;
     tab.crashCount = (tab.crashCount || 0) + 1;
     if (tab.crashCount > MAX_CRASH_RELOADS) {
       console.error(`Tab crashed ${tab.crashCount}x (${details.reason}), giving up.`);
@@ -1577,8 +1582,8 @@ function showBugReportDialog() {
     mode: getAppMode()
   };
 
-  // Hoehe am gemessenen Inhalt (943px auf 1080p), damit der Dialog nicht scrollt.
-  const brSize = fitToWorkArea(720, 910);
+  // Hoehe am gemessenen Inhalt, damit der Dialog nicht scrollt.
+  const brSize = fitToWorkArea(640, 690);
   const brPos = centerOnMainWindow(brSize.width, brSize.height);
   const win = new BrowserWindow({
     width: brSize.width, height: brSize.height, ...brPos, resizable: false,
@@ -1612,16 +1617,14 @@ function showBugReportDialog() {
 *{margin:0;padding:0;box-sizing:border-box}
 body{background:${bg};color:${fg};font-family:system-ui,-apple-system,sans-serif;font-size:14px;
   display:flex;flex-direction:column;height:100vh;padding:0;overflow:hidden}
-h2{font-size:18px;font-weight:600;margin-bottom:8px}
-.intro{color:${sub};font-size:13px;line-height:1.5;margin-bottom:18px}
-.field{margin-bottom:14px;display:flex;flex-direction:column}
+.field{margin-bottom:12px;display:flex;flex-direction:column}
 label{font-size:12px;font-weight:500;color:${sub};margin-bottom:6px;letter-spacing:.02em}
 textarea,input[type=email]{background:${inputBg};color:${fg};border:1px solid ${inputBorder};
   border-radius:8px;padding:10px 12px;font-size:13.5px;font-family:inherit;outline:none;
   transition:border-color .15s,box-shadow .15s;resize:none}
 textarea:focus,input[type=email]:focus{border-color:${inputFocus};box-shadow:0 0 0 3px ${inputFocus}22}
-textarea.desc{min-height:110px;line-height:1.5}
-textarea.errcodes{min-height:70px;line-height:1.45;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12.5px}
+textarea.desc{min-height:92px;line-height:1.5}
+textarea.errcodes{min-height:54px;line-height:1.45;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12.5px}
 .auto-info-row{display:flex;align-items:flex-start;gap:10px;margin:6px 0 14px;
   padding:10px 12px;background:${inputBg};border:1px solid ${inputBorder};border-radius:8px;cursor:pointer;
   user-select:none;transition:border-color .15s}
@@ -1691,12 +1694,9 @@ ${customTitlebarCSS()}
 ${customTitlebarHTML(s.title)}
 <div class="bugreport-main">
 <div id="form-view">
-  <h2>${s.title}</h2>
-  <p class="intro">${s.intro}</p>
-
   <div class="disclaimer" role="note">
     <span class="ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></span>
-    <span class="txt"><span class="ttl">${s.disclaimerTitle}</span>${s.disclaimerBody} <a id="anthropic-link" href="#" tabindex="0">${s.disclaimerLink}</a>${s.serverSideHint ? `<br><br>${s.serverSideHint}` : ''}</span>
+    <span class="txt"><span class="ttl">${s.disclaimerTitle}</span>${s.disclaimerBody} <a id="anthropic-link" href="#" tabindex="0">${s.disclaimerLink}</a></span>
   </div>
 
   <form id="bugform" novalidate>
@@ -1723,7 +1723,6 @@ ${customTitlebarHTML(s.title)}
       <input type="checkbox" id="autoinfo" checked>
       <span class="text">
         <span class="label">${s.autoInfoLabel}</span>
-        <span class="hint">${s.autoInfoHint}</span>
       </span>
     </label>
 
@@ -3118,7 +3117,7 @@ body{display:flex;flex-direction:column;overflow:hidden}
 .hero{position:relative;padding:24px 28px 22px;background:linear-gradient(135deg,${ac.from},${ac.to});color:#fff;overflow:hidden;display:flex;align-items:center;gap:16px}
 .hero::before{content:'';position:absolute;right:-70px;top:-70px;width:210px;height:210px;border-radius:50%;background:rgba(255,255,255,.12);pointer-events:none}
 .hero::after{content:'';position:absolute;right:36px;bottom:-46px;width:126px;height:126px;border-radius:50%;background:rgba(255,255,255,.08);pointer-events:none}
-.hero-logo{width:58px;height:58px;border-radius:14px;flex-shrink:0;position:relative;z-index:1;box-shadow:0 2px 12px rgba(0,0,0,.28)}
+.hero-logo{width:64px;height:64px;border-radius:15px;flex-shrink:0;position:relative;z-index:1;box-shadow:0 2px 12px rgba(0,0,0,.28);background:#0d0d0d;object-fit:contain}
 .hero-text{position:relative;z-index:1;flex:1;min-width:0}
 .hero-name{font-size:21px;font-weight:700;letter-spacing:-.2px;margin-bottom:2px}
 .hero-version{font-size:12px;opacity:.85;font-family:ui-monospace,Menlo,Consolas,monospace;margin-bottom:6px}

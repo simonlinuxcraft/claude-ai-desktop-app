@@ -11,7 +11,8 @@
   // bricht, greifen die anderen. Bei Erst-Match jeder Strategie loggen wir einmal,
   // damit man bei Regressionen in DevTools sieht welche noch greift.
 
-  var STOP_RE = /stop|abbrechen|abbreche|abbruch|halt/i;
+  // Wortgrenzen: ohne sie traf "halt" auch "Inhalt kopieren".
+  var STOP_RE = /\b(stop|stoppen|abbrechen|abbruch|halt)\b/i;
   var lastFire = 0;
   var COOLDOWN = 2000;
   var wasGenerating = false;
@@ -33,21 +34,42 @@
     return false;
   }
 
+  // Der Stop-Button sitzt immer am Composer. Ohne diese Eingrenzung traf die Suche auch
+  // Eintraege aus Sidebar und Nachrichtenliste, z.B. "Weitere Optionen fuer <Chat> abbrechen",
+  // und die Heuristik meldete dauerhaft "generiert". Ohne Composer bleibt das ganze Dokument.
+  function scope() {
+    var ed = document.querySelector('div[contenteditable="true"]');
+    if (!ed) return document;
+    var form = ed.closest('form');
+    if (form) return form;
+    // Bis zum ersten Vorfahren hoch, der ueberhaupt Buttons enthaelt: das ist die
+    // Composer-Leiste (gemessen 5 Ebenen ueber dem Eingabefeld, mit Senden, Diktieren,
+    // Modellwahl). Selbstkalibrierend, damit ein Layout-Umbau bei claude.ai nicht sofort
+    // den Scope leert und die Erkennung stumm schaltet.
+    var n = ed;
+    for (var up = 0; up < 8 && n.parentElement; up++) {
+      n = n.parentElement;
+      if (n.querySelector('button')) return n;
+    }
+    return document;
+  }
+
   function findStopButton() {
+    var root = scope();
     // 1. aria-label (DE+EN)
-    var byAria = document.querySelector('button[aria-label*="stop" i], button[aria-label*="abbrechen" i], button[aria-label*="halt" i]');
+    var byAria = root.querySelector('button[aria-label*="stop" i], button[aria-label*="abbrechen" i], button[aria-label*="halt" i]');
     if (byAria && isVisible(byAria)) { logStrategy(1, 'aria-label'); return byAria; }
     // 2. data-testid
-    var byTest = document.querySelector('button[data-testid*="stop" i]');
+    var byTest = root.querySelector('button[data-testid*="stop" i]');
     if (byTest && isVisible(byTest)) { logStrategy(2, 'data-testid'); return byTest; }
     // 3. SVG-Icon mit data-icon oder ueber svg-rect (Stop-Symbol = Quadrat)
-    var byDataIcon = document.querySelector('button [data-icon="stop" i], button [data-icon="square" i]');
+    var byDataIcon = root.querySelector('button [data-icon="stop" i], button [data-icon="square" i]');
     if (byDataIcon) {
       var btn = byDataIcon.closest('button');
       if (btn && isVisible(btn)) { logStrategy(3, 'data-icon'); return btn; }
     }
     // 4. Textinhalt-Fallback
-    var btns = document.querySelectorAll('button');
+    var btns = root.querySelectorAll('button');
     for (var i = 0; i < btns.length; i++) {
       var b = btns[i];
       var l = (b.getAttribute('aria-label') || b.textContent || '').trim();
