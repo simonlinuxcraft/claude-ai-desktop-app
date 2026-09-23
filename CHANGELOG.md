@@ -7,6 +7,51 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.4.19] - 2026-09-23 - Matrix Theme and Idle Load
+
+### Added
+
+- Matrix colour theme: green tinted near black with a character rain in the background. It is
+  built like Midnight Blue, with its own surface steps and hairlines, and its rules only enter
+  the stylesheet while the theme is selected, so no other theme pays for it.
+- Matrix accent style in emerald green, combinable with every colour theme like the others.
+- The character rain can fall, stepping line by line, with an on/off switch of its own in the
+  design window. It honours the system setting for reduced motion.
+- Monochrome tray icon as an option in the design window.
+
+### Changed
+
+- New app icon, a rounded spark on a transparent background, also used for the tray, the
+  AppImage and the Snap. Classic and beta carry the same spark. The icon copies in the user's
+  icon theme are refreshed on the first start of a new version, not only on a style switch.
+- The style section of the design window holds four cards now and the theme section five, so
+  both moved to a grid that fits.
+- The bug report window dropped its duplicate heading, its intro line and two warnings that
+  repeated what the confirmation checkbox asks, going from 720x910 to 640x690.
+
+### Fixed
+
+- Much less load while idle. The ring around the input field recomputed its gradient sixty
+  times a second, continuously, in every style except Classic. Measured as CPU time of all
+  processes, that was about 60% of one core; stepping it brings it to about 14%.
+- Background notifications never fired. The stop button that tells the app whether Claude is
+  still writing was looked for across the whole page, which also matched sidebar entries like
+  "More options for ... cancel". The search is limited to the composer now, and the word match
+  no longer treats "Inhalt" as "halt".
+- Starting the app a second time brought up tray, tabs and a full claude.ai load before
+  quitting again, because app.quit() is asynchronous.
+- A failed window state write marked the state as saved, so it was never retried.
+- Tab crash counts reset after a minute. They used to add up over the whole runtime, so three
+  crashes spread over a day left a tab permanently blank.
+- Window frames are visible again in every dark theme. The lower frame colour sat almost on the
+  window colour, so the frame faded out towards the bottom.
+- The logo in the about window got its dark tile back. It is a transparent PNG and sat on the
+  accent gradient with almost no contrast.
+- After a navigation, the observer of the previously injected content script kept working with
+  the theme state it had captured, restoring the stylesheet for the wrong theme.
+
+---
+
 ## [1.4.18] - 2026-09-18 - Screenshots and Scaling
 
 ### Fixed

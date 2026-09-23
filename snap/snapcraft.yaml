@@ -2,7 +2,7 @@ name: claude-ai-desktop
 # Der Store zeigt title statt name. Der Name bleibt, sonst verliert die Installbasis den
 # Update-Pfad; der angezeigte Titel verweist auf Claude statt sich so zu nennen.
 title: Desktop for Claude (Unofficial)
-version: '1.4.18'
+version: '1.4.19'
 summary: Desktop for Claude, an unofficial Claude AI app with tabs and tray
 description: |
   Desktop for Claude is an unofficial app that runs claude.ai on Linux
@@ -21,21 +21,25 @@ description: |
   the official app does not support, and here in the Snap Store, where there
   is no official package.
 
-  What's new in v1.4.18:
+  What's new in v1.4.19:
+
+  * New colour theme Matrix: green tinted near black with a character
+    rain in the background, plus Matrix as an accent style in emerald
+    green. The rain can fall line by line and has its own on/off
+    switch in the design window.
+  * Much less load while idle. The coloured ring around the input
+    field recomputed its gradient sixty times a second, continuously.
+    Measured, that cost about half a processor core; it now needs a
+    quarter of that.
+  * Background notifications work again. The app looked for the stop
+    button across the whole page and also matched sidebar entries, so
+    it considered Claude busy forever.
+
+  Highlights from v1.4.18:
 
   * The screenshot entry in claude.ai's plus menu works. The app used
     to turn screen capture down; on Wayland you now pick the screen in
     the system dialog, no extra Snap permission needed.
-  * The composer ring sits around the input field only and follows the
-    accent style: Modern and Neon show it in every colour theme,
-    Classic shows none. Switching the style no longer reloads the page.
-  * Dialogs scale with the screen and no longer scroll. Electron
-    41.10.7 and several security fixes.
-
-  Highlights from v1.4.17:
-
-  * The thank-you badge from 1.4.16 covered claude.ai's send button
-    and swallowed the click. It is removed.
 
   System requirements:
 

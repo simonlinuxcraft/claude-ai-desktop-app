@@ -23,7 +23,7 @@
 
 ---
 
-> **v1.4.18** - Screenshots and Scaling. The screenshot entry in claude.ai's plus menu did nothing, because the app turned the screen capture down. It is allowed for claude.ai now: on Wayland you pick the screen in the system dialog, on X11 the app takes the screen its window is on, and the Snap needs no extra permission for it. The composer ring sits around the input field only again, after claude.ai moved the disclaimer and model picker into the same container, and it follows the accent style: Modern and Neon show it in every colour theme, Classic shows none. Switching the style no longer reloads the page. Dialogs scale with the screen and no longer scroll, the hamburger menu no longer cuts labels off, Electron is at 41.10.7, and several security fixes are in.
+> **v1.4.19** - Matrix Theme and Idle Load. A fifth colour theme on green tinted near black, with a character rain in the background that can fall line by line and has its own switch, plus Matrix as an emerald accent style that combines with any theme. The ring around the input field used to recompute its gradient sixty times a second, continuously, which measured at about half a processor core; it steps now and needs a quarter of that. Background notifications work again, the app had been looking for the stop button across the whole page and kept matching sidebar entries. Starting the app twice no longer boots everything in the background first, window frames are visible in every dark theme again, the about window logo has its dark tile back, and the bug report window is noticeably smaller.
 
 ---
 
@@ -106,7 +106,7 @@ cat > ~/.local/share/applications/claude-desktop.desktop << EOF
 [Desktop Entry]
 Name=Desktop for Claude
 Comment=Unofficial desktop app for Claude AI
-Exec=/path/to/Claude-Desktop-1.4.18.AppImage --no-sandbox
+Exec=/path/to/Claude-Desktop-1.4.19.AppImage --no-sandbox
 Icon=/path/to/icon.png
 Type=Application
 Categories=Utility;

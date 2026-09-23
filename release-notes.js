@@ -14,6 +14,83 @@ const RELEASE_NOTES_REVISIT = {
 };
 
 const RELEASE_NOTES = {
+  '1.4.19': [
+    {
+      icon: 'palette',
+      title: {
+        de: 'Neues Farbthema: Matrix',
+        en: 'New colour theme: Matrix',
+        fr: 'Nouveau thème de couleur : Matrix',
+        it: 'Nuovo tema colore: Matrix'
+      },
+      text: {
+        de: 'Ein fünftes Farbthema auf grünstichigem, fast schwarzem Grund, mit einem Zeichenregen im Hintergrund. Dazu gibt es Matrix auch als Stil, also als reine Akzentfarbe in Smaragdgrün, die sich mit jedem Farbthema kombinieren lässt. Beides findest du im Design-Fenster.',
+        en: 'A fifth colour theme on green tinted near black, with a character rain in the background. Matrix also comes as a style, that is as an accent colour in emerald green that combines with any colour theme. Both live in the design window.',
+        fr: 'Un cinquième thème de couleur sur un noir profond teinté de vert, avec une pluie de caractères en arrière-plan. Matrix existe aussi comme style, c’est-à-dire une couleur d’accent vert émeraude qui se combine avec tous les thèmes. Les deux se trouvent dans la fenêtre Design.',
+        it: 'Un quinto tema colore su un nero quasi pieno con sfumatura verde, con una pioggia di caratteri sullo sfondo. Matrix c’è anche come stile, cioè come colore d’accento verde smeraldo che si combina con qualsiasi tema. Trovi entrambi nella finestra Design.'
+      }
+    },
+    {
+      icon: 'refresh',
+      title: {
+        de: 'Der Zeichenregen fällt, wenn du willst',
+        en: 'The character rain falls if you want it to',
+        fr: 'La pluie de caractères tombe si vous le souhaitez',
+        it: 'La pioggia di caratteri cade se vuoi'
+      },
+      text: {
+        de: 'Im Matrix-Thema kann der Regen Zeile für Zeile nach unten wandern. Er springt zeilenweise statt zu gleiten, dadurch braucht er kaum Rechenleistung. Ein eigener Schalter im Design-Fenster stellt ihn ab, und wer im System Bewegungen reduziert hat, bekommt ihn gar nicht erst zu sehen.',
+        en: 'In the Matrix theme the rain can travel downwards line by line. It steps instead of gliding, so it needs very little processing power. A switch in the design window turns it off, and anyone who reduces motion system wide never sees it move.',
+        fr: 'Dans le thème Matrix, la pluie peut descendre ligne par ligne. Elle avance par paliers au lieu de glisser et demande donc très peu de ressources. Un interrupteur dans la fenêtre Design la désactive, et si vous avez réduit les animations au niveau du système, elle ne bouge pas du tout.',
+        it: 'Nel tema Matrix la pioggia può scendere riga per riga. Avanza a scatti invece di scorrere, quindi richiede pochissime risorse. Un interruttore nella finestra Design la disattiva, e chi ha ridotto le animazioni a livello di sistema non la vede muoversi affatto.'
+      }
+    },
+    {
+      icon: 'bolt',
+      title: {
+        de: 'Deutlich weniger Last im Leerlauf',
+        en: 'Much less load while idle',
+        fr: 'Nettement moins de charge au repos',
+        it: 'Molto meno carico a riposo'
+      },
+      text: {
+        de: 'Der farbige Rahmen um das Eingabefeld hat seinen Verlauf sechzig Mal pro Sekunde neu berechnet, dauerhaft, auch wenn die App nur offen stand. Gemessen hat das rund einen halben Prozessorkern gekostet. Er bewegt sich jetzt in Stufen und braucht dafür ein Viertel davon. Betroffen waren alle Stile ausser Classic.',
+        en: 'The coloured ring around the input field recomputed its gradient sixty times a second, continuously, even when the app just sat there. Measured, that cost about half a processor core. It now moves in steps and needs a quarter of that. Every style except Classic was affected.',
+        fr: 'Le cadre coloré autour du champ de saisie recalculait son dégradé soixante fois par seconde, en continu, même lorsque l’application restait simplement ouverte. Mesuré, cela coûtait environ un demi-cœur de processeur. Il avance désormais par paliers et n’en demande qu’un quart. Tous les styles sauf Classic étaient concernés.',
+        it: 'La cornice colorata attorno al campo di inserimento ricalcolava il suo gradiente sessanta volte al secondo, di continuo, anche quando l’app era solo aperta. Misurato, costava circa mezzo core del processore. Ora avanza a scatti e ne richiede un quarto. Erano interessati tutti gli stili tranne Classic.'
+      }
+    },
+    {
+      icon: 'bell',
+      title: {
+        de: 'Benachrichtigungen kommen wieder an',
+        en: 'Notifications arrive again',
+        fr: 'Les notifications arrivent de nouveau',
+        it: 'Le notifiche arrivano di nuovo'
+      },
+      text: {
+        de: 'Die Meldung, wenn Claude in einem anderen Tab fertig geantwortet hat, blieb aus. Die App erkennt das am Stopp-Knopf im Eingabefeld, suchte ihn aber auf der ganzen Seite und fand dabei auch Einträge aus der Seitenleiste, etwa "Weitere Optionen für ... abbrechen". Dadurch hielt sie Claude für dauerhaft beschäftigt. Gesucht wird jetzt nur noch direkt am Eingabefeld.',
+        en: 'The notice when Claude finished answering in another tab stayed away. The app spots that by the stop button in the composer, but searched the whole page for it and also matched sidebar entries such as "More options for ... cancel". So it thought Claude was busy forever. It now only looks at the composer itself.',
+        fr: 'L’avis indiquant que Claude a terminé sa réponse dans un autre onglet n’arrivait plus. L’application le détecte au bouton d’arrêt de la zone de saisie, mais le cherchait dans toute la page et trouvait aussi des entrées de la barre latérale, par exemple « Plus d’options pour ... annuler ». Elle croyait donc Claude occupé en permanence. La recherche se limite désormais à la zone de saisie.',
+        it: 'L’avviso che Claude ha finito di rispondere in un’altra scheda non arrivava più. L’app lo riconosce dal pulsante di stop nel campo di inserimento, ma lo cercava in tutta la pagina e trovava anche voci della barra laterale, ad esempio "Altre opzioni per ... annulla". Così riteneva Claude sempre occupato. Ora cerca solo nel campo di inserimento.'
+      }
+    },
+    {
+      icon: 'check',
+      title: {
+        de: 'Kleinere Korrekturen',
+        en: 'Smaller corrections',
+        fr: 'Corrections mineures',
+        it: 'Correzioni minori'
+      },
+      text: {
+        de: 'Ein zweiter Start der App fuhr im Hintergrund alles hoch, bevor er sich beendete. Das Fenster mit den Fehlerberichten war zu gross und sagte dasselbe dreimal, es ist jetzt deutlich kleiner. Der Fensterrahmen ist in allen dunklen Themes wieder sichtbar, das Logo im Über-Fenster hat seine dunkle Kachel zurück, und ein Tab, der über den Tag verteilt mehrfach abstürzt, bleibt nicht mehr dauerhaft leer.',
+        en: 'Starting the app a second time brought everything up in the background before quitting again. The bug report window was too large and said the same thing three times, it is noticeably smaller now. The window frame is visible again in every dark theme, the logo in the about window has its dark tile back, and a tab that crashes a few times over a day no longer stays blank for good.',
+        fr: 'Un deuxième lancement de l’application démarrait tout en arrière-plan avant de se terminer. La fenêtre de rapport d’erreur était trop grande et répétait trois fois la même chose, elle est nettement plus compacte. Le cadre de la fenêtre est de nouveau visible dans tous les thèmes sombres, le logo de la fenêtre À propos a retrouvé sa tuile sombre, et un onglet qui plante plusieurs fois dans la journée ne reste plus vide définitivement.',
+        it: 'Un secondo avvio dell’app caricava tutto in background prima di chiudersi. La finestra per le segnalazioni era troppo grande e ripeteva tre volte la stessa cosa, ora è molto più compatta. La cornice della finestra è di nuovo visibile in tutti i temi scuri, il logo nella finestra Informazioni ha di nuovo la sua piastrella scura, e una scheda che va in crash più volte nell’arco della giornata non resta più vuota per sempre.'
+      }
+    }
+  ],
   '1.4.18': [
     {
       icon: 'check',

@@ -1,6 +1,6 @@
 {
   "name": "claude-desktop",
-  "version": "1.4.18",
+  "version": "1.4.19",
   "description": "Unofficial desktop app for Claude AI on Linux",
   "main": "main.js",
   "license": "MIT",
