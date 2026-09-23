@@ -118,9 +118,23 @@
 
   // Modi mit eigener Flaechenpalette. dark und light bekommen null: dark laeuft auf
   // claude.ais nativer Palette, light auf dem Invert-Filter, beide brauchen kein Remap.
+  // Gleiche Treppe, in Gruen: das Matrix-Theme sitzt auf gruenstichigem Fast-Schwarz.
+  function mapMatrix(c) {
+    if (!c) return null;
+    var sum = c[0] + c[1] + c[2];
+    if (sum < 30) return '#020403';
+    if (sum < 150) return '#040806';
+    if (sum < 200) return '#0b1610';
+    if (sum < 260) return '#122017';
+    if (sum < 330) return '#18291d';
+    if (sum < 400) return '#1f3325';
+    return null;
+  }
+
   function surfaceMap(mode) {
     if (mode === 'oled') return mapDark;
     if (mode === 'midnight') return mapMidnight;
+    if (mode === 'matrix') return mapMatrix;
     return null;
   }
 
@@ -168,6 +182,8 @@
     de.setAttribute('data-cd-surface', measureSurface());
     de.setAttribute('data-cd-theme', st.mode);
     de.setAttribute('data-cd-design', st.design);
+    de.setAttribute('data-cd-rain', (st.mode === 'matrix' && st.rain) ? 'on' : 'off');
+    ensureRain(st.mode === 'matrix' && st.rain);
     var ac = st.accent || {};
     de.style.setProperty('--cd-accent-from', ac.from || '#F26A3F');
     de.style.setProperty('--cd-accent-to', ac.to || '#E83B6E');
@@ -387,6 +403,20 @@
     idle(function () { recolorSVGs(document.body); }, 200);
   }
 
+  // Eigene Ebene fuer den animierten Regen. Sie traegt nur das Muster und wird per
+  // transform bewegt, damit die Animation im Compositor bleibt. Ohne Animation gibt es sie
+  // nicht, dann malt der body das Muster wie bei OLED und Mitternachtsblau.
+  function ensureRain(an) {
+    var el = document.getElementById('cd-rain');
+    if (!an) { if (el && el.parentNode) el.parentNode.removeChild(el); return; }
+    if (el && el.isConnected) return;
+    if (!document.body) return;
+    el = document.createElement('div');
+    el.id = 'cd-rain';
+    el.setAttribute('aria-hidden', 'true');
+    document.body.appendChild(el);
+  }
+
   function applyAll() {
     applyAttrs();
     setSheet('cd-theme-static', buildStaticCSS());
@@ -450,6 +480,9 @@
       }
       // unsere Artefakte wiederherstellen, falls claude.ai sie entfernt
       if (!document.getElementById('cd-theme-static') || !document.getElementById('cd-theme-static').isConnected) setSheet('cd-theme-static', buildStaticCSS());
+      // In beide Richtungen: claude.ai baut den body beim Navigieren neu, dann fehlt die
+      // Ebene; und wer das Theme oder den Schalter wechselt, soll sie wieder los sein.
+      ensureRain(st.mode === 'matrix' && st.rain);
       // Modal-Flag direkt im Observer, NICHT im rAF: requestAnimationFrame pausiert bei
       // verdecktem/unsichtbarem Fenster, dann bliebe das Sternenfeld-Ausblenden aus. Der
       // MutationObserver laeuft dagegen auch dann. Frueher hielt die CSS-:has()-Regel das

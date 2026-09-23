@@ -43,6 +43,40 @@
   function waveUse(x, y, sc, op) {
     return "<use href='#w' transform='translate(" + x + "," + y + ") scale(" + sc + ")' opacity='" + op + "'/>";
   }
+  // Zeichenregen fuer das Matrix-Theme. Spalten mit hellem Kopf, nach unten in den
+  // dunkleren Ton auslaufend. Feste Koordinaten (kein Zufall), damit das Sheet
+  // deterministisch bleibt. Kurze Spalten statt durchgehender Bahnen: eine Bahn ueber die
+  // volle Kachelhoehe reisst sichtbar ab, sobald claude.ai eine deckende Flaeche darueberlegt.
+  function rainBg() {
+    var KOPF = '#247F3B', SCHWEIF = '#185427';
+    // x, y, Laenge. Unregelmaessige Abstaende, damit das Kacheln nicht als Raster auffaellt.
+    var spalten = [
+      [14, 30, 9], [40, 300, 7], [72, 150, 11], [96, 470, 6], [128, 60, 8],
+      [150, 350, 10], [182, 210, 7], [206, 520, 9], [238, 90, 6], [262, 390, 11],
+      [292, 250, 8], [316, 20, 10], [348, 440, 7], [372, 170, 9], [404, 330, 6],
+      [428, 80, 11], [458, 500, 8], [482, 230, 7], [512, 130, 10], [536, 410, 9],
+      [566, 40, 7], [590, 290, 11], [28, 560, 5], [110, 580, 6], [340, 570, 5],
+      [470, 590, 5], [604, 470, 6], [220, 600, 4]
+    ];
+    var ZEICHEN = '01A7F3X9E2C8Z4B6Y5D1N0M3K7';
+    var g = '', k = 0;
+    for (var i = 0; i < spalten.length; i++) {
+      var x = spalten[i][0], y0 = spalten[i][1], n = spalten[i][2];
+      for (var j = 0; j < n; j++) {
+        var t = j / n;
+        var farbe = j === 0 ? KOPF : SCHWEIF;
+        var op = (0.8 * (1 - t * 0.8)).toFixed(3);
+        var y = y0 + j * 14;
+        if (y > 616) break;
+        g += "<text x='" + x + "' y='" + y + "' fill='" + farbe + "' opacity='" + op + "'>"
+          + ZEICHEN.charAt(k++ % ZEICHEN.length) + "</text>";
+      }
+    }
+    var svg = "<svg xmlns='http://www.w3.org/2000/svg' width='620' height='620' viewBox='0 0 620 620'>"
+      + "<g font-family='ui-monospace,monospace' font-size='11'>" + g + "</g></svg>";
+    return 'url("data:image/svg+xml,' + encodeURIComponent(svg) + '")';
+  }
+
   function wavesBg(st) {
     var ac = (st && st.accent) || {}, f = ac.from || '#2F7FFF', t = ac.to || '#00E5FF';
     var svg = "<svg xmlns='http://www.w3.org/2000/svg' width='620' height='620' viewBox='0 0 620 620'>"
@@ -72,6 +106,13 @@
     var M_EDGE = 'rgba(47,127,255,0.20)', M_HAIR = 'rgba(138,154,181,0.20)', M_FOCUS = 'rgba(0,229,255,0.55)';
     var M = 'html[data-cd-theme="midnight"][data-cd-surface="dark"]';
     var WAVES = wavesBg(st);
+
+    // Matrix. Wie Mitternachtsblau aufgebaut, nur auf gruenstichigem Fast-Schwarz. Der
+    // Zeichenregen ist die Signatur dieses Themes, so wie das Sternenfeld die von OLED ist.
+    var XBG = '#040806', XBG_HI = '#0b1610', XBG_TOP = '#122017';
+    var X_EDGE = 'rgba(56,199,92,0.20)', X_HAIR = 'rgba(36,127,59,0.28)', X_FOCUS = 'rgba(56,199,92,0.55)';
+    var X = 'html[data-cd-theme="matrix"][data-cd-surface="dark"]';
+    var RAIN = rainBg();
     // Verlaufsring um die Composer-Karte, animiert. Selektor davor setzen.
     var D = 'html[data-cd-design="modern"]';
     var RING = '{content:"";position:absolute;inset:-2px;border-radius:var(--cd-composer-radius,14px);padding:2px;background:linear-gradient(135deg,var(--cd-accent-from),var(--cd-accent-to),var(--cd-accent-from),var(--cd-accent-to));background-size:300% 300%;animation:cdGradShift 6s ease-in-out infinite;-webkit-mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);-webkit-mask-composite:xor;mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);mask-composite:exclude;pointer-events:none;z-index:5}';
@@ -84,6 +125,63 @@
         return scope + ' [class*="' + t + '"]:not([class*="' + t + '/"])';
       }).join(',') + '{background-color:' + color + ' !important}';
     }
+
+    // Anders als die uebrigen Themes haengt Matrix NUR im Sheet, wenn es auch laeuft.
+    // Gemessen: der Block kostet sonst jeden Nutzer rund 27% mehr Style-Recalc
+    // (5.34 -> 6.81 ms), auch wenn er nie Matrix waehlt - die [class*=]-Selektoren werden
+    // bei jedem Recalc mitgeprueft. Beim Themewechsel baut der Controller das Sheet neu,
+    // der Block ist also rechtzeitig da.
+    var matrixRegeln = st.mode !== 'matrix' ? [] : [
+      // --- Matrix: gruenstichiges Fast-Schwarz mit Zeichenregen. Aufbau eins zu eins wie
+      // Mitternachtsblau, nur andere Stufen; neue Themes haengen hinten an, damit das
+      // bestehende Sheet Byte-gleich bleibt (siehe test/theme-static.test.js).
+      X + '{background-color:' + XBG + ' !important;--cd-rain-img:' + RAIN + '}',
+      X + ' body{background-color:' + XBG + ' !important;background-image:var(--cd-rain-img) !important;background-size:620px 620px}',
+      X + '[data-cd-modal] body{background-image:none !important}',
+      X + ' #__next,' + X + ' #root,' + X + ' main,' + X + ' [role="main"]{background-color:transparent !important;background-image:none !important}',
+      X + ' nav,' + X + ' aside,' + X + ' header,' + X + ' [class*="sidebar" i],' + X + ' [class*="Sidebar"],' + X + ' [class*="topbar" i],' + X + ' [class*="TopBar"]{background-color:' + XBG + ' !important;background-image:none !important}',
+      X + ' nav,' + X + ' aside,' + X + ' [class*="sidebar" i],' + X + ' [class*="Sidebar"]{border-right:1px solid ' + X_HAIR + ' !important}',
+      safeBg(X, ['bg-bg-000', 'bg-bg-100', 'bg-bg-200'], XBG),
+      safeBg(X, ['bg-bg-300', 'bg-bg-400'], XBG_HI),
+      safeBg(X, ['bg-bg-500', 'bg-bg-600'], XBG_TOP),
+      safeBg(X, ['bg-surface-0', 'bg-surface-1'], XBG),
+      safeBg(X, ['bg-surface-2', 'bg-surface-3'], XBG_HI),
+      safeBg(X, ['bg-black', 'bg-neutral-900', 'bg-neutral-950', 'bg-zinc-900', 'bg-zinc-950', 'bg-gray-900', 'bg-gray-950', 'bg-stone-900', 'bg-stone-950', 'bg-slate-900', 'bg-slate-950'], XBG),
+      X + ' [class*="om-dc-select"],' + X + ' [class*="om-tray-composer-shell"]{background-color:' + XBG_HI + ' !important}',
+      X + ' [class*="from-bg-"],' + X + ' [class*="to-bg-"],' + X + ' [class*="via-bg-"]{background-image:none !important}',
+      X + ' [class*="pointer-events-none"][class*="inset-0"]{background-color:transparent !important;background-image:none !important}',
+      X + ' header[class*="bg-"]{background-color:' + XBG + ' !important;background-image:none !important}',
+      X + ' [class*="top-scrim"],' + X + ' [class*="bottom-scrim"]{background-image:none !important}',
+      X + ' nav a,' + X + ' nav button,' + X + ' aside a,' + X + ' aside button,' + X + ' [class*="sidebar" i] a,' + X + ' [class*="sidebar" i] button,' + X + ' [class*="Sidebar"] a,' + X + ' [class*="Sidebar"] button{background-color:transparent !important;border-color:transparent !important;box-shadow:none !important}',
+      X + ' nav a:hover,' + X + ' nav button:hover,' + X + ' aside a:hover,' + X + ' aside button:hover,' + X + ' [class*="sidebar" i] a:hover,' + X + ' [class*="sidebar" i] button:hover{background-color:' + XBG_HI + ' !important}',
+      X + ' nav [aria-current="page"],' + X + ' nav [data-state="active"],' + X + ' nav [aria-selected="true"],' + X + ' aside [aria-current="page"],' + X + ' aside [data-state="active"],' + X + ' aside [aria-selected="true"]{background-color:' + XBG_TOP + ' !important}',
+      X + ' [role="menu"],' + X + ' [role="dialog"],' + X + ' [role="listbox"],' + X + ' [role="tooltip"],' + X + ' [class*="opover"],' + X + ' [class*="ropdown"],' + X + ' [class*="enuContent"],' + X + ' [data-radix-popper-content-wrapper]>*{background-color:' + XBG_HI + ' !important;background-image:none !important;border:1px solid ' + X_EDGE + ' !important;box-shadow:0 8px 28px rgba(0,0,0,0.6) !important}',
+      X + ' [role="menu"] [role="menuitem"],' + X + ' [role="menu"] button,' + X + ' [role="menu"] a,' + X + ' [role="listbox"] [role="option"]{background-color:transparent !important;border-color:transparent !important}',
+      X + ' [role="menu"] [role="menuitem"]:hover,' + X + ' [role="menu"] button:hover,' + X + ' [role="menu"] a:hover,' + X + ' [role="listbox"] [role="option"]:hover,' + X + ' [role="menuitem"][data-highlighted]{background-color:' + XBG_TOP + ' !important}',
+      X + ' input:focus,' + X + ' textarea:focus,' + X + ' [role="searchbox"]:focus,' + X + ' [role="combobox"]:focus{outline:1.5px solid ' + X_FOCUS + ' !important;outline-offset:2px !important}',
+      X + ' .cd-composer{position:relative;border-color:transparent !important;overflow:visible !important;background-color:revert-layer !important}',
+      X + ' .cd-composer::before' + RING,
+      // Animierter Regen. Bewusst NICHT background-position animiert: das waere ein Repaint
+      // ueber die volle Flaeche bei jedem Frame. Stattdessen eine eigene Ebene, die per
+      // transform verschoben wird - das laeuft im Compositor auf der GPU, der Main-Thread
+      // bleibt frei (gleicher Pfad wie der Invert-Filter im Hell-Modus). Die Ebene ist eine
+      // Kachel hoeher als der Viewport und laeuft genau eine Kachelhoehe weit, dann springt
+      // sie zurueck; weil das Muster mit 620px kachelt, ist der Sprung unsichtbar.
+      'html[data-cd-rain="on"] #cd-rain{position:fixed;left:0;right:0;top:0;height:calc(100% + 620px);'
+        + 'background-image:var(--cd-rain-img);background-size:620px 620px;background-repeat:repeat;'
+        + 'pointer-events:none;z-index:-1;will-change:transform;animation:cdRain 24s linear infinite}',
+      '@keyframes cdRain{from{transform:translateY(-620px)}to{transform:translateY(0)}}',
+      // Solange die Ebene laeuft, traegt sie das Muster. Der body muss dabei durchsichtig
+      // werden: die Ebene haengt an z-index:-1, und nach der Malreihenfolge liegen negative
+      // z-index-Kinder VOR den Hintergruenden der Block-Nachfahren, ein deckender
+      // body-Hintergrund wuerde sie also zudecken. Die Flaechenfarbe kommt von <html>.
+      // body[class] statt body: die safeBg-Regeln oben treffen den body ueber seine
+      // Tailwind-Klasse (gemessen: bg-surface-1) und haben mit vier Attributen die hoehere
+      // Spezifitaet. Das zusaetzliche [class] hebt diese Regel darueber.
+      'html[data-cd-rain="on"]' + X.slice('html'.length) + ' body[class]{background-image:none !important;background-color:transparent !important}',
+      // Bewegung abschalten, wenn das System es verlangt.
+      '@media (prefers-reduced-motion:reduce){html[data-cd-rain="on"] #cd-rain{animation:none}}'
+    ];
 
     return [
       // --- White: claude.ai bleibt technisch dark, wird per GPU-Invert hell. Beim Umschalten
@@ -201,7 +299,7 @@
       W + '[data-cd-design="modern"] .cd-composer::before,' + W + '[data-cd-design="modern"] fieldset .rounded-composer::before{filter:invert(1) hue-rotate(180deg)}',
       'html[data-cd-design="classic"] .cd-composer::before{content:none !important}',
       ''
-    ].join('');
+    ].concat(matrixRegeln).join('');
   }
 
   return { buildStaticCSS: buildStaticCSS, sparkleBg: sparkleBg };

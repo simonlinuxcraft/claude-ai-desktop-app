@@ -191,7 +191,7 @@ function validateAccelerator(accel) {
   return HOTKEY_RE.test(accel) ? accel : null;
 }
 
-const THEME_MODES = ['light', 'dark', 'oled', 'midnight'];
+const THEME_MODES = ['light', 'dark', 'oled', 'midnight', 'matrix'];
 
 // Loest den Farbmodus aus einem gespeicherten window-state.json auf. Bis 1.4.15 stand er
 // dort in zwei Booleans, seitdem in themeMode. Ohne diese Ableitung startet jede bestehende

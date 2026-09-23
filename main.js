@@ -240,6 +240,7 @@ let bugReportWindow = null;
 let appMenuJustClosedAt = 0;
 let minimizeOnClose = false;
 let trayMono = false;
+let matrixRain = true;   // animierter Zeichenregen im Matrix-Theme
 let currentHotkey = null;
 let currentClipboardHotkey = null;
 let promptTemplates = [];      // [{ id, name, prefix }]
@@ -270,15 +271,17 @@ const STATE_SCHEMA = [
   // Lesen laeuft ueber resolveThemeMode (kennt auch den Alt-State), set ist darum No-op.
   { key: 'themeMode', get: () => themeMode, set: () => {} },
   // Legacy: 1.4.15 und aelter kennen nur diese beiden Booleans. Weiter mitschreiben, damit
-  // ein Downgrade nicht im falschen Modus startet (midnight faellt dort auf oled zurueck).
+  // ein Downgrade nicht im falschen Modus startet (midnight und matrix fallen dort auf oled zurueck).
   { key: 'isDarkMode', get: () => themeMode !== 'light', set: () => {} },
-  { key: 'oledMode', get: () => themeMode === 'oled' || themeMode === 'midnight', set: () => {} },
+  { key: 'oledMode', get: () => themeMode === 'oled' || themeMode === 'midnight' || themeMode === 'matrix', set: () => {} },
   { key: 'oledIntroSeen', optional: true, get: () => oledIntroSeen,
     set: v => { oledIntroSeen = v === true; } },
   { key: 'minimizeOnClose', get: () => minimizeOnClose,
     set: v => { minimizeOnClose = v === true; } },
   { key: 'trayMono', get: () => trayMono,
     set: v => { trayMono = v === true; } },
+  { key: 'matrixRain', get: () => matrixRain,
+    set: v => { matrixRain = v !== false; } },
   { key: 'hotkey', get: () => currentHotkey,
     set: v => { currentHotkey = (typeof v === 'string' && v.length > 0) ? v : null; } },
   { key: 'clipboardHotkey', get: () => currentClipboardHotkey,
@@ -459,7 +462,8 @@ const THEME = {
   dark:  { bg: '#262624', bgHover: '#333330', bgActive: '#3a3a37', text: '#9a9a96', textActive: '#e8e8e4', border: '#333330', frameHi: '#5c554b', frameLo: '#4a443b' },
   light: { bg: '#f5f2ef', bgHover: '#ede9e4', bgActive: '#faf8f6', text: '#8a7e72', textActive: '#2a2420', border: '#e8e4de', frameHi: '#cbc2b5', frameLo: '#b8ad9d' },
   oled:  { bg: '#050306', bgHover: '#121013', bgActive: '#1c181b', text: '#9a948f', textActive: '#e8e8e4', border: '#1a1719', frameHi: '#443a42', frameLo: '#332b32' },
-  midnight: { bg: '#070c18', bgHover: '#0d1526', bgActive: '#151f36', text: '#8a9ab5', textActive: '#e9eff8', border: '#182238', frameHi: '#44608f', frameLo: '#34496e' }
+  midnight: { bg: '#070c18', bgHover: '#0d1526', bgActive: '#151f36', text: '#8a9ab5', textActive: '#e9eff8', border: '#182238', frameHi: '#44608f', frameLo: '#34496e' },
+  matrix: { bg: '#040806', bgHover: '#0b1610', bgActive: '#122017', text: '#8aab96', textActive: '#e6f2ea', border: '#16281c', frameHi: '#2f6b45', frameLo: '#24543a' }
 };
 
 // Akzent pro Stil. Kein Theme erzwingt einen eigenen: jede Kombination aus Farbthema und
@@ -472,7 +476,7 @@ const ACCENT = {
   modern:  { from: '#F26A3F', to: '#E83B6E' },
   classic: { from: '#d4734c', to: '#d4734c' },
   neon:    { from: '#1B54BE', to: '#2A72E8', neonFrom: '#2F7FFF', neonTo: '#00E5FF', brandHsl: '217 100% 59%' },
-  matrix:  { from: '#0E7A34', to: '#12833A', neonFrom: '#00E676', neonTo: '#2BE86A', brandHsl: '151 100% 45%' },
+  matrix:  { from: '#0E7A34', to: '#12833A', neonFrom: '#38C75C', neonTo: '#2EA34B', brandHsl: '135 56% 50%' },
   // Neon und Matrix fuehren zwei Paare: from/to liegt unter weissem Buttontext (4.5:1 bzw.
   // 6.9:1, Matrix 5.5:1 und 4.9:1), neonFrom/neonTo ist reine Deko (Composer-Rand,
   // Fokus-Ring) und wuerde als Buttonflaeche mit Weiss darauf auf 1.5:1 fallen.
@@ -485,7 +489,8 @@ const WARN = {
   dark:     { rgb: '224,169,62', fg: '#e0a93e', title: '#e0a93e', k: 1 },
   oled:     { rgb: '224,169,62', fg: '#e0a93e', title: '#e0a93e', k: 1 },
   light:    { rgb: '224,150,40', fg: '#c97e1c', title: '#a86412', k: 1.2 },
-  midnight: { rgb: '232,199,106', fg: '#e8c76a', title: '#e8c76a', k: 0.9 }
+  midnight: { rgb: '232,199,106', fg: '#e8c76a', title: '#e8c76a', k: 0.9 },
+  matrix:   { rgb: '224,169,62', fg: '#e0a93e', title: '#e0a93e', k: 1 }
 };
 function warnColor() {
   const w = WARN[currentThemeMode()] || WARN.dark;
@@ -846,7 +851,8 @@ function themeState() {
   return {
     mode: currentThemeMode(),
     design: designStyle === 'classic' ? 'classic' : 'modern',
-    accent: { from: ac.neonFrom || ac.from, to: ac.neonTo || ac.to, mid: ac.neonFrom || '#E8524F', brandHsl: ac.brandHsl || null }
+    accent: { from: ac.neonFrom || ac.from, to: ac.neonTo || ac.to, mid: ac.neonFrom || '#E8524F', brandHsl: ac.brandHsl || null },
+    rain: matrixRain
   };
 }
 function themeScript() {
@@ -861,7 +867,7 @@ function themeScript() {
 ipcMain.on('cd-theme-mode', (e) => {
   const st = themeState();
   let staticCSS = '';
-  try { if (st.mode === 'oled' || st.mode === 'midnight') staticCSS = cdBuildStaticCSS(st); } catch {}
+  try { if (st.mode === 'oled' || st.mode === 'midnight' || st.mode === 'matrix') staticCSS = cdBuildStaticCSS(st); } catch {}
   e.returnValue = Object.assign({}, st, { staticCSS });
 });
 
@@ -3260,7 +3266,8 @@ const PREVIEW_SURFACE = {
   dark:     { page: '#262624', card: '#30302e' },
   light:    { page: '#faf9f7', card: '#ffffff' },
   oled:     { page: '#050306', card: '#120f12' },
-  midnight: { page: '#070c18', card: '#0d1526' }
+  midnight: { page: '#070c18', card: '#0d1526' },
+  matrix:   { page: '#040806', card: '#0b1610' }
 };
 
 function getDesignHTML() {
@@ -3272,7 +3279,7 @@ function getDesignHTML() {
   const mode = currentThemeMode();
   const i18n = {
     title: 'Design',
-    subtitle: t('Farbthema, Stil und Tray-Symbol', 'Colour theme, style and tray icon', 'Thème de couleur, style et icône de notification', 'Tema colore, stile e icona di notifica'),
+    subtitle: t('Farbthema, Stil, Zeichenregen und Tray-Symbol', 'Colour theme, style, character rain and tray icon', 'Thème, style, pluie de caractères et icône de notification', 'Tema, stile, pioggia di caratteri e icona di notifica'),
     secTheme: t('Farbthema', 'Colour theme', 'Thème de couleur', 'Tema colore'),
     secStyle: t('Stil', 'Style', 'Style', 'Stile'),
     styleNote: t(
@@ -3282,6 +3289,13 @@ function getDesignHTML() {
       'Lo stile imposta il colore d’accento: freccia di invio, motivo, evidenziazioni e il bordo del composer, che solo Classic omette. Ogni stile si combina con ogni tema.'
     ),
     secTray: t('Tray-Symbol', 'Tray icon', 'Icône de la zone de notification', 'Icona nell’area di notifica'),
+    secRain: t('Zeichenregen', 'Character rain', 'Pluie de caractères', 'Pioggia di caratteri'),
+    rainNote: t(
+      'Gilt nur im Matrix-Thema. Die Bewegung läuft auf der Grafikkarte, nicht im Hauptprozess.',
+      'Only applies to the Matrix theme. The motion runs on the GPU, not on the main thread.',
+      'Ne concerne que le thème Matrix. Le mouvement tourne sur le GPU, pas sur le thread principal.',
+      'Vale solo per il tema Matrix. Il movimento gira sulla GPU, non sul thread principale.'
+    ),
     close: t('Schließen', 'Close', 'Fermer', 'Chiudi')
   };
   const TRAY_LABELS = {
@@ -3310,6 +3324,10 @@ function getDesignHTML() {
     midnight: {
       name: t('Mitternachtsblau', 'Midnight Blue', 'Bleu nuit', 'Blu notte'),
       hint: t('Tiefblau mit Neon-Akzent.', 'Deep blue with a neon accent.', 'Bleu profond avec accent néon.', 'Blu profondo con accento neon.')
+    },
+    matrix: {
+      name: 'Matrix',
+      hint: t('Zeichenregen auf fast Schwarz.', 'Character rain on near black.', 'Pluie de caractères sur noir profond.', 'Pioggia di caratteri su quasi nero.')
     }
   };
   const STYLE_LABELS = {
@@ -3349,6 +3367,20 @@ function getDesignHTML() {
 </button>`;
   };
 
+  const RAIN_LABELS = {
+    on:  { name: t('An', 'On', 'Activée', 'Attiva'), hint: t('Der Regen fällt langsam.', 'The rain falls slowly.', 'La pluie tombe lentement.', 'La pioggia cade lentamente.') },
+    off: { name: t('Aus', 'Off', 'Désactivée', 'Disattiva'), hint: t('Muster steht still.', 'Pattern stays still.', 'Le motif reste fixe.', 'Il motivo resta fermo.') }
+  };
+
+  const rainCard = (key) => {
+    const an = key === 'on';
+    return `<button class="style-card" data-rain="${key}" aria-pressed="${an === matrixRain}">
+  <span class="swatch" style="background:linear-gradient(180deg,#247F3B,#185427)"></span>
+  <span class="style-text"><span class="card-name">${RAIN_LABELS[key].name}<svg class="tick" viewBox="0 0 16 16"><path d="M3 8.5l3.2 3.2L13 5" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+  <span class="card-hint">${RAIN_LABELS[key].hint}</span></span>
+</button>`;
+  };
+
   const trayCard = (key) => {
     const mono = key === 'mono';
     let src = '';
@@ -3379,6 +3411,7 @@ h1{font-size:16px;margin:0 0 2px;font-weight:600}
 .section{margin-bottom:18px}
 .section h2{font-size:11px;font-weight:600;letter-spacing:.6px;text-transform:uppercase;color:var(--tt);margin:0 0 10px}
 .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.grid-theme{grid-template-columns:1fr 1fr 1fr}
 .card,.style-card{font-family:inherit;text-align:left;cursor:pointer;padding:8px;border-radius:10px;
   background:var(--bgh);border:1.5px solid var(--bd);color:var(--ta);
   transition:border-color .15s ease,background .15s ease}
@@ -3431,12 +3464,17 @@ ${customTitlebarHTML('Desktop for Claude - Design')}
 <div class="scroll">
   <div class="section">
     <h2>${i18n.secTheme}</h2>
-    <div class="grid">${THEME_MODES.map(card).join('')}</div>
+    <div class="grid grid-theme">${THEME_MODES.map(card).join('')}</div>
   </div>
   <div class="section">
     <h2>${i18n.secStyle}</h2>
     <div class="grid">${styleCard('modern')}${styleCard('classic')}${styleCard('neon')}${styleCard('matrix')}</div>
     <div class="note">${i18n.styleNote}</div>
+  </div>
+  <div class="section">
+    <h2>${i18n.secRain}</h2>
+    <div class="grid">${rainCard('on')}${rainCard('off')}</div>
+    <div class="note">${i18n.rainNote}</div>
   </div>
   <div class="section">
     <h2>${i18n.secTray}</h2>
@@ -3453,6 +3491,11 @@ const trays=[...document.querySelectorAll('[data-tray]')];
 for(const b of trays)b.addEventListener('click',()=>{
   pick(trays,b);
   window.designAPI.setTrayMono(b.dataset.tray==='mono');
+});
+const rains=[...document.querySelectorAll('[data-rain]')];
+for(const b of rains)b.addEventListener('click',()=>{
+  pick(rains,b);
+  window.designAPI.setMatrixRain(b.dataset.rain==='on');
 });
 // Das Fenster faerbt sich selbst sofort um, statt bis zum naechsten Oeffnen im alten
 // Theme zu bleiben. Die Werte liegen schon in der Karte, es geht kein IPC-Roundtrip weg.
@@ -3494,7 +3537,7 @@ function openDesignWindow() {
     designWindow.focus();
     return;
   }
-  const size = fitToWorkArea(640, 810);
+  const size = fitToWorkArea(720, 900);
   designWindow = new BrowserWindow({
     width: size.width, height: size.height,
     ...centerOnMainWindow(size.width, size.height),
@@ -4952,6 +4995,12 @@ ipcMain.on('design-set-mode', (event, mode) => {
 ipcMain.on('design-set-design', (event, style) => {
   if (!designWindow || designWindow.isDestroyed() || event.sender !== designWindow.webContents) return;
   setDesignStyle(style);
+});
+ipcMain.on('design-set-matrix-rain', (event, on) => {
+  if (!designWindow || designWindow.isDestroyed() || event.sender !== designWindow.webContents) return;
+  matrixRain = on === true;
+  applyThemeToAllViews();
+  saveWindowState();
 });
 ipcMain.on('design-set-tray-mono', (event, on) => {
   if (!designWindow || designWindow.isDestroyed() || event.sender !== designWindow.webContents) return;
