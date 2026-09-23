@@ -115,7 +115,7 @@
     var RAIN = rainBg();
     // Verlaufsring um die Composer-Karte, animiert. Selektor davor setzen.
     var D = 'html[data-cd-design="modern"]';
-    var RING = '{content:"";position:absolute;inset:-2px;border-radius:var(--cd-composer-radius,14px);padding:2px;background:linear-gradient(135deg,var(--cd-accent-from),var(--cd-accent-to),var(--cd-accent-from),var(--cd-accent-to));background-size:300% 300%;animation:cdGradShift 6s ease-in-out infinite;-webkit-mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);-webkit-mask-composite:xor;mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);mask-composite:exclude;pointer-events:none;z-index:5}';
+    var RING = '{content:"";position:absolute;inset:-2px;border-radius:var(--cd-composer-radius,14px);padding:2px;background:linear-gradient(135deg,var(--cd-accent-from),var(--cd-accent-to),var(--cd-accent-from),var(--cd-accent-to));background-size:300% 300%;animation:cdGradShift 6s steps(60) infinite;-webkit-mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);-webkit-mask-composite:xor;mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);mask-composite:exclude;pointer-events:none;z-index:5}';
 
     // [class*="X"] matcht auch Tailwinds Opacity-Modifier "X/NN" (z.B. eine helle 5%-Toenung
     // fuer einen Preis-Chip), die sonst faelschlich volldeckend geschwaerzt wird und ihren
@@ -240,6 +240,12 @@
       O + ' [role="menu"] [role="menuitem"]:hover,' + O + ' [role="menu"] button:hover,' + O + ' [role="menu"] a:hover,' + O + ' [role="listbox"] [role="option"]:hover,' + O + ' [role="menuitem"][data-highlighted]{background-color:#1c181b !important}',
       O + ' input:focus,' + O + ' textarea:focus,' + O + ' [role="searchbox"]:focus,' + O + ' [role="combobox"]:focus{outline:1.5px solid ' + FOCUS + ' !important;outline-offset:2px !important}',
       // --- OLED: Composer-Gradient-Rand ---
+      // steps(60) statt ease-in-out, also zehn Stufen pro Sekunde. Das Verschieben der
+      // background-position rechnet Gradient und Maske bei jedem Frame neu, und weil das im
+      // Compositing steckt, taucht es in RecalcStyle und Layout nicht auf (beide 0.0ms).
+      // Gemessen als CPU-Zeit aller Prozesse ueber /proc, je 15s im direkten Wechsel:
+      // ease-in-out 66.3% und 59.3% eines Kerns, steps(60) 14.7% und 13.6%. Der Ring laeuft
+      // dauerhaft und in jedem Stil ausser Classic, das war die Grundlast der App im Leerlauf.
       '@keyframes cdGradShift{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}',
       O + ' .cd-composer{position:relative;border-color:transparent !important;overflow:visible !important;background-color:' + BG + ' !important}',
       O + ' .cd-composer::before' + RING,
