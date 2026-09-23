@@ -205,7 +205,7 @@ function resolveThemeMode(saved) {
   return 'dark';
 }
 
-const DESIGN_STYLES = ['modern', 'classic', 'neon'];
+const DESIGN_STYLES = ['modern', 'classic', 'neon', 'matrix'];
 
 // Wie resolveThemeMode, nur fuer den Stil: bis 1.4.15 stand er als Boolean customDesign im
 // State (true = Modern, false = Classic), seitdem als designStyle.

@@ -453,7 +453,7 @@ function isOAuthDomain(url) {
 
 // Theme & Design
 
-const DESIGN_STYLE_LABEL = { modern: 'Modern', classic: 'Classic', neon: 'Neon' };
+const DESIGN_STYLE_LABEL = { modern: 'Modern', classic: 'Classic', neon: 'Neon', matrix: 'Matrix' };
 
 const THEME = {
   dark:  { bg: '#262624', bgHover: '#333330', bgActive: '#3a3a37', text: '#9a9a96', textActive: '#e8e8e4', border: '#333330', frameHi: '#5c554b', frameLo: '#4a443b' },
@@ -472,9 +472,10 @@ const ACCENT = {
   modern:  { from: '#F26A3F', to: '#E83B6E' },
   classic: { from: '#d4734c', to: '#d4734c' },
   neon:    { from: '#1B54BE', to: '#2A72E8', neonFrom: '#2F7FFF', neonTo: '#00E5FF', brandHsl: '217 100% 59%' },
-  // Neon fuehrt zwei Paare: from/to liegt unter weissem Buttontext (4.5:1 bzw. 6.9:1),
-  // neonFrom/neonTo ist reine Deko (Composer-Rand, Fokus-Ring) und wuerde als
-  // Buttonflaeche mit Weiss darauf auf 1.5:1 fallen.
+  matrix:  { from: '#0E7A34', to: '#12833A', neonFrom: '#00E676', neonTo: '#2BE86A', brandHsl: '151 100% 45%' },
+  // Neon und Matrix fuehren zwei Paare: from/to liegt unter weissem Buttontext (4.5:1 bzw.
+  // 6.9:1, Matrix 5.5:1 und 4.9:1), neonFrom/neonTo ist reine Deko (Composer-Rand,
+  // Fokus-Ring) und wuerde als Buttonflaeche mit Weiss darauf auf 1.5:1 fallen.
 };
 
 // Warnfarbe pro Theme. Bernstein bleibt das Signal, der Ton folgt dem Untergrund: das warme
@@ -3275,10 +3276,10 @@ function getDesignHTML() {
     secTheme: t('Farbthema', 'Colour theme', 'Thème de couleur', 'Tema colore'),
     secStyle: t('Stil', 'Style', 'Style', 'Stile'),
     styleNote: t(
-      'Der Stil setzt die Akzentfarbe: Sende-Pfeil, Muster, Highlights und bei Modern und Neon den Composer-Rand. Jeder Stil lässt sich mit jedem Farbthema kombinieren.',
-      'The style sets the accent colour: send arrow, pattern, highlights and, for Modern and Neon, the composer border. Every style combines with every colour theme.',
-      'Le style définit la couleur d’accent : flèche d’envoi, motif, surbrillances et, pour Modern et Neon, la bordure du composeur. Chaque style se combine avec chaque thème.',
-      'Lo stile imposta il colore d’accento: freccia di invio, motivo, evidenziazioni e, per Modern e Neon, il bordo del composer. Ogni stile si combina con ogni tema.'
+      'Der Stil setzt die Akzentfarbe: Sende-Pfeil, Muster, Highlights und den Composer-Rand, den nur Classic weglässt. Jeder Stil lässt sich mit jedem Farbthema kombinieren.',
+      'The style sets the accent colour: send arrow, pattern, highlights and the composer border, which only Classic leaves out. Every style combines with every colour theme.',
+      'Le style définit la couleur d’accent : flèche d’envoi, motif, surbrillances et la bordure du composeur, que seul Classic omet. Chaque style se combine avec chaque thème.',
+      'Lo stile imposta il colore d’accento: freccia di invio, motivo, evidenziazioni e il bordo del composer, che solo Classic omette. Ogni stile si combina con ogni tema.'
     ),
     secTray: t('Tray-Symbol', 'Tray icon', 'Icône de la zone de notification', 'Icona nell’area di notifica'),
     close: t('Schließen', 'Close', 'Fermer', 'Chiudi')
@@ -3314,7 +3315,8 @@ function getDesignHTML() {
   const STYLE_LABELS = {
     modern: { name: 'Modern', hint: t('Warmes Orange.', 'Warm orange.', 'Orange chaud.', 'Arancione caldo.') },
     classic: { name: 'Classic', hint: t('Anthropics Original-Ton, eigenes Icon.', 'Anthropic’s original tone, its own icon.', 'Le ton d’origine d’Anthropic, icône propre.', 'Il tono originale di Anthropic, icona propria.') },
-    neon: { name: 'Neon', hint: t('Blau, auch in den anderen Themes.', 'Blue, in the other themes too.', 'Bleu, aussi dans les autres thèmes.', 'Blu, anche negli altri temi.') }
+    neon: { name: 'Neon', hint: t('Blau, auch in den anderen Themes.', 'Blue, in the other themes too.', 'Bleu, aussi dans les autres thèmes.', 'Blu, anche negli altri temi.') },
+    matrix: { name: 'Matrix', hint: t('Smaragdgrün, am stärksten auf OLED.', 'Emerald green, strongest on OLED.', 'Vert émeraude, plus intense en OLED.', 'Verde smeraldo, più intenso su OLED.') }
   };
 
   const card = (m) => {
@@ -3377,7 +3379,6 @@ h1{font-size:16px;margin:0 0 2px;font-weight:600}
 .section{margin-bottom:18px}
 .section h2{font-size:11px;font-weight:600;letter-spacing:.6px;text-transform:uppercase;color:var(--tt);margin:0 0 10px}
 .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.grid3{grid-template-columns:1fr 1fr 1fr}
 .card,.style-card{font-family:inherit;text-align:left;cursor:pointer;padding:8px;border-radius:10px;
   background:var(--bgh);border:1.5px solid var(--bd);color:var(--ta);
   transition:border-color .15s ease,background .15s ease}
@@ -3434,7 +3435,7 @@ ${customTitlebarHTML('Desktop for Claude - Design')}
   </div>
   <div class="section">
     <h2>${i18n.secStyle}</h2>
-    <div class="grid grid3">${styleCard('modern')}${styleCard('classic')}${styleCard('neon')}</div>
+    <div class="grid">${styleCard('modern')}${styleCard('classic')}${styleCard('neon')}${styleCard('matrix')}</div>
     <div class="note">${i18n.styleNote}</div>
   </div>
   <div class="section">
@@ -3493,7 +3494,7 @@ function openDesignWindow() {
     designWindow.focus();
     return;
   }
-  const size = fitToWorkArea(640, 780);
+  const size = fitToWorkArea(640, 810);
   designWindow = new BrowserWindow({
     width: size.width, height: size.height,
     ...centerOnMainWindow(size.width, size.height),
