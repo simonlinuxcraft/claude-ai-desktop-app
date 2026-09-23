@@ -3289,12 +3289,12 @@ function getDesignHTML() {
       'Lo stile imposta il colore d’accento: freccia di invio, motivo, evidenziazioni e il bordo del composer, che solo Classic omette. Ogni stile si combina con ogni tema.'
     ),
     secTray: t('Tray-Symbol', 'Tray icon', 'Icône de la zone de notification', 'Icona nell’area di notifica'),
-    secRain: t('Zeichenregen', 'Character rain', 'Pluie de caractères', 'Pioggia di caratteri'),
+    secRain: t('Zeichenregen / Matrix-Thema', 'Character rain / Matrix theme', 'Pluie de caractères / thème Matrix', 'Pioggia di caratteri / tema Matrix'),
     rainNote: t(
-      'Gilt nur im Matrix-Thema. Die Bewegung läuft auf der Grafikkarte, nicht im Hauptprozess.',
-      'Only applies to the Matrix theme. The motion runs on the GPU, not on the main thread.',
-      'Ne concerne que le thème Matrix. Le mouvement tourne sur le GPU, pas sur le thread principal.',
-      'Vale solo per il tema Matrix. Il movimento gira sulla GPU, non sul thread principale.'
+      'Gilt nur im Matrix-Thema. Der Regen springt zeilenweise statt zu gleiten, dadurch braucht er kaum Rechenleistung. Auf älteren Geräten kannst du ihn hier abschalten.',
+      'Only applies to the Matrix theme. The rain steps line by line instead of gliding, so it needs very little processing power. On older machines you can turn it off here.',
+      'Ne concerne que le thème Matrix. La pluie avance ligne par ligne au lieu de glisser, elle demande donc très peu de ressources. Sur une machine ancienne, désactivez-la ici.',
+      'Vale solo per il tema Matrix. La pioggia avanza riga per riga invece di scorrere, quindi richiede pochissime risorse. Su macchine più vecchie puoi disattivarla qui.'
     ),
     close: t('Schließen', 'Close', 'Fermer', 'Chiudi')
   };
@@ -3368,7 +3368,7 @@ function getDesignHTML() {
   };
 
   const RAIN_LABELS = {
-    on:  { name: t('An', 'On', 'Activée', 'Attiva'), hint: t('Der Regen fällt langsam.', 'The rain falls slowly.', 'La pluie tombe lentement.', 'La pioggia cade lentamente.') },
+    on:  { name: t('An', 'On', 'Activée', 'Attiva'), hint: t('Der Regen fällt Zeile für Zeile.', 'The rain falls line by line.', 'La pluie tombe ligne par ligne.', 'La pioggia cade riga per riga.') },
     off: { name: t('Aus', 'Off', 'Désactivée', 'Disattiva'), hint: t('Muster steht still.', 'Pattern stays still.', 'Le motif reste fixe.', 'Il motivo resta fermo.') }
   };
 

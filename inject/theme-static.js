@@ -163,13 +163,18 @@
       X + ' .cd-composer::before' + RING,
       // Animierter Regen. Bewusst NICHT background-position animiert: das waere ein Repaint
       // ueber die volle Flaeche bei jedem Frame. Stattdessen eine eigene Ebene, die per
-      // transform verschoben wird - das laeuft im Compositor auf der GPU, der Main-Thread
-      // bleibt frei (gleicher Pfad wie der Invert-Filter im Hell-Modus). Die Ebene ist eine
-      // Kachel hoeher als der Viewport und laeuft genau eine Kachelhoehe weit, dann springt
-      // sie zurueck; weil das Muster mit 620px kachelt, ist der Sprung unsichtbar.
+      // transform verschoben wird. Die Ebene ist eine Kachel hoeher als der Viewport und
+      // laeuft genau eine Kachelhoehe weit, dann springt sie zurueck; weil das Muster mit
+      // 620px kachelt, ist der Sprung unsichtbar.
+      // steps(44) statt linear, und das ist der eigentliche Punkt: 620px / 14px Zeilenabstand
+      // ergibt einen Sprung pro Zeile, also gut zwei Frames pro Sekunde statt sechzig.
+      // Gemessen ueber je 20 Sekunden: linear 65.8% eines Kerns, steps 7.3%, Ruhezustand
+      // ohne Regen 4.9%. Die Animation bleibt zwar im Compositor (Style-Recalc und Layout
+      // sind 0.0ms), aber jeder Frame kostet trotzdem das Neuzusammensetzen einer
+      // bildschirmgrossen Ebene. Zeilenweise sieht ausserdem mehr nach Terminal aus.
       'html[data-cd-rain="on"] #cd-rain{position:fixed;left:0;right:0;top:0;height:calc(100% + 620px);'
         + 'background-image:var(--cd-rain-img);background-size:620px 620px;background-repeat:repeat;'
-        + 'pointer-events:none;z-index:-1;will-change:transform;animation:cdRain 24s linear infinite}',
+        + 'pointer-events:none;z-index:-1;will-change:transform;animation:cdRain 24s steps(44) infinite}',
       '@keyframes cdRain{from{transform:translateY(-620px)}to{transform:translateY(0)}}',
       // Solange die Ebene laeuft, traegt sie das Muster. Der body muss dabei durchsichtig
       // werden: die Ebene haengt an z-index:-1, und nach der Malreihenfolge liegen negative
