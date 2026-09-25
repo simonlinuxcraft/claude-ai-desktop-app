@@ -25,6 +25,48 @@ contextBridge.exposeInMainWorld('claudeDesktop', {
   offlineRetry: () => ipcRenderer.send('cd-offline-retry')
 });
 
+// Ein einziger sendSync fuer beide Startaufgaben unten: der Aufruf blockiert den
+// Renderer-Start, und die Antwort traegt inzwischen auch den Controller-Quelltext.
+var cdState = null;
+function cdThemeState() {
+  if (cdState === null) {
+    try { cdState = ipcRenderer.sendSync('cd-theme-mode') || {}; } catch (e) { cdState = {}; }
+  }
+  return cdState;
+}
+
+// Theme-Controller schon bei document-start in die Seite bringen. main.js injiziert ihn
+// zusaetzlich bei dom-ready per executeJavaScript, aber dort landet er hinter Reacts
+// Hydration in der Task-Queue: gemessen lief sein Variablen-Scan erst nach 2,3s, mit 6facher
+// CPU-Drosselung nach 9,7s. So lange stehen claude.ais Originalfarben in Karten und
+// Raendern (sichtbar an der Dokumentkarte, die blau statt themenfarben erschien), obwohl die
+// Palette schon ab rund 300ms lesbar ist. Als Script-Tag laeuft der Controller, sobald das
+// Dokument existiert; sein init wartet selbst auf DOMContentLoaded. Die zweite Injektion ist
+// unschaedlich, der Controller ist ueber window._cdThemeCtl idempotent.
+(function () {
+  try {
+    if (!/(^|\.)claude\.ai$/.test(location.hostname)) return;
+    var ctl = cdThemeState().ctl;
+    if (!ctl) return;
+    var gesetzt = false;
+    function setzen() {
+      if (gesetzt) return true;
+      var de = document.documentElement;
+      if (!de) return false;
+      var s = document.createElement('script');
+      s.textContent = ctl;
+      de.appendChild(s);
+      s.remove();
+      gesetzt = true;
+      return true;
+    }
+    if (!setzen()) {
+      var iv = setInterval(function () { if (setzen()) clearInterval(iv); }, 0);
+      document.addEventListener('readystatechange', setzen);
+    }
+  } catch (e) {}
+})();
+
 // Anti-FOUC: die Flaechenfarbe schon bei document-start setzen (laeuft vor dem ersten Paint),
 // damit beim kalten Start/Tab nicht claude.ais eigenes Grau aufblitzt, bis der Theme-Controller
 // bei dom-ready greift. Nur auf claude.ai, nur in Modi die die Seite selbst umfaerben
@@ -33,7 +75,7 @@ contextBridge.exposeInMainWorld('claudeDesktop', {
 (function () {
   try {
     if (!/(^|\.)claude\.ai$/.test(location.hostname)) return;
-    var st = ipcRenderer.sendSync('cd-theme-mode') || {};
+    var st = cdThemeState();
     // Nur Modi, die die Seite selbst umfaerben. dark laeuft auf claude.ais eigener Palette,
     // light auf dem Invert-Filter, beide brauchen kein Vorab-Sheet.
     var PRE_BG = { oled: '#050306', midnight: '#070c18', matrix: '#040806' };
@@ -56,9 +98,20 @@ contextBridge.exposeInMainWorld('claudeDesktop', {
     function apply() {
       var de = document.documentElement;
       if (!de) return false;
+      // Hat der Controller schon uebernommen, nichts mehr anfassen. Sein Sheet ersetzt
+      // dieses hier; ohne die Bremse stellt ein spaeteres readystatechange das Vorab-Sheet
+      // wieder her, das er gerade entfernt hat, und das stoert einen Wechsel nach Hell.
+      if (document.getElementById('cd-theme-static')) return true;
       de.style.backgroundColor = BG;
       de.setAttribute('data-cd-theme', st.mode);
       de.setAttribute('data-cd-surface', 'dark');
+      // data-cd-design und data-cd-rain gehoeren hier genauso hin wie theme und surface:
+      // ohne design greift der Brand-Block des statischen Sheets nicht und das Spark-Logo
+      // steht bis zum Controller auf claude.ais Orange (gemessen 6x gedrosselt bis 2,4s).
+      // rain bewusst 'off': die animierte Ebene legt erst der Controller an, bei 'off' malt
+      // der body dasselbe Muster statisch, sonst bleibt der Hintergrund hier leer.
+      de.setAttribute('data-cd-design', st.design === 'classic' ? 'classic' : 'modern');
+      de.setAttribute('data-cd-rain', 'off');
       if (!document.getElementById('cd-theme-preload')) {
         var s = document.createElement('style');
         s.id = 'cd-theme-preload';

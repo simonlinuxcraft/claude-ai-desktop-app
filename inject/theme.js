@@ -182,8 +182,8 @@
     de.setAttribute('data-cd-surface', measureSurface());
     de.setAttribute('data-cd-theme', st.mode);
     de.setAttribute('data-cd-design', st.design);
-    de.setAttribute('data-cd-rain', (st.mode === 'matrix' && st.rain) ? 'on' : 'off');
-    ensureRain(st.mode === 'matrix' && st.rain);
+    var rainAn = (st.mode === 'matrix' && st.rain);
+    de.setAttribute('data-cd-rain', (rainAn && ensureRain(rainAn)) ? 'on' : 'off');
     var ac = st.accent || {};
     de.style.setProperty('--cd-accent-from', ac.from || '#F26A3F');
     de.style.setProperty('--cd-accent-to', ac.to || '#E83B6E');
@@ -224,6 +224,23 @@
   // Stufennummer und werden weiterhin umgefaerbt.
   var VAR_SCALE_RE = /-\d{2,4}$/;
 
+  // Selektoren, die als Nachfahre nie matchen: der html-Scope deckt sie schon ab.
+  var SELF_SEL_RE = /^(:root|html|\*)$/;
+
+  // claude.ai definiert die --cds-Palette nicht nur auf :root, sondern ein zweites Mal auf
+  // .cds-root-Containern mitten im Baum. Ein Override nur am <html> wird dort neu gesetzt
+  // und alles darunter erbt wieder das Original (gemessen am Spark-Logo im Chat: fill
+  // faellt auf den Attribut-Fallback var(--cds-clay, #d97757) zurueck). Deshalb merken,
+  // unter welchen Selektoren die Palette sonst noch definiert wird, und dort ebenfalls
+  // ueberschreiben. Gesammelt statt fest verdrahtet, damit eine umbenannte Klasse folgt.
+  function collectSel(selectorText, bag) {
+    var parts = String(selectorText).split(',');
+    for (var i = 0; i < parts.length; i++) {
+      var one = parts[i].trim();
+      if (one && !SELF_SEL_RE.test(one)) bag[one] = 1;
+    }
+  }
+
   function buildVarsCSS() {
     // Cache: nur neu scannen, wenn sich Design/Mode/Akzent oder die Anzahl Stylesheets aendert
     // (Letzteres faengt nachgeladenes claude.ai-CSS ab). Spart teure Rescans. Der Akzent muss
@@ -231,7 +248,7 @@
     var key = st.design + '|' + st.mode + '|' + (st.accent && st.accent.mid) + '|' + document.styleSheets.length;
     if (key === _varsKey && document.getElementById('cd-theme-vars')) return;
     _varsKey = key;
-    var modern = '', oled = '', seenM = {}, mid = st.accent.mid || '#E8524F';
+    var modern = '', oled = '', seenM = {}, modernSel = {}, mid = st.accent.mid || '#E8524F';
     var mapSurface = surfaceMap(st.mode);
     // Ein Token kann mehrfach definiert sein, hell unter :root und dunkel unter
     // [data-theme="dark"]. Die dunkle Definition ist die, die unter OLED wirklich gilt,
@@ -266,10 +283,10 @@
             if (!c) continue;
             // Brand-Recoloring (orange -> Brand-Rot) im Light-Mode NICHT anwenden,
             // sonst wirkt das warme Weiss roetlich. Nur Dark/OLED.
-            if (st.design === 'modern' && st.mode !== 'light' && !seenM[prop] && isOrange(c)
+            if (st.design === 'modern' && st.mode !== 'light' && isOrange(c)
                 && !VAR_SKIP[prop] && !VAR_SCALE_RE.test(prop)) {
-              modern += prop + ':' + mid + ' !important;';
-              seenM[prop] = true;
+              if (!seenM[prop]) { modern += prop + ':' + mid + ' !important;'; seenM[prop] = true; }
+              collectSel(sel, modernSel);
             }
             if (mapSurface && isRoot && (oledRank[prop] === undefined || rank >= oledRank[prop])) {
               oledVal[prop] = mapSurface(c);
@@ -281,7 +298,14 @@
     } catch (e) {}
     for (var p in oledVal) if (oledVal[p]) oled += p + ':' + oledVal[p] + ' !important;';
     var css = '';
-    if (modern) css += 'html[data-cd-design="modern"]{' + modern + '}';
+    if (modern) {
+      css += 'html[data-cd-design="modern"]{' + modern + '}';
+      var nested = Object.keys(modernSel);
+      // :is() ist fehlertolerant: ein Selektor, den der Parser nicht kennt, faellt einzeln
+      // raus statt die ganze Regel zu kippen.
+      if (nested.length)
+        css += 'html[data-cd-design="modern"] :is(' + nested.join(',') + '){' + modern + '}';
+    }
     // Ersatz fuer das ausgelassene --accent-brand: die Utility-Klasse direkt einfaerben.
     // color statt fill, weil die Icons per fill-current/currentColor erben.
     // Anders als der Variablen-Scan darueber gilt das auch im Hell-Modus: hier faerbt sich
@@ -350,10 +374,20 @@
 
   // ---------- Modern: orange SVGs recoloren ----------
 
+  // Generation statt Boolean: clearRecolor zaehlt hoch und entwertet damit auch die Marke
+  // an Icons, die beim letzten Lauf nicht orange waren. Mit dem Boolean blieb so ein Icon
+  // nach einem Stilwechsel fuer immer ungeprueft, weil clearRecolor nur Elemente mit
+  // data-cd-recolored zuruecksetzte.
+  // Am window statt in der Closure, aus demselben Grund wie window._cdTheme im Observer:
+  // seit der Preload den Controller einsetzt, laeuft er regulaer zweimal, und der Observer
+  // der ersten Instanz muss dieselbe Generation sehen wie das clearRecolor der zweiten.
+  if (typeof window._cdRecolorGen !== 'number') window._cdRecolorGen = 1;
+
   function recolorEl(el) {
-    if (el._cdDone) return;
+    if (el._cdDone === window._cdRecolorGen) return;
     try {
-      var cs = getComputedStyle(el), mid = st.accent.mid || '#E8524F';
+      var cur = window._cdTheme || st;
+      var cs = getComputedStyle(el), mid = (cur.accent && cur.accent.mid) || '#E8524F';
       var f = parseRGB(cs.fill);
       var s = parseRGB(cs.stroke);
       if ((f && isOrange(f)) || (s && isOrange(s))) {
@@ -362,7 +396,7 @@
         // Merken, damit der naechste Themewechsel die Inline-Farbe wieder loswird.
         el.setAttribute('data-cd-recolored', '');
       }
-      el._cdDone = true;
+      el._cdDone = window._cdRecolorGen;
     } catch (e) {}
   }
 
@@ -370,16 +404,16 @@
   // Ruecknahme behaelt ein Brand-Icon beim Themewechsel die alte Farbe: gemessen blieb der
   // Stern im Greeting nach OLED -> Mitternachtsblau rot, obwohl der Akzent blau ist.
   function clearRecolor() {
+    window._cdRecolorGen++;
     var done = document.querySelectorAll('[data-cd-recolored]');
     for (var i = 0; i < done.length; i++) {
       done[i].style.removeProperty('fill');
       done[i].style.removeProperty('stroke');
       done[i].removeAttribute('data-cd-recolored');
-      done[i]._cdDone = false;
     }
   }
   function recolorSVGs(root) {
-    if (st.design !== 'modern' || !root || root.nodeType !== 1) return;
+    if ((window._cdTheme || st).design !== 'modern' || !root || root.nodeType !== 1) return;
     var svgs = (root.tagName === 'svg' || root.tagName === 'SVG') ? [root] : root.querySelectorAll('svg');
     for (var i = 0; i < svgs.length; i++) {
       recolorEl(svgs[i]);
@@ -399,22 +433,26 @@
   // Nur recolorSVGs bleibt deferred (minderprioritaer: claude.ai hat praktisch keine
   // hardcoded-orange SVGs, gemessen orangeFound=0) und nur im Modern-Dark/OLED-Fall.
   function deferHeavy() {
-    if (st.design !== 'modern') return;
+    if ((window._cdTheme || st).design !== 'modern') return;
     idle(function () { recolorSVGs(document.body); }, 200);
   }
 
   // Eigene Ebene fuer den animierten Regen. Sie traegt nur das Muster und wird per
   // transform bewegt, damit die Animation im Compositor bleibt. Ohne Animation gibt es sie
   // nicht, dann malt der body das Muster wie bei OLED und Mitternachtsblau.
+  // Rueckgabe: steht die Ebene? Das Attribut data-cd-rain="on" schaltet im statischen Sheet
+  // das Muster auf dem body ab und erwartet dafuer diese Ebene. Ohne body gibt es sie noch
+  // nicht, dann muss "off" gelten, sonst bleibt der Hintergrund leer (beim Kaltstart sichtbar).
   function ensureRain(an) {
     var el = document.getElementById('cd-rain');
-    if (!an) { if (el && el.parentNode) el.parentNode.removeChild(el); return; }
-    if (el && el.isConnected) return;
-    if (!document.body) return;
+    if (!an) { if (el && el.parentNode) el.parentNode.removeChild(el); return false; }
+    if (el && el.isConnected) return true;
+    if (!document.body) return false;
     el = document.createElement('div');
     el.id = 'cd-rain';
     el.setAttribute('aria-hidden', 'true');
     document.body.appendChild(el);
+    return true;
   }
 
   function applyAll() {
@@ -510,6 +548,35 @@
     startObserver();
   }
 
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
-  else init();
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+    // Sheets so frueh wie moeglich statt erst bei DOMContentLoaded: der Variablen-Scan
+    // braucht nur document.styleSheets, nicht das fertige DOM. Wartet man, stehen die
+    // Flaechen so lange in claude.ais Grau und das Spark-Logo auf dessen Orange (6x
+    // gedrosselt gemessen: Seite ab 745ms sichtbar, Scan erst bei 2427ms). Sicher, weil
+    // ensureRain und recolorSVGs ohne body aussteigen und setSheet ohne head auskommt.
+    // Das statische Sheet nur einmal bauen, nur der Scan wiederholt sich; er hoert auf,
+    // sobald claude.ais Palette lesbar war, spaetestens bei DOMContentLoaded.
+    var einmal = false, runden = 0;
+    var frueh = setInterval(function () {
+      try {
+        if (!document.documentElement) return;
+        if (++runden > 100) { clearInterval(frueh); return; }
+        // applyAttrs bei JEDEM Durchlauf: es legt auch die Regen-Ebene an, und die braucht
+        // document.body. Beim ersten Durchlauf gibt es den noch nicht, ein einmaliger Aufruf
+        // liesse die Ebene also bis DOMContentLoaded fehlen. Das statische Sheet dagegen nur
+        // einmal bauen, der String kostet. applyAttrs ist idempotent und billig.
+        applyAttrs();
+        if (!einmal) { setSheet('cd-theme-static', buildStaticCSS()); einmal = true; }
+        buildVarsCSS();
+        // Auch der Composer-Ring haengt an einer Klasse, die erst JS setzt. Ohne das hier
+        // bekommt die Eingabekarte ihren Rand erst bei DOMContentLoaded. Billig und
+        // gefahrlos: findet der Selektor nichts, tut die Funktion nichts.
+        tagComposer();
+        var v = document.getElementById('cd-theme-vars');
+        if (v && v.textContent.indexOf('--cds-') >= 0) clearInterval(frueh);
+      } catch (e) { clearInterval(frueh); }
+    }, 40);
+    document.addEventListener('DOMContentLoaded', function () { clearInterval(frueh); });
+  } else init();
 })();
