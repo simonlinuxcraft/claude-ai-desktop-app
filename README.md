@@ -23,7 +23,7 @@
 
 ---
 
-> **v1.4.19** - Matrix Theme and Idle Load. A fifth colour theme on green tinted near black, with a character rain in the background that can fall line by line and has its own switch, plus Matrix as an emerald accent style that combines with any theme. The ring around the input field used to recompute its gradient sixty times a second, continuously, which measured at about half a processor core; it steps now and needs a quarter of that. Background notifications work again, the app had been looking for the stop button across the whole page and kept matching sidebar entries. Starting the app twice no longer boots everything in the background first, window frames are visible in every dark theme again, the about window logo has its dark tile back, and the bug report window is noticeably smaller.
+> **v1.4.20** - Theme Fixes. The theme is in place from the first frame. Cards, surfaces and the spark logo used to render in claude.ai's own colours for up to two seconds before the theme took over, on slower machines for longer. Six separate causes behind that, each measured frame by frame with the processor throttled sixfold: claude.ai defines its colour palette a second time on containers inside the page and not only on the root element, the theme controller only started once the document was ready and queued behind the page's own startup work, the 190 surface colours had to wait for a scan of claude.ai's stylesheets and are now precomputed, and the character rain was missing on a cold start because the flag that switches off the static pattern was set before the animated layer could exist.
 
 ---
 
@@ -106,7 +106,7 @@ cat > ~/.local/share/applications/claude-desktop.desktop << EOF
 [Desktop Entry]
 Name=Desktop for Claude
 Comment=Unofficial desktop app for Claude AI
-Exec=/path/to/Claude-Desktop-1.4.19.AppImage --no-sandbox
+Exec=/path/to/Claude-Desktop-1.4.20.AppImage --no-sandbox
 Icon=/path/to/icon.png
 Type=Application
 Categories=Utility;

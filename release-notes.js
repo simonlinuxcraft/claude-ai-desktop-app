@@ -14,6 +14,38 @@ const RELEASE_NOTES_REVISIT = {
 };
 
 const RELEASE_NOTES = {
+  '1.4.20': [
+    {
+      icon: 'palette',
+      title: {
+        de: 'Das Farbthema steht sofort',
+        en: 'The colour theme is there right away',
+        fr: 'Le thème de couleur est là tout de suite',
+        it: 'Il tema colore c’è subito'
+      },
+      text: {
+        de: 'Beim Start und beim Laden einer Seite blitzten kurz claude.ais eigene Farben auf: Karten mit blauem Rand, das Logo in Orange, Flächen in Grau. Erst danach übernahm dein Thema. Jetzt steht es ab dem ersten Bild. Auf langsameren Rechnern war das bisher am deutlichsten zu sehen.',
+        en: 'When starting the app or loading a page, claude.ai’s own colours used to show first: cards with a blue border, the logo in orange, surfaces in grey. Your theme only took over afterwards. It is now in place from the first frame. This was most noticeable on slower machines.',
+        fr: 'Au démarrage et au chargement d’une page, les couleurs de claude.ai apparaissaient brièvement : cartes à bordure bleue, logo en orange, surfaces en gris. Votre thème ne prenait le relais qu’ensuite. Il est maintenant en place dès la première image. C’était surtout visible sur les machines lentes.',
+        it: 'All’avvio e al caricamento di una pagina comparivano prima i colori di claude.ai: schede con bordo blu, logo arancione, superfici grigie. Il tuo tema subentrava solo dopo. Ora è presente fin dal primo fotogramma. Si notava soprattutto sui computer più lenti.'
+      }
+    },
+    {
+      icon: 'bug',
+      title: {
+        de: 'Zeichenregen beim Kaltstart',
+        en: 'Character rain on a cold start',
+        fr: 'Pluie de caractères au démarrage à froid',
+        it: 'Pioggia di caratteri all’avvio a freddo'
+      },
+      text: {
+        de: 'Im Matrix-Thema fehlte der Regen direkt nach dem Öffnen der App, der Hintergrund blieb einfarbig, bis die Seite fertig geladen war. Die Umschaltung auf die bewegte Ebene passierte, bevor es diese Ebene überhaupt gab.',
+        en: 'In the Matrix theme the rain was missing right after opening the app, the background stayed plain until the page had finished loading. The switch to the moving layer happened before that layer could exist.',
+        fr: 'Dans le thème Matrix, la pluie manquait juste après l’ouverture de l’application, le fond restait uni jusqu’à la fin du chargement. Le passage à la couche animée se faisait avant que cette couche puisse exister.',
+        it: 'Nel tema Matrix la pioggia mancava subito dopo l’apertura dell’app, lo sfondo restava uniforme fino al termine del caricamento. Il passaggio al livello animato avveniva prima che quel livello potesse esistere.'
+      }
+    }
+  ],
   '1.4.19': [
     {
       icon: 'palette',

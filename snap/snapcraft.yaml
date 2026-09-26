@@ -2,7 +2,7 @@ name: claude-ai-desktop
 # Der Store zeigt title statt name. Der Name bleibt, sonst verliert die Installbasis den
 # Update-Pfad; der angezeigte Titel verweist auf Claude statt sich so zu nennen.
 title: Desktop for Claude (Unofficial)
-version: '1.4.19'
+version: '1.4.20'
 summary: Desktop for Claude, an unofficial Claude AI app with tabs and tray
 description: |
   Desktop for Claude is an unofficial app that runs claude.ai on Linux
@@ -21,19 +21,16 @@ description: |
   the official app does not support, and here in the Snap Store, where there
   is no official package.
 
-  What's new in v1.4.19:
+  What's new in v1.4.20:
 
-  * New colour theme Matrix: green tinted near black with a character
-    rain in the background, plus Matrix as an accent style in emerald
-    green. The rain can fall line by line and has its own on/off
-    switch in the design window.
-  * Much less load while idle. The coloured ring around the input
-    field recomputed its gradient sixty times a second, continuously.
-    Measured, that cost about half a processor core; it now needs a
-    quarter of that.
-  * Background notifications work again. The app looked for the stop
-    button across the whole page and also matched sidebar entries, so
-    it considered Claude busy forever.
+  * The theme is in place from the first frame. Cards, surfaces and the
+    logo used to render in claude.ai's own colours for up to two seconds
+    before the theme took over, on slower machines for longer.
+  * Six separate causes behind that, each measured frame by frame: the
+    colour palette is defined a second time on containers inside the
+    page, the theme controller only started once the document was ready,
+    the surface colours waited for a stylesheet scan, and the character
+    rain was missing on a cold start.
 
   Highlights from v1.4.18:
 

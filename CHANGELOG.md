@@ -7,6 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.4.20] - 2026-09-26 - Theme Fixes
+
+### Fixed
+
+- The theme is in place from the first frame. Cards, surfaces and the spark logo rendered in
+  claude.ai's own colours for up to two seconds before the theme took over, on slower machines
+  for longer. Measured frame by frame with the processor throttled sixfold.
+- claude.ai defines its colour palette a second time on containers inside the page, not only on
+  the root element. The recolouring only sat on the root, so everything below inherited the
+  original values. The scan now collects those selectors itself instead of carrying a class name
+  in the source, so a rename on their side does not silently break it again.
+- The theme controller was injected once the document was ready, where it queued behind the
+  page's own startup work and ran after 2.3 seconds, with the processor throttled sixfold after
+  9.7 seconds. It now starts with the document, and the variable scan no longer waits for the
+  document to finish parsing since it only needs the stylesheets.
+- The 190 surface colours had to wait for a scan of claude.ai's stylesheets. They are now
+  precomputed per theme in the sheet that ships with the document. The scan still runs and
+  corrects them should the palette change.
+- The character rain was missing on a cold start. The flag that switches off the static pattern
+  on the page body was set before the animated layer it hands over to could exist.
+- An icon that was not orange during one pass was marked as done and never checked again, so it
+  kept the wrong colour after a style switch.
+
+---
+
 ## [1.4.19] - 2026-09-23 - Matrix Theme and Idle Load
 
 ### Added
