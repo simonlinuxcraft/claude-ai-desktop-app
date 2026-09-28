@@ -59,8 +59,8 @@ description: |
   * Prompt templates for the Quick-Prompt window
   * Background reply notifications when Claude finishes answering
   * Clipboard & screenshot hotkeys to start a chat from selection
-  * Four colour themes (Light, Dark, OLED, Midnight Blue) and three
-    accent styles (Modern, Classic, Neon), freely combinable
+  * Five colour themes (Light, Dark, OLED, Midnight Blue, Matrix) and
+    four accent styles (Modern, Classic, Neon, Matrix), freely combinable
   * Bug report form in DE/EN/FR/ES/IT
   * Auto-update synced with the GitHub Release
   * Window memory, crash recovery, offline page, download manager,
