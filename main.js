@@ -29,13 +29,8 @@ process.on('unhandledRejection', (e) => { try { console.error('unhandledRejectio
 
 if (app.isPackaged) process.env.ELECTRON_DISABLE_SECURITY_WARNINGS = 'true';
 
-// Wayland-Bypass: BrowserWindow-Positionierung ist unter nativem Wayland
-// no-op (Issue #40886, Maintainer-Statement Okt 2025). Loesung: ueber
-// XWayland rendern. Der Switch wird zur Build-Zeit im AppImage-Wrapper
-// (scripts/after-pack.js) und im Snap (snap/local/electron-launch) immer
-// fix gesetzt. Im Dev-Modus muss er manuell beim Start mitgegeben werden:
-// `npx electron . --no-sandbox --ozone-platform=x11`. Das `npm run dev`-
-// Script in package.json macht das automatisch.
+// Unter Wayland laeuft die App nativ, Electron waehlt das selbst. Ueber XWayland startet sie mit
+// --ozone-platform=x11; die Wrapper haengen Nutzer-Argumente hinten an, das letzte gewinnt.
 
 // Sandbox-Fallback
 // Belt-and-suspenders zum --no-sandbox-Flag im .desktop-File: greift wenn die App
@@ -71,8 +66,7 @@ const isWayland = process.platform === 'linux'
 // Benachrichtigungen an CHROME_DESKTOP.
 const APP_ID = 'io.github.simonlinuxcraft.DesktopForClaude';
 if (!process.env.SNAP) app.setDesktopName(`${APP_ID}.desktop`);
-// Nativ statt ueber XWayland: die Wrapper setzen --ozone-platform=x11, ein danach
-// angehaengtes --ozone-platform=wayland gewinnt.
+// Nativ, ausser jemand startet ausdruecklich mit --ozone-platform=x11.
 const nativeWayland = isWayland && app.commandLine.getSwitchValue('ozone-platform') !== 'x11';
 // Globale Hotkeys gibt es nativ unter Wayland nur ueber das Portal, in Electron 44.5 noch
 // nicht standardmaessig an.

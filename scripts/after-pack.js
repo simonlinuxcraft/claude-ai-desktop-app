@@ -23,18 +23,10 @@ DIR="$(dirname "$(readlink -f "$0")")"
 # auf GDummyTlsBackend zurueckfallen. Chromium selbst ist davon unabhaengig.
 unset GIO_MODULE_DIR
 
-# Wayland-Bypass: BrowserWindow x/y ist unter nativem Wayland no-op,
-# Pop-ups landen zufaellig. Loesung: ueber XWayland rendern. Switch
-# muss VOR Electron-Init am argv stehen, deshalb hier im Wrapper.
-# VS Code, Discord, Signal, Obsidian machen es genauso.
-WL_ARGS=()
-if [ -n "$WAYLAND_DISPLAY" ] && [ "$XDG_SESSION_TYPE" = "wayland" ]; then
-  WL_ARGS=(--ozone-platform=x11)
-fi
-
+# Unter Wayland laeuft die App nativ, mit --ozone-platform=x11 ueber XWayland.
 case " $* " in
-  *" --no-sandbox "*) exec "$DIR/${exeName}.bin" "\${WL_ARGS[@]}" "$@" ;;
-  *) exec "$DIR/${exeName}.bin" --no-sandbox "\${WL_ARGS[@]}" "$@" ;;
+  *" --no-sandbox "*) exec "$DIR/${exeName}.bin" "$@" ;;
+  *) exec "$DIR/${exeName}.bin" --no-sandbox "$@" ;;
 esac
 `;
 

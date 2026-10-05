@@ -1,14 +1,8 @@
 #!/bin/bash
-# Wayland und X11 laufen beide via XWayland (--ozone-platform=x11). Grund:
-# Electron-BrowserWindow x/y-Position ist unter nativem Wayland no-op
-# (Issue #40886, Electron-Maintainer-Statement Okt 2025), Pop-ups landen
-# verstreut. Unter XWayland funktionieren Position, globalShortcut und
-# alle bisherigen Code-Pfade wieder. Trade-Off: leicht unschaerfer bei
-# Fractional-Scaling. VS Code, Discord, Signal, Obsidian machen es genauso.
+# Unter Wayland laeuft die App nativ, mit --ozone-platform=x11 ueber XWayland.
 # GTK_USE_PORTAL=1: Open/Save-Dialoge und der HTML-File-Picker laufen ueber
 # xdg-desktop-portal. Unter strict confinement gibt das Document-Portal Zugriff
 # auf gewaehlte Dateien auch ausserhalb von $HOME (per FD), statt nur den
 # home-Plug-Pfad zu zeigen. Behebt das "kann Datei nicht anhaengen/speichern".
 exec env XDG_CURRENT_DESKTOP=Unity GTK_USE_PORTAL=1 "$SNAP/app/desktop-for-claude" \
-  --no-sandbox --use-gl=angle --use-angle=gl \
-  --ozone-platform=x11 "$@"
+  --no-sandbox --use-gl=angle --use-angle=gl "$@"

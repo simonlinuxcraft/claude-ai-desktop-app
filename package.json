@@ -15,7 +15,7 @@
   },
   "scripts": {
     "start": "electron .",
-    "dev": "electron . --no-sandbox --ozone-platform=x11",
+    "dev": "electron . --no-sandbox",
     "test": "node --test test/pure.test.js test/theme-static.test.js test/release-notes.test.js",
     "test:electron": "electron test/frame-watchdog.test.js --no-sandbox",
     "build": "electron-builder --linux",
