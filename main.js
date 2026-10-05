@@ -2271,7 +2271,9 @@ function createDialogWindow(opts) {
   const pos = centerOnMainWindow(width, height);
   const parentWin = (mainWindow && !mainWindow.isDestroyed() && mainWindow.isVisible()) ? mainWindow : undefined;
   const win = new BrowserWindow({
-    width, height, ...pos,
+    // Unter Wayland zeichnet Electron die Titelleiste innerhalb der Fenstergroesse, ohne das hier
+    // fehlten dem Inhalt rund 37px. Unter X11 liegt sie ohnehin aussen.
+    width, height, ...pos, useContentSize: true,
     parent: parentWin,
     modal: !!parentWin,
     resizable: false, minimizable: false, maximizable: false,
