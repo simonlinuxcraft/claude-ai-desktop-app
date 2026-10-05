@@ -535,12 +535,6 @@ function iconDataUrl() {
   return _iconDataUrlCache[p];
 }
 
-// Das Spark-Logo ist transparent (keine Kachel im PNG). Wer es auf farbigen Untergrund
-// setzt, muss selbst fuer Kontrast sorgen - siehe .hero-logo im About-Fenster.
-function iconDataUrlForCurrentTheme() {
-  return iconDataUrl();
-}
-
 // Logo fuer die Fensterkoepfe: Modern und Classic wie in der Taskleiste, Neon und Matrix
 // fuellen die Logoform mit ihrem hellen Deko-Verlauf.
 function styledLogoHTML(cls) {
@@ -2027,13 +2021,14 @@ function openNewChatFromHotkey() {
 function getQuickPromptHTML() {
   const th = theme();
   const ac = accent();
+  const glow = ac.neonFrom || ac.from;
+  const glow2 = ac.neonTo || ac.to;
   const i18n = {
-    placeholder: t('Frage an Claude\u2026', 'Ask Claude\u2026', 'Poser une question \u00e0 Claude\u2026', 'Chiedi a Claude\u2026'),
-    hint: t('Enter zum Senden \u00b7 Shift+Enter neue Zeile \u00b7 Esc abbrechen \u00b7 Tab Template', 'Enter to send \u00b7 Shift+Enter new line \u00b7 Esc to cancel \u00b7 Tab template', 'Entr\u00e9e pour envoyer \u00b7 Maj+Entr\u00e9e nouvelle ligne \u00b7 \u00c9chap annuler \u00b7 Tab mod\u00e8le', 'Invio per inviare \u00b7 Maiusc+Invio nuova riga \u00b7 Esc annulla \u00b7 Tab modello'),
-    noTemplate: t('Kein Template', 'No template', 'Aucun modèle', 'Nessun modello'),
-    templates: t('Template', 'Template', 'Modèle', 'Modello')
+    placeholder: t('Frage an Claude…', 'Ask Claude…', 'Poser une question à Claude…', 'Chiedi a Claude…'),
+    plain: t('Frei', 'Plain', 'Libre', 'Libero'),
+    send: t('senden', 'send', 'envoyer', 'invia'),
+    template: t('Vorlage', 'template', 'modèle', 'modello')
   };
-  const logoUrl = iconDataUrlForCurrentTheme();
   // XSS-safe: </script> in Template-Namen würde sonst aus dem Script-Kontext brechen
   const tpls = JSON.stringify(promptTemplates.map(t => ({ id: t.id, name: t.name, prefix: t.prefix })))
     .replace(/<\//g, '<\\/');
@@ -2042,73 +2037,91 @@ function getQuickPromptHTML() {
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{height:100%;background:transparent;color:${th.textActive};font-family:system-ui,-apple-system,sans-serif;font-size:14px;overflow:hidden}
-body{padding:10px}
-@keyframes gradShift{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
-.frame{height:100%;border-radius:12px;padding:2px;
-  background:linear-gradient(135deg,${ac.from},${ac.to},${ac.from},${ac.to});
-  background-size:300% 300%;
-  animation:gradShift 6s ease-in-out infinite}
-.inner{height:100%;background:${th.bg};border-radius:10px;padding:12px 16px 10px;display:flex;flex-direction:column;gap:8px}
-.wrap{flex:1;display:flex;align-items:flex-start;gap:12px;min-height:0}
-.logo{width:28px;height:28px;flex-shrink:0;border-radius:7px;margin-top:4px;object-fit:contain;
-  box-shadow:0 2px 8px color-mix(in srgb,${ac.from} 40%,transparent)}
-textarea{flex:1;background:transparent;border:none;outline:none;resize:none;color:${th.textActive};font-family:inherit;font-size:15px;line-height:1.5;min-height:48px;padding:4px 0}
+/* Das Fenster ist durchsichtig. Schatten und Schein muessen ganz in diesen Rand passen,
+   sonst schneidet die Fensterkante sie gerade ab. */
+body{padding:18px}
+/* Lichtkante: am Logo am hellsten, rundum weiter in der Akzentfarbe sichtbar. */
+.frame{position:relative;height:100%;border-radius:18px;padding:1.5px;
+  background:linear-gradient(140deg,${glow} 0%,color-mix(in srgb,${glow2} 75%,transparent) 22%,color-mix(in srgb,${glow} 34%,transparent) 55%,color-mix(in srgb,${glow2} 28%,transparent) 100%);
+  box-shadow:0 0 0 1px rgba(0,0,0,.3),0 4px 13px rgba(0,0,0,.45),0 0 16px -6px color-mix(in srgb,${glow} 70%,transparent)}
+/* Einmal beim Oeffnen laeuft ein Lichtstreif ueber die Kante, danach steht alles still. */
+.frame::after{content:'';position:absolute;inset:0;border-radius:18px;padding:1.5px;pointer-events:none;
+  background:linear-gradient(110deg,transparent 30%,rgba(255,255,255,.95) 50%,transparent 70%) 0 0/250% 100%;
+  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;
+  animation:qpSweep 1.1s ease-out .1s both}
+@keyframes qpSweep{from{background-position:120% 0;opacity:1}to{background-position:-30% 0;opacity:0}}
+.inner{position:relative;height:100%;overflow:hidden;background:${th.bg};border-radius:16.5px;display:flex;flex-direction:column}
+.inner::before{content:'';position:absolute;left:-60px;top:-80px;width:260px;height:240px;pointer-events:none;
+  background:radial-gradient(closest-side,color-mix(in srgb,${glow} 28%,transparent),transparent)}
+.top{position:relative;flex:1;min-height:0;display:flex;align-items:flex-start;gap:14px;padding:14px 16px 8px}
+.ring{position:relative;width:46px;height:46px;flex:0 0 auto;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  background:${th.bg};border:1px solid color-mix(in srgb,${glow} 65%,transparent)}
+.ring::after{content:'';position:absolute;inset:-7px;border-radius:50%;border:1px solid color-mix(in srgb,${glow} 28%,transparent)}
+.logo-mark{width:28px;height:28px}
+textarea{flex:1;height:100%;background:transparent;border:none;outline:none;resize:none;color:${th.textActive};font-family:inherit;font-size:16px;line-height:1.5;padding:9px 0 0}
 textarea::placeholder{color:${th.text}}
-.bot{display:flex;align-items:center;justify-content:space-between;gap:10px}
-.tpl-pick{display:flex;align-items:center;gap:6px;font-size:11.5px;color:${th.text}}
-.tpl-pick select{background:${th.bgHover};color:${th.textActive};border:1px solid ${th.border};border-radius:5px;padding:3px 8px;font-family:inherit;font-size:11.5px;outline:none;cursor:pointer;max-width:200px}
-.tpl-pick select:focus{border-color:${ac.from}}
-.tpl-pick.empty{display:none}
-.hint{color:${th.text};font-size:11px;text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bar{position:relative;display:flex;align-items:center;gap:8px;padding:0 12px 0 76px;border-top:1px solid color-mix(in srgb,${th.textActive} 8%,transparent);flex-shrink:0;min-height:38px}
+.tabs{display:flex;gap:2px;flex:1;min-width:0;overflow-x:auto;-webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 28px),transparent)}
+.tabs::-webkit-scrollbar{height:0}
+.tab{position:relative;flex:0 0 auto;padding:10px 10px 11px;font-size:12.5px;color:${th.text};cursor:pointer;white-space:nowrap;background:none;border:none;font-family:inherit}
+.tab:hover{color:${th.textActive}}
+.tab.on{color:${th.textActive}}
+.tab.on::after{content:'';position:absolute;left:8px;right:8px;bottom:0;height:2px;border-radius:2px 2px 0 0;background:linear-gradient(90deg,${glow},${glow2})}
+.keys{display:flex;align-items:center;gap:12px;margin-left:auto;font-size:11.5px;color:${th.text};white-space:nowrap}
+kbd{font:600 10.5px/1 system-ui,-apple-system,sans-serif;color:${th.textActive};background:${th.bgHover};border:1px solid ${th.border};border-bottom-width:2px;border-radius:5px;padding:3px 6px;margin-right:4px}
+@media (prefers-reduced-motion:reduce){.frame::after{animation:none;opacity:0}}
 </style></head><body>
 <div class="frame"><div class="inner">
-<div class="wrap">
-  <img class="logo" src="${logoUrl}" alt="Claude"/>
-  <textarea id="q" placeholder="${i18n.placeholder}" autofocus></textarea>
-</div>
-<div class="bot">
-  <div class="tpl-pick" id="tplwrap">
-    <span>${i18n.templates}:</span>
-    <select id="tpl"></select>
+  <div class="top">
+    <span class="ring">${styledLogoHTML('logo-mark')}</span>
+    <textarea id="q" placeholder="${i18n.placeholder}" autofocus></textarea>
   </div>
-  <div class="hint">${i18n.hint}</div>
-</div>
+  <div class="bar">
+    <div class="tabs" id="tabs"></div>
+    <div class="keys"><span id="tabhint"><kbd>Tab</kbd>${i18n.template}</span><span><kbd>Enter</kbd>${i18n.send}</span></div>
+  </div>
 </div></div>
 <script>
 const api = window.quickPromptAPI;
 const q = document.getElementById('q');
-const sel = document.getElementById('tpl');
-const tplwrap = document.getElementById('tplwrap');
+const tabsEl = document.getElementById('tabs');
 const TEMPLATES = ${tpls};
 const I = ${safeJson(i18n)};
+let cur = -1;
 
-function buildTplOptions() {
-  if (!TEMPLATES.length) { tplwrap.classList.add('empty'); return; }
-  const opt = document.createElement('option'); opt.value = ''; opt.textContent = I.noTemplate;
-  sel.appendChild(opt);
-  for (const t of TEMPLATES) {
-    const o = document.createElement('option'); o.value = t.id; o.textContent = t.name;
-    sel.appendChild(o);
-  }
+function renderTabs() {
+  tabsEl.textContent = '';
+  if (!TEMPLATES.length) { document.getElementById('tabhint').hidden = true; return; }
+  [{ name: I.plain }].concat(TEMPLATES).forEach((tp, i) => {
+    const b = document.createElement('button');
+    b.className = 'tab' + (i - 1 === cur ? ' on' : '');
+    b.textContent = tp.name;
+    b.tabIndex = -1;
+    b.addEventListener('mousedown', (e) => { e.preventDefault(); cur = i - 1; renderTabs(); q.focus(); });
+    tabsEl.appendChild(b);
+  });
+  const on = tabsEl.querySelector('.on');
+  if (on) on.scrollIntoView({ block: 'nearest', inline: 'nearest' });
 }
-buildTplOptions();
+renderTabs();
 
 q.focus();
 q.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') { e.preventDefault(); api.cancel(); return; }
-  if (e.key === 'Tab' && TEMPLATES.length) { e.preventDefault(); sel.focus(); return; }
+  if (e.key === 'Tab' && TEMPLATES.length) {
+    e.preventDefault();
+    const n = TEMPLATES.length + 1;
+    cur = ((cur + 1 + (e.shiftKey ? -1 : 1)) % n + n) % n - 1;
+    renderTabs();
+    return;
+  }
   if (e.key === 'Enter' && !e.shiftKey) {
     e.preventDefault();
     const v = q.value.trim();
     if (v.length === 0) { api.cancel(); return; }
-    const tpl = TEMPLATES.find(t => t.id === sel.value);
-    const finalText = tpl ? (tpl.prefix.trimEnd() + ' ' + v) : v;
-    api.submit(finalText);
+    const tpl = TEMPLATES[cur];
+    api.submit(tpl ? (tpl.prefix.trimEnd() + ' ' + v) : v);
   }
-});
-sel.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape') { e.preventDefault(); api.cancel(); }
-  if (e.key === 'Enter') { e.preventDefault(); q.focus(); }
 });
 </script>
 </body></html>`;
@@ -2120,7 +2133,7 @@ function openQuickPrompt() {
     quickPromptWindow.focus();
     return;
   }
-  const qpSize = fitToWorkArea(600, 160);
+  const qpSize = fitToWorkArea(612, 168);
   const qpBase = {
     width: qpSize.width, height: qpSize.height,
     frame: false, roundedCorners: windowsRounded, resizable: false, movable: true,
