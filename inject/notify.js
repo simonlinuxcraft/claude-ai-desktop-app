@@ -100,9 +100,16 @@
     return '';
   }
 
+  function report(on) {
+    try {
+      if (window.claudeDesktop && typeof window.claudeDesktop.generating === 'function') window.claudeDesktop.generating(on);
+    } catch (e) {}
+  }
+
   function tick() {
     var stopBtn = findStopButton();
     var generating = !!stopBtn;
+    if (generating !== wasGenerating) report(generating);
     if (wasGenerating && !generating) {
       var now = Date.now();
       if (now - lastFire >= COOLDOWN) {
@@ -119,5 +126,7 @@
 
   // Polling reicht aus — DOM-Mutationen sind haeufig, aber wir wollen nur den
   // Uebergang erkennen. 700ms ist ein Kompromiss aus Latenz und CPU.
+  // Nach einem Neuladen kann der alte Stand noch "antwortet" sein.
+  report(false);
   window._cdNotifyInterval = setInterval(tick, 700);
 })();

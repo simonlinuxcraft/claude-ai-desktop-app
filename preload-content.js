@@ -25,6 +25,7 @@ contextBridge.exposeInMainWorld('claudeDesktop', {
     }
     ipcRenderer.send('claude-response-done', { preview });
   },
+  generating: (on) => ipcRenderer.send('claude-generating', on === true),
   resetVerification: () => ipcRenderer.send('claude-reset-verification'),
   offlineRetry: () => ipcRenderer.send('cd-offline-retry')
 });

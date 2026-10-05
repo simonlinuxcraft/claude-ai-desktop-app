@@ -231,6 +231,7 @@ let appMenuView = null;
 let bugReportWindow = null;
 let minimizeOnClose = false;
 let trayMono = false;
+let officialAppSeen = false;   // Punkt am Knopf zur offiziellen App, bis er einmal geoeffnet wurde
 let roundedCorners = true;   // Einstellung, greift beim naechsten Start
 let windowsRounded = true;   // was die Fenster dieser Sitzung tatsaechlich nutzen
 let matrixRain = true;   // animierter Zeichenregen im Matrix-Theme
@@ -269,6 +270,8 @@ const STATE_SCHEMA = [
   { key: 'oledMode', get: () => themeMode === 'oled' || themeMode === 'midnight' || themeMode === 'matrix', set: () => {} },
   { key: 'oledIntroSeen', optional: true, get: () => oledIntroSeen,
     set: v => { oledIntroSeen = v === true; } },
+  { key: 'officialAppSeen', optional: true, get: () => officialAppSeen,
+    set: v => { officialAppSeen = v === true; } },
   { key: 'minimizeOnClose', get: () => minimizeOnClose,
     set: v => { minimizeOnClose = v === true; } },
   { key: 'trayMono', get: () => trayMono,
@@ -544,7 +547,7 @@ let _tabBarCache = '';
 let _tabBarKey = '';
 
 function getTabBarHTML() {
-  const key = `${currentThemeMode()}:${designStyle}`;
+  const key = `${currentThemeMode()}:${designStyle}:${officialAppSeen}`;
   if (key === _tabBarKey && _tabBarCache) return _tabBarCache;
   _tabBarKey = key;
   const th = theme();
@@ -591,8 +594,9 @@ ${roundFrameCSS('var(--frame-hi)', 'var(--frame-lo)')}
 .menu-btn:hover{background:color-mix(in srgb,var(--ac-from) 12%,transparent);
   border-color:color-mix(in srgb,var(--ac-from) 35%,transparent);color:var(--ac-from);opacity:1}
 .menu-btn svg{width:16px;height:16px}
-#tabs{display:flex;align-items:flex-end;height:100%;flex:1;padding:0 4px;gap:2px;
+#tabs{display:flex;align-items:flex-end;height:100%;flex:0 1 auto;padding:0 0 0 4px;gap:2px;
   overflow-x:auto;min-width:0}
+.spacer{flex:1;align-self:stretch}
 #tabs::-webkit-scrollbar{height:0}
 .tab{display:flex;align-items:center;height:34px;padding:0 14px;border-radius:11px 11px 0 0;
   cursor:pointer;white-space:nowrap;max-width:220px;min-width:60px;gap:8px;
@@ -605,6 +609,13 @@ ${roundFrameCSS('var(--frame-hi)', 'var(--frame-lo)')}
   background:linear-gradient(90deg,var(--ac-from),var(--ac-to));border-radius:2px 2px 0 0;
   box-shadow:0 0 8px color-mix(in srgb,var(--ac-from) 45%,transparent)}
 .tab-title{flex:1;overflow:hidden;text-overflow:ellipsis}
+/* Status: pulsiert, solange Claude antwortet, und bleibt stehen, wenn eine Antwort im Hintergrund fertig ist */
+.tab-dot{display:none;width:7px;height:7px;border-radius:50%;background:var(--ac-from);flex:0 0 auto;margin-right:-1px}
+.tab.busy .tab-dot,.tab.unread .tab-dot{display:block}
+.tab.busy .tab-dot{animation:tabPulse 1.1s ease-in-out infinite}
+.tab.unread .tab-title{color:var(--ac-from)}
+@keyframes tabPulse{50%{opacity:.25;transform:scale(.75)}}
+@media (prefers-reduced-motion:reduce){.tab.busy .tab-dot{animation:none}}
 .tab-close{width:18px;height:18px;border-radius:8px;display:flex;align-items:center;justify-content:center;
   font-size:15px;line-height:1;opacity:0;flex-shrink:0;transition:opacity .1s,background .1s}
 .tab:hover .tab-close{opacity:.5}
@@ -618,24 +629,42 @@ ${roundFrameCSS('var(--frame-hi)', 'var(--frame-lo)')}
 /* Theme-Cycle und Modern/Classic-Pille sind ausgeblendet, seit das Design-Fenster beides
    uebernimmt. Buttons und IPC bleiben verdrahtet: display:none entfernen holt sie zurueck. */
 #theme-toggle,#design-toggle{display:none}
-#new-tab{background:linear-gradient(135deg,var(--ac-from),var(--ac-to));color:#fff;opacity:1;
-  box-shadow:0 2px 8px color-mix(in srgb,var(--ac-from) 35%,transparent)}
-#new-tab:hover{background:linear-gradient(135deg,var(--ac-from),var(--ac-to));color:#fff;
-  border-color:transparent;filter:brightness(1.08)}
+#new-tab{-webkit-app-region:no-drag;flex:0 0 auto;width:26px;height:26px;margin:0 0 4px 6px;border-radius:8px;
+  display:flex;align-items:center;justify-content:center;cursor:pointer;color:#fff;
+  background:linear-gradient(135deg,var(--ac-from),var(--ac-to));
+  box-shadow:0 2px 8px color-mix(in srgb,var(--ac-from) 35%,transparent);transition:filter .15s}
+#new-tab:hover{filter:brightness(1.08)}
+#new-tab svg{width:14px;height:14px}
 .design-pill{padding:2px 11px;height:22px;border-radius:11px;font-size:10px;font-weight:600;
   letter-spacing:.4px;text-transform:uppercase;display:flex;align-items:center;cursor:pointer;
   background:var(--bgh);color:var(--t);transition:all .15s;-webkit-app-region:no-drag;margin-right:4px;
   border:1px solid var(--bd)}
 .design-pill:hover{background:linear-gradient(135deg,var(--ac-from),var(--ac-to));color:#fff;border-color:transparent}
-/* Dauerhafter Verweis auf Anthropics eigene Linux-App. Unter 900px Fensterbreite
-   ausgeblendet, sonst draengt sie die Tabs weg. */
-.official-pill{padding:2px 11px;height:22px;border-radius:11px;font-size:10px;font-weight:600;
-  letter-spacing:.4px;display:flex;align-items:center;gap:5px;cursor:pointer;white-space:nowrap;
-  background:transparent;color:var(--t);transition:all .15s;-webkit-app-region:no-drag;margin-right:4px;
-  border:1px solid var(--bd)}
-.official-pill:hover{background:var(--bgh);color:var(--ta);border-color:var(--ac-from)}
-.official-pill svg{width:11px;height:11px;flex-shrink:0}
-@media (max-width:900px){.official-pill{display:none}}
+/* Dauerhafter Verweis auf Anthropics eigene Linux-App: nur das Symbol, der Text klappt beim
+   Drueberfahren auf. Der Punkt verschwindet, sobald der Hinweis einmal geoeffnet wurde. */
+.official{position:relative;display:flex;align-items:center;height:30px;max-width:30px;border-radius:8px;overflow:hidden;
+  white-space:nowrap;cursor:pointer;color:var(--ta);opacity:.85;-webkit-app-region:no-drag;
+  transition:max-width .25s ease,background .15s,color .15s}
+.official .oi{flex:0 0 30px;display:flex;align-items:center;justify-content:center}
+.official svg{width:16px;height:16px}
+.official .lbl{font-size:11.5px;font-weight:600;padding-right:10px}
+.official:hover{max-width:170px;opacity:1;color:var(--ac-from);background:color-mix(in srgb,var(--ac-from) 12%,transparent)}
+.official::after{content:'';position:absolute;top:6px;left:19px;width:7px;height:7px;border-radius:50%;
+  background:var(--ac-from);box-shadow:0 0 0 2px var(--bg)}
+.official.seen::after{display:none}
+.tool-sep{width:1px;height:18px;background:var(--bd);margin:0 3px}
+/* Update: Ring um ein Download-Symbol waehrend des Downloads, danach ein Knopf zum Neustart */
+#upd{position:relative;width:30px;height:30px;display:flex;align-items:center;justify-content:center;color:var(--ta)}
+#upd svg.ring{position:absolute;inset:3px;width:24px;height:24px;transform:rotate(-90deg)}
+#upd .ring-bg{stroke:var(--bd)}
+#upd .ring-fg{stroke:var(--ac-from);transition:stroke-dashoffset .3s linear}
+#upd .ui-ico{width:12px;height:12px}
+#upd-ready{-webkit-app-region:no-drag;display:flex;align-items:center;gap:6px;height:26px;padding:0 11px 0 9px;margin-right:4px;border-radius:13px;
+  border:none;font-family:inherit;font-size:11.5px;font-weight:600;color:#fff;cursor:pointer;white-space:nowrap;
+  background:linear-gradient(135deg,var(--ac-from),var(--ac-to));transition:filter .15s}
+#upd-ready:hover{filter:brightness(1.08)}
+#upd-ready .ui-ico{width:13px;height:13px}
+#upd[hidden],#upd-ready[hidden]{display:none}
 .win-controls{display:flex;align-items:stretch;margin-left:6px;padding-right:2px;-webkit-app-region:no-drag;height:${TAB_BAR_HEIGHT}px}
 .win-btn{width:38px;height:100%;border:none;background:transparent;color:var(--ta);
   cursor:pointer;display:flex;align-items:center;justify-content:center;
@@ -650,29 +679,24 @@ ${roundFrameCSS('var(--frame-hi)', 'var(--frame-lo)')}
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
 </div>
 <div id="tabs"></div>
+<div id="new-tab" title="${t('Neuer Tab', 'New Tab', 'Nouvel onglet', 'Nuova scheda')} (Ctrl+T)">
+  <svg viewBox="0 0 16 16"><path d="M8 2v12M2 8h12" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" fill="none"/></svg>
+</div>
+<div class="spacer"></div>
 <div class="controls">
   <div class="design-pill" id="design-toggle" title="${t('Design wechseln', 'Toggle design', 'Changer de design', 'Cambia design')}">${DESIGN_STYLE_LABEL[designStyle]}</div>
-  <div class="official-pill" id="official-app" title="${t('Anthropic bietet eine eigene Claude-App für Linux an. Hier steht, wie sie installiert wird.', 'Anthropic ships its own Claude app for Linux. This explains how to install it.', 'Anthropic propose sa propre application Claude pour Linux. Voici comment l’installer.', 'Anthropic distribuisce una propria app Claude per Linux. Qui come installarla.')}">
-    <svg viewBox="0 0 24 24" fill="none"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-    ${t('Offizielle App', 'Official app', 'App officielle', 'App ufficiale')}
+  <div class="official${officialAppSeen ? ' seen' : ''}" id="official-app" title="${t('Anthropic bietet eine eigene Claude-App für Linux an. Hier steht, wie sie installiert wird.', 'Anthropic ships its own Claude app for Linux. This explains how to install it.', 'Anthropic propose sa propre application Claude pour Linux. Voici comment l’installer.', 'Anthropic distribuisce una propria app Claude per Linux. Qui come installarla.')}">
+    <span class="oi">${uiIcon('package', 16)}</span><span class="lbl">${t('Offizielle App', 'Official app', 'App officielle', 'App ufficiale')}</span>
   </div>
-  <div class="ctrl-btn" id="export-btn" title="${t('Konversation als Markdown exportieren', 'Export conversation as Markdown', 'Exporter la conversation en Markdown', 'Esporta la conversazione in Markdown')}">
-    <svg viewBox="0 0 24 24" fill="none"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-  </div>
-  <div class="ctrl-btn" id="bug-report" title="${(bugReportStrings[sysLang] || bugReportStrings.en).title}">
-    <svg viewBox="0 0 24 24" fill="none"><path d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-  </div>
-  <div class="ctrl-btn" id="reset-verify" title="${t('claude.ai-Verifizierung zurücksetzen (bei hängender Sicherheitsprüfung)', 'Reset claude.ai verification (when the security check is stuck)', 'Réinitialiser la vérification claude.ai (si la vérification est bloquée)', 'Reimposta la verifica claude.ai (se il controllo è bloccato)')}">
-    <svg viewBox="0 0 24 24" fill="none"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-  </div>
+  <span class="tool-sep"></span>
+  <div class="ctrl-btn" id="export-btn" title="${t('Konversation als Markdown exportieren', 'Export conversation as Markdown', 'Exporter la conversation en Markdown', 'Esporta la conversazione in Markdown')}">${uiIcon('export', 16)}</div>
+  <div class="ctrl-btn" id="bug-report" title="${(bugReportStrings[sysLang] || bugReportStrings.en).title}">${uiIcon('bug', 16)}</div>
+  <div class="ctrl-btn" id="reset-verify" title="${t('claude.ai-Verifizierung zurücksetzen (bei hängender Sicherheitsprüfung)', 'Reset claude.ai verification (when the security check is stuck)', 'Réinitialiser la vérification claude.ai (si la vérification est bloquée)', 'Reimposta la verifica claude.ai (se il controllo è bloccato)')}">${uiIcon('shieldReset', 16)}</div>
   <div class="ctrl-btn" id="theme-toggle" title="${t('Theme wechseln', 'Toggle theme', 'Changer de thème', 'Cambia tema')}">
     <svg id="theme-icon-dark" viewBox="0 0 24 24"${currentThemeMode() === 'dark' ? '' : ' style="display:none"'}><path d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>
     <svg id="theme-icon-light" viewBox="0 0 24 24"${currentThemeMode() === 'light' ? '' : ' style="display:none"'}><circle cx="12" cy="12" r="5" stroke="currentColor" stroke-width="2" fill="none"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"/></svg>
     <svg id="theme-icon-oled" viewBox="0 0 24 24"${currentThemeMode() === 'oled' ? '' : ' style="display:none"'}><path d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79z" fill="currentColor"/></svg>
     <svg id="theme-icon-midnight" viewBox="0 0 24 24"${currentThemeMode() === 'midnight' ? '' : ' style="display:none"'}><path d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79z" fill="currentColor" opacity=".5"/><path d="M5.6 3l.75 2.05L8.4 5.8l-2.05.75L5.6 8.6l-.75-2.05L2.8 5.8l2.05-.75z" fill="currentColor"/></svg>
-  </div>
-  <div class="ctrl-btn" id="new-tab" title="${t('Neuer Tab', 'New Tab', 'Nouvel onglet', 'Nuova scheda')} (Ctrl+T)">
-    <svg viewBox="0 0 16 16"><path d="M8 2v12M2 8h12" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" fill="none"/></svg>
   </div>
 </div>
 <div class="win-controls">
@@ -724,7 +748,7 @@ window.tabAPI.onTabsUpdate(data=>{
     let el=tabEls[i];
     if(!el){
       el=document.createElement('div');el.className='tab';
-      el.innerHTML='<span class="tab-title"></span><span class="tab-close">&times;</span>';
+      el.innerHTML='<span class="tab-dot"></span><span class="tab-title"></span><span class="tab-close">&times;</span>';
       el.addEventListener('click',e=>{
         const idx=tabEls.indexOf(el);
         if(e.target.classList.contains('tab-close'))window.tabAPI.closeTab(idx);
@@ -732,10 +756,12 @@ window.tabAPI.onTabsUpdate(data=>{
       });
       tabsEl.appendChild(el);tabEls.push(el);
     }
-    const ts=el.firstChild,title=data.tabs[i].title;
-    if(ts.textContent!==title)ts.textContent=title;
+    const tab=data.tabs[i],ts=el.querySelector('.tab-title');
+    if(ts.textContent!==tab.title)ts.textContent=tab.title;
     const a=i===data.activeIndex;
     if(el.classList.contains('active')!==a)el.classList.toggle('active',a);
+    el.classList.toggle('busy',!!tab.busy);
+    el.classList.toggle('unread',!!tab.unread&&!a);
     el.lastChild.style.display=c>1?'':'none';
   }
 });
@@ -806,7 +832,7 @@ window.tabAPI.requestNotifications();
 const sendTabsUpdate = throttle(() => {
   if (!mainWindow || mainWindow.isDestroyed()) return;
   mainWindow.webContents.send('tabs-update', {
-    tabs: tabs.map((tab, i) => ({ title: tab.title || `Tab ${i + 1}` })),
+    tabs: tabs.map((tab, i) => ({ title: tab.title || `Tab ${i + 1}`, busy: !!tab.busy, unread: !!tab.unread })),
     activeIndex: activeTabIndex
   });
 }, 100);
@@ -1304,6 +1330,7 @@ function switchToTab(index) {
   if (prev && alive(prev.view)) prev.view.setVisible(false);
 
   activeTabIndex = index;
+  target.unread = false;
 
   target.view.setVisible(true);
   if (target.pendingUrl) { const u = target.pendingUrl; target.pendingUrl = null; target.view.webContents.loadURL(u); }
@@ -3592,6 +3619,11 @@ function openDesignWindow() {
 const OFFICIAL_APP_DOCS = 'https://code.claude.com/docs/en/desktop-linux';
 
 async function showOfficialAppInfo() {
+  if (!officialAppSeen) {
+    officialAppSeen = true;
+    saveWindowState();
+    if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.executeJavaScript("document.getElementById('official-app').classList.add('seen')").catch(() => {});
+  }
   const res = await showCustomMessageBox({
     title: t('Offizielle Claude-App', 'Official Claude app', 'Application Claude officielle', 'App Claude ufficiale'),
     width: 440,
@@ -3801,7 +3833,7 @@ function getAppMenuItems() {
     { type: 'item', action: 'new-tab', label: t('Neuer Tab', 'New Tab', 'Nouvel onglet', 'Nuova scheda'), accel: 'Ctrl+T', icon: 'plus' },
     { type: 'item', action: 'close-tab', label: t('Tab schließen', 'Close Tab', 'Fermer l’onglet', 'Chiudi scheda'), accel: 'Ctrl+W', icon: 'x' },
     { type: 'sep' },
-    { type: 'item', action: 'export', label: t('Konversation exportieren', 'Export conversation', 'Exporter la conversation', 'Esporta la conversazione'), accel: 'Ctrl+Shift+E', icon: 'download' },
+    { type: 'item', action: 'export', label: t('Konversation exportieren', 'Export conversation', 'Exporter la conversation', 'Esporta la conversazione'), accel: 'Ctrl+Shift+E', icon: 'export' },
     { type: 'item', action: 'reload', label: t('Neu laden', 'Reload', 'Recharger', 'Ricarica'), accel: 'Ctrl+R', icon: 'refresh' },
     { type: 'sep' },
     { type: 'item', action: 'design-open', label: t('App-Theme', 'App Theme', 'Thème de l’app', 'Tema dell’app'), icon: 'palette' },
@@ -3810,9 +3842,9 @@ function getAppMenuItems() {
     { type: 'item', action: 'check-updates', label: t('Nach Updates suchen', 'Check for Updates', 'Rechercher des mises à jour', 'Controlla aggiornamenti'), icon: 'refresh' },
     { type: 'item', action: 'bug-report', label: (bugReportStrings[sysLang] || bugReportStrings.en).title, icon: 'bug' },
     { type: 'item', action: 'copy-diagnostics', label: t('Diagnose-Info kopieren', 'Copy diagnostics info', 'Copier les infos de diagnostic', 'Copia informazioni di diagnostica'), icon: 'info' },
-    { type: 'item', action: 'reset-verification', label: t('claude.ai-Verifizierung zurücksetzen', 'Reset claude.ai verification', 'Réinitialiser la vérification claude.ai', 'Reimposta la verifica claude.ai'), icon: 'shield' },
+    { type: 'item', action: 'reset-verification', label: t('claude.ai-Verifizierung zurücksetzen', 'Reset claude.ai verification', 'Réinitialiser la vérification claude.ai', 'Reimposta la verifica claude.ai'), icon: 'shieldReset' },
     { type: 'sep' },
-    { type: 'item', action: 'official-app', label: t('Offizielle Claude-App', 'Official Claude app', 'Application Claude officielle', 'App Claude ufficiale'), icon: 'download' },
+    { type: 'item', action: 'official-app', label: t('Offizielle Claude-App', 'Official Claude app', 'Application Claude officielle', 'App Claude ufficiale'), icon: 'package' },
     { type: 'item', action: 'support', label: t('App unterstützen', 'Support the app', 'Soutenir l’app', 'Sostieni l’app'), icon: 'heart' },
     { type: 'item', action: 'whats-new', label: t('Was ist neu?', 'What’s New', 'Nouveautés', 'Novità'), icon: 'bolt' },
     { type: 'item', action: 'about', label: t('Über Desktop for Claude', 'About Desktop for Claude', 'À propos de Desktop for Claude', 'Informazioni su Desktop for Claude'), icon: 'info' },
@@ -5174,13 +5206,22 @@ ipcMain.on('settings-close', () => {
   if (settingsWindow && !settingsWindow.isDestroyed()) settingsWindow.close();
 });
 
+// Status-Punkt im Tab: notify.js meldet jeden Wechsel zwischen "antwortet" und "fertig".
+ipcMain.on('claude-generating', (event, on) => {
+  const tab = tabs.find(tb => tb.view && tb.view.webContents === event.sender);
+  if (!tab || !!tab.busy === (on === true)) return;
+  tab.busy = on === true;
+  sendTabsUpdate();
+});
+
 // Background-Notification von der claude.ai-Seite (via preload-content.js)
 ipcMain.on('claude-response-done', (event, payload) => {
-  if (!bgNotificationsEnabled) return;
   // Senderview ermitteln
   const senderWc = event.sender;
   const idx = tabs.findIndex(tb => tb.view && tb.view.webContents === senderWc);
   if (idx < 0) return;
+  if (idx !== activeTabIndex) { tabs[idx].unread = true; sendTabsUpdate(); }
+  if (!bgNotificationsEnabled) return;
   // Nur Notification, wenn Tab nicht aktiv ODER Hauptfenster nicht sichtbar/fokussiert
   const mainVisible = mainWindow && !mainWindow.isDestroyed() && mainWindow.isVisible() && mainWindow.isFocused() && !mainWindow.isMinimized();
   if (idx === activeTabIndex && mainVisible) return;
