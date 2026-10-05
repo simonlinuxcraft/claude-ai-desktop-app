@@ -2,7 +2,7 @@ name: claude-ai-desktop
 # Der Store zeigt title statt name. Der Name bleibt, sonst verliert die Installbasis den
 # Update-Pfad; der angezeigte Titel verweist auf Claude statt sich so zu nennen.
 title: Desktop for Claude (Unofficial)
-version: '1.4.20'
+version: '1.4.21'
 summary: Desktop for Claude, an unofficial Claude AI app with tabs and tray
 description: |
   Desktop for Claude is an unofficial app that runs claude.ai on Linux
@@ -21,16 +21,20 @@ description: |
   the official app does not support, and here in the Snap Store, where there
   is no official package.
 
-  What's new in v1.4.20:
+  What's new in v1.4.21:
 
-  * The theme is in place from the first frame. Cards, surfaces and the
-    logo used to render in claude.ai's own colours for up to two seconds
-    before the theme took over, on slower machines for longer.
-  * Six separate causes behind that, each measured frame by frame: the
-    colour palette is defined a second time on containers inside the
-    page, the theme controller only started once the document was ready,
-    the surface colours waited for a stylesheet scan, and the character
-    rain was missing on a cold start.
+  * The app stays free. A new "Support the app" entry in the menu and a
+    link in the About window explain how to support development with a
+    voluntary contribution on Ko-fi. Nothing about the app changes.
+  * The "Design" menu entry is now called "App Theme", so it is no
+    longer mixed up with Claude Design.
+  * Copied diagnostics and bug reports include the distribution, the
+    desktop environment and the display scale.
+
+  Highlights from v1.4.20:
+
+  * The theme is in place from the first frame instead of claude.ai's
+    own colours showing for up to two seconds.
 
   Highlights from v1.4.18:
 

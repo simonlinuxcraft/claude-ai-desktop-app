@@ -14,6 +14,53 @@ const RELEASE_NOTES_REVISIT = {
 };
 
 const RELEASE_NOTES = {
+  '1.4.21': [
+    {
+      icon: 'heart',
+      title: {
+        de: 'Die App bleibt kostenlos',
+        en: 'The app stays free',
+        fr: 'L’application reste gratuite',
+        it: 'L’app resta gratuita'
+      },
+      text: {
+        de: 'Keine Werbung, keine gesperrten Funktionen, und daran ändert sich nichts. Die App entsteht in meiner Freizeit. Wer möchte, kann die Entwicklungskosten mit einer freiwilligen Zahlung über Ko-fi unterstützen: im Menü unter „App unterstützen“ oder im Fenster „Über“. Danke an alle, die die App nutzen und Fehler melden.',
+        en: 'No ads, no locked features, and that is not changing. I build the app in my spare time. If you like, you can support the development costs with a voluntary payment on Ko-fi: in the menu under “Support the app” or in the About window. Thanks to everyone who uses it and reports bugs.',
+        fr: 'Pas de publicité, aucune fonction bloquée, et cela ne changera pas. Je développe l’application sur mon temps libre. Si vous le souhaitez, vous pouvez soutenir les frais de développement par un paiement volontaire sur Ko-fi : dans le menu sous « Soutenir l’app » ou dans la fenêtre « À propos ». Merci à toutes celles et ceux qui l’utilisent et signalent des bugs.',
+        it: 'Niente pubblicità, nessuna funzione bloccata, e non cambierà. Sviluppo l’app nel tempo libero. Se vuoi, puoi sostenere i costi di sviluppo con un pagamento volontario su Ko-fi: nel menu alla voce «Sostieni l’app» o nella finestra «Informazioni». Grazie a chi la usa e segnala i bug.'
+      }
+    },
+    {
+      icon: 'palette',
+      title: {
+        de: '„Design“ heißt jetzt „App-Theme“',
+        en: '“Design” is now called “App Theme”',
+        fr: '« Design » s’appelle désormais « Thème de l’app »',
+        it: '«Design» ora si chiama «Tema dell’app»'
+      },
+      text: {
+        de: 'Der Menüeintrag für Farbthema und Stil wurde leicht mit Claude Design verwechselt. Er heißt jetzt „App-Theme“, das Fenster dahinter ist dasselbe.',
+        en: 'The menu entry for colour theme and style was easy to mistake for Claude Design. It is now called “App Theme”, the window behind it is the same.',
+        fr: 'L’entrée de menu pour le thème et le style se confondait facilement avec Claude Design. Elle s’appelle désormais « Thème de l’app », la fenêtre reste la même.',
+        it: 'La voce di menu per tema e stile si confondeva facilmente con Claude Design. Ora si chiama «Tema dell’app», la finestra è la stessa.'
+      }
+    },
+    {
+      icon: 'info',
+      title: {
+        de: 'Genauere Fehlerberichte',
+        en: 'More precise bug reports',
+        fr: 'Rapports de bug plus précis',
+        it: 'Segnalazioni più precise'
+      },
+      text: {
+        de: 'Die kopierten Diagnose-Infos und der Fehlerbericht nennen jetzt auch Distribution, Desktop-Umgebung und die Skalierung der Monitore. Damit lassen sich Darstellungsfehler wie unscharfer Text bei 125 % schneller zuordnen.',
+        en: 'Copied diagnostics and bug reports now also name the distribution, the desktop environment and the display scale. That makes rendering issues such as soft text at 125% easier to pin down.',
+        fr: 'Les infos de diagnostic copiées et le rapport de bug indiquent désormais aussi la distribution, l’environnement de bureau et la mise à l’échelle des écrans. Les problèmes d’affichage, comme un texte flou à 125 %, sont ainsi plus faciles à cerner.',
+        it: 'Le informazioni di diagnostica copiate e la segnalazione di bug indicano ora anche la distribuzione, l’ambiente desktop e il ridimensionamento degli schermi. Così i problemi di visualizzazione, come il testo sfocato al 125%, si individuano più in fretta.'
+      }
+    }
+  ],
   '1.4.20': [
     {
       icon: 'palette',

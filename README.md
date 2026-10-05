@@ -23,7 +23,7 @@
 
 ---
 
-> **v1.4.20** - Theme Fixes. The theme is in place from the first frame. Cards, surfaces and the spark logo used to render in claude.ai's own colours for up to two seconds before the theme took over, on slower machines for longer. Six separate causes behind that, each measured frame by frame with the processor throttled sixfold: claude.ai defines its colour palette a second time on containers inside the page and not only on the root element, the theme controller only started once the document was ready and queued behind the page's own startup work, the 190 surface colours had to wait for a scan of claude.ai's stylesheets and are now precomputed, and the character rain was missing on a cold start because the flag that switches off the static pattern was set before the animated layer could exist.
+> **v1.4.21** - Support and App Theme. The app stays free; a new "Support the app" entry in the menu and a link in the About window lead to a voluntary contribution on [Ko-fi](https://ko-fi.com/simonlinuxcraft), and nothing about the app changes either way. The "Design" menu entry and window are now called "App Theme", since users read "Design" as Claude Design. Copied diagnostics and bug reports now include the distribution, the desktop environment and the display scale, so a report can be matched to a setup.
 
 ---
 
@@ -106,7 +106,7 @@ cat > ~/.local/share/applications/claude-desktop.desktop << EOF
 [Desktop Entry]
 Name=Desktop for Claude
 Comment=Unofficial desktop app for Claude AI
-Exec=/path/to/Claude-Desktop-1.4.20.AppImage --no-sandbox
+Exec=/path/to/Claude-Desktop-1.4.21.AppImage --no-sandbox
 Icon=/path/to/icon.png
 Type=Application
 Categories=Utility;

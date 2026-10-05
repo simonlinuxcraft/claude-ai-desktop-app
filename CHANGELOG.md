@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.4.21] - 2026-10-05 - Support and App Theme
+
+### Added
+
+- A "Support the app" entry in the app menu opens a dialog that explains how to support
+  development with a voluntary contribution on Ko-fi. The app stays free, nothing is locked
+  behind it. The About window links to the same page, as do the README, `.github/FUNDING.yml`
+  and the snap's `donation` field.
+- Copied diagnostics and bug reports include the distribution, the desktop environment and the
+  size and scale of each display. The snap cannot read the host's os-release, so there the
+  kernel's `/proc/version` names the distribution through its build strings.
+
+### Changed
+
+- The "Design" menu entry, window title and heading are now "App Theme". Users read "Design" as
+  Claude Design and did not look there for the colour themes.
+
+---
+
 ## [1.4.20] - 2026-09-26 - Theme Fixes
 
 ### Fixed
