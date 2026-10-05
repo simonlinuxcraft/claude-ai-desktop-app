@@ -9,6 +9,10 @@ const { contextBridge, ipcRenderer } = require('electron');
 // waehrend IPC und Timer normal weiterlaufen.
 // Zwei Antworten: 'alive' sofort (der Renderer lebt), 'raf' nur wenn auch Frames laufen.
 ipcRenderer.on('cd-frame-ping', () => {
+  // Weiss der Renderer selbst, dass er unsichtbar ist (minimiert, unter Wayland vom Compositor
+  // schlafen gelegt), fehlen Frames zu Recht. Keine Antwort, sonst repariert der Watchdog eine
+  // gesunde Flaeche: Umhaengen und Groessenwechsel ohne Sichtbarkeit lassen sie leer zurueck.
+  if (document.visibilityState === 'hidden') return;
   ipcRenderer.send('cd-frame-pong', 'alive');
   requestAnimationFrame(() => ipcRenderer.send('cd-frame-pong', 'raf'));
 });

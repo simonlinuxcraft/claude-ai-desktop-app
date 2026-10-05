@@ -6,8 +6,11 @@
 // 3. setBackgroundThrottling(false) pinnt das Widget auf "nie versteckt". Das ist der Grund,
 //    warum die App das Flag zur Laufzeit nicht mehr anfasst. Schlaegt dieser Test irgendwann
 //    fehl, hat Electron das Verhalten geaendert und die Begruendung gehoert geprueft.
-// 4. Beide Reparaturwege (Sichtbarkeits-Toggle, View neu anhaengen) bringen Frames zurueck,
-//    und das Neuanhaengen laedt die Seite nicht neu.
+// 4. Beide Reparaturwege (Sichtbarkeits-Toggle, View neu nach oben haengen) bringen Frames
+//    zurueck, und das Neuanhaengen laedt die Seite nicht neu.
+// 5. Eine versteckte View meldet sich nicht, der Watchdog repariert also keine gewollte Pause.
+// 6. Abhaengen plus Anhaengen laesst die View unter Linux auf "hidden" stehen (Electron 44,
+//    electron/electron#54626). Schlaegt das fehl, ist der Bug behoben.
 //
 // Laufen mit: env -u ELECTRON_RUN_AS_NODE ./node_modules/electron/dist/electron test/frame-watchdog.test.js --no-sandbox
 const { app, BrowserWindow, WebContentsView, ipcMain } = require('electron');
@@ -41,21 +44,34 @@ app.whenReady().then(async () => {
   // Ohne Frames muss die rAF-Antwort ausbleiben, die Sofort-Antwort aber kommen.
   view.setVisible(false);
   await sleep(500);
-  assert.deepStrictEqual(await ping(view, 1000), { alive: true, raf: false }, 'versteckte View: lebendig, aber keine Frames');
+  assert.deepStrictEqual(await ping(view, 1000), { alive: false, raf: false }, 'versteckte View meldet sich nicht, fehlende Frames sind gewollt');
 
   // Reparatur 1: Sichtbarkeits-Toggle wie in repaintActiveView.
   view.setVisible(true);
   await sleep(500);
   assert.strictEqual((await ping(view, 1000)).raf, true, 'nach dem Repaint muss die View wieder Frames liefern');
 
-  // Reparatur 2: abhaengen und neu anhaengen, ohne die Seite zu verlieren.
-  win.contentView.removeChildView(view);
+  // Reparatur 2: nach oben haengen wie in reattachActiveView, ohne die Seite zu verlieren.
   win.contentView.addChildView(view);
   view.setVisible(true);
   view.setBounds({ x: 0, y: 0, width: 400, height: 300 });
   await sleep(800);
   assert.strictEqual((await ping(view, 1000)).raf, true, 'nach dem Neuanhaengen muss die View Frames liefern');
   assert.strictEqual(await view.webContents.executeJavaScript('window.__mark'), 1, 'Neuanhaengen darf die Seite nicht neu laden');
+
+  // Der Grund, warum reattachActiveView nicht abhaengt. Eigene View, weil das Flag weiter unten
+  // das Verstecken abschaltet.
+  const view2 = new WebContentsView({ webPreferences: { sandbox: true, contextIsolation: true } });
+  win.contentView.addChildView(view2);
+  view2.setBounds({ x: 0, y: 0, width: 200, height: 150 });
+  await view2.webContents.loadURL('data:text/html,<body>zwei</body>');
+  await sleep(800);
+  win.contentView.removeChildView(view2);
+  win.contentView.addChildView(view2);
+  await sleep(1000);
+  assert.strictEqual(await view2.webContents.executeJavaScript('document.visibilityState'), 'hidden', 'electron#54626: ab- und wieder angehaengte View bleibt hidden');
+  win.contentView.removeChildView(view2);
+  view2.webContents.close();
 
   // Der Grund fuer den Verzicht auf setBackgroundThrottling zur Laufzeit.
   view.webContents.setBackgroundThrottling(false);
@@ -64,6 +80,6 @@ app.whenReady().then(async () => {
   await sleep(600);
   assert.strictEqual((await ping(view, 1000)).raf, true, 'gepinntes Flag laesst die versteckte View weiterrendern (Visibility-Desync)');
 
-  console.log('ok: Heartbeat, Drosselung ohne Flag, beide Reparaturwege, Desync-Nachweis');
+  console.log('ok: Heartbeat, Drosselung ohne Flag, beide Reparaturwege, electron#54626, Desync-Nachweis');
   app.exit(0);
 }).catch((e) => { console.error('FAIL', e); app.exit(1); });

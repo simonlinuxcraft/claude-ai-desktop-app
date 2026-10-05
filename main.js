@@ -1235,13 +1235,14 @@ function repaintActiveView() {
   } catch {}
 }
 
-// Letzte Eskalationsstufe: View abhaengen und neu anhaengen. Erzwingt eine frische
-// Layer/Surface, ohne die Seite neu zu laden - der Chat-Zustand bleibt erhalten.
+// Letzte Eskalationsstufe: View neu nach oben haengen, ohne die Seite neu zu laden.
+// Nur addChildView, kein removeChildView davor: Electron 44 laesst eine abgehaengte und wieder
+// angehaengte View unter Linux dauerhaft auf "hidden" stehen (electron/electron#54626, erst in 45
+// behoben). Genau das liess die claude.ai-Flaeche leer zurueck.
 function reattachActiveView() {
   const a = tabs[activeTabIndex];
   if (!a || !alive(a.view) || !mainWindow || mainWindow.isDestroyed()) return;
   try {
-    mainWindow.contentView.removeChildView(a.view);
     mainWindow.contentView.addChildView(a.view);
     a.view.setVisible(true);
     lastViewBounds = '';
@@ -1280,8 +1281,11 @@ function startSurfaceWatchdog() {
   });
   setInterval(() => {
     const a = tabs[activeTabIndex];
+    // Nur bei Fokus: unter Wayland bekommt ein verdecktes Fenster keine Frames, ohne dass die Seite
+    // davon weiss, und der Watchdog hielte das fuer eine haengende Flaeche. Die Rueckkehr zur App
+    // gibt dem Fenster den Fokus, eine wirklich leere Flaeche faellt also weiter auf.
     const watchable = mainWindow && !mainWindow.isDestroyed() && mainWindow.isVisible()
-      && !mainWindow.isMinimized() && a && alive(a.view) && a.view.getVisible();
+      && !mainWindow.isMinimized() && mainWindow.isFocused() && a && alive(a.view) && a.view.getVisible();
     if (!watchable) { frameRaf = true; frameMisses = 0; repairStep = 0; return; }
     if (frameRaf || !frameAlive) { frameMisses = 0; repairStep = 0; }
     else frameMisses++;
