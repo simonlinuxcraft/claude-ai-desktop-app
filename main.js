@@ -2509,28 +2509,27 @@ function getSettingsHTML() {
   const th = subTheme();
   const ac = accent();
   const i18n = {
-    title: t('Einstellungen', 'Settings', 'Param\u00e8tres', 'Impostazioni'),
-    subtitle: t('Hintergrund, Hotkeys, Templates', 'Background, hotkeys, templates', 'Arri\u00e8re-plan, raccourcis, mod\u00e8les', 'Background, scorciatoie, modelli'),
     secBackground: t('Hintergrund', 'Background', 'Arri\u00e8re-plan', 'Background'),
     secMicrophone: t('Mikrofon', 'Microphone', 'Microphone', 'Microfono'),
     secHotkeys: t('Globale Hotkeys', 'Global hotkeys', 'Raccourcis globaux', 'Scorciatoie globali'),
     secTemplates: t('Prompt-Templates', 'Prompt templates', 'Mod\u00e8les de prompt', 'Modelli di prompt'),
     minimizeLabel: t('Beim Schlie\u00dfen in den Hintergrund minimieren', 'Minimize to tray on close', 'R\u00e9duire dans la zone de notification \u00e0 la fermeture', 'Riduci nell\'area di notifica alla chiusura'),
-    minimizeHint: t('Claude bleibt im Hintergrund erreichbar \u2013 \u00fcber das Tray-Symbol oder die Hotkeys unten.', 'Claude stays reachable in the background \u2013 via the tray icon or the hotkeys below.', 'Claude reste accessible en arri\u00e8re-plan, via l\'ic\u00f4ne de la zone de notification ou les raccourcis ci-dessous.', 'Claude resta accessibile in background, tramite l\'icona nell\'area di notifica o le scorciatoie qui sotto.'),
+    minimizeHint: t('Claude bleibt \u00fcber das Tray-Symbol und die Hotkeys erreichbar.', 'Claude stays reachable through the tray icon and the hotkeys.', 'Claude reste accessible en arri\u00e8re-plan, via l\'ic\u00f4ne de la zone de notification ou les raccourcis ci-dessous.', 'Claude resta accessibile in background, tramite l\'icona nell\'area di notifica o le scorciatoie qui sotto.'),
     autostartLabel: t('Beim Anmelden automatisch starten', 'Start automatically at login', 'Lancer automatiquement \u00e0 la connexion', 'Avvia automaticamente all\'accesso'),
     autostartHint: t('Claude startet beim Hochfahren des Systems automatisch.', 'Claude launches automatically when the system starts.', 'Claude se lance automatiquement au d\u00e9marrage du syst\u00e8me.', 'Claude si avvia automaticamente all\'avvio del sistema.'),
     autostartFailed: t('Autostart konnte nicht aktiviert werden.', 'Could not enable autostart.', 'Impossible d\'activer le d\u00e9marrage automatique.', 'Impossibile attivare l\'avvio automatico.'),
     bgNotifLabel: t('Antwort-Benachrichtigung f\u00fcr Hintergrund-Tabs', 'Notify when a background tab finishes a response', 'Notification de r\u00e9ponse pour les onglets en arri\u00e8re-plan', 'Notifica di risposta per le schede in background'),
     bgNotifHint: t('Native Notification, sobald Claude in einem nicht aktiven Tab fertig geantwortet hat.', 'Native notification once Claude finishes a response in a tab you\u2019re not currently looking at.', 'Notification native d\u00e8s que Claude a termin\u00e9 sa r\u00e9ponse dans un onglet que vous ne regardez pas.', 'Notifica nativa non appena Claude termina una risposta in una scheda che non stai guardando.'),
     micLabel: t('Mikrofon-Zugriff erlauben', 'Allow microphone access', 'Autoriser l\'acc\u00e8s au microphone', 'Consenti l\'accesso al microfono'),
-    micHint: t('Erlaubt Claude, dein Mikrofon f\u00fcr Spracheingaben zu nutzen. Beim ersten Klick auf das Mikrofon-Symbol fragt die App einmal nach \u2013 die Auswahl kannst du hier jederzeit \u00e4ndern.', 'Lets Claude use your microphone for voice input. The app asks once the first time you click the microphone icon \u2013 you can change your choice here at any time.', 'Permet \u00e0 Claude d\'utiliser votre microphone pour la saisie vocale. Au premier clic sur l\'ic\u00f4ne du microphone, l\'application demande une fois, vous pouvez modifier ce choix ici \u00e0 tout moment.', 'Permette a Claude di usare il microfono per l\'input vocale. Al primo clic sull\'icona del microfono l\'app chiede una volta, puoi modificare questa scelta qui in qualsiasi momento.'),
-    micSnapHint: t('Auf Snap muss das Mikrofon einmalig freigegeben werden. Entweder im Snap-Store \u00f6ffnen und \u201eAudio Record" aktivieren \u2013 oder den Befehl unten im Terminal ausf\u00fchren.', 'On Snap the microphone must be enabled once. Either open the Snap Store and enable \u201cAudio Record\u201d \u2013 or run the command below in a terminal.', 'Sur Snap, le microphone doit \u00eatre autoris\u00e9 une fois. Ouvrez le Snap Store et activez \u00ab Audio Record \u00bb, ou ex\u00e9cutez la commande ci-dessous dans un terminal.', 'Su Snap il microfono deve essere autorizzato una volta. Apri lo Snap Store e attiva "Audio Record", oppure esegui il comando qui sotto in un terminale.'),
+    micHint: t('Erlaubt Claude, dein Mikrofon f\u00fcr Spracheingaben zu nutzen. Beim ersten Klick auf das Mikrofon-Symbol fragt die App einmal nach, \u00e4ndern kannst du das hier jederzeit.', 'Lets Claude use your microphone for voice input. The app asks once the first time you click the microphone icon, you can change it here at any time.', 'Permet \u00e0 Claude d\'utiliser votre microphone pour la saisie vocale. Au premier clic sur l\'ic\u00f4ne du microphone, l\'application demande une fois, vous pouvez modifier ce choix ici \u00e0 tout moment.', 'Permette a Claude di usare il microfono per l\'input vocale. Al primo clic sull\'icona del microfono l\'app chiede una volta, puoi modificare questa scelta qui in qualsiasi momento.'),
+    micSnapHint: t('Auf Snap muss das Mikrofon einmalig freigegeben werden. Entweder im Snap-Store \u00f6ffnen und \u201eAudio Record\u201c aktivieren oder den Befehl unten im Terminal ausf\u00fchren.', 'On Snap the microphone must be enabled once. Either open the Snap Store and enable \u201cAudio Record\u201d or run the command below in a terminal.', 'Sur Snap, le microphone doit \u00eatre autoris\u00e9 une fois. Ouvrez le Snap Store et activez \u00ab Audio Record \u00bb, ou ex\u00e9cutez la commande ci-dessous dans un terminal.', 'Su Snap il microfono deve essere autorizzato una volta. Apri lo Snap Store e attiva "Audio Record", oppure esegui il comando qui sotto in un terminale.'),
     micSnapButton: t('Im Snap-Store \u00f6ffnen', 'Open in Snap Store', 'Ouvrir dans le Snap Store', 'Apri nello Snap Store'),
     micSnapCmdLabel: t('Oder im Terminal:', 'Or in a terminal:', 'Ou dans un terminal :', 'Oppure in un terminale:'),
     micSnapCmdCopy: t('Befehl kopieren', 'Copy command', 'Copier la commande', 'Copia comando'),
     micSnapCmdCopied: t('Kopiert \u2713', 'Copied \u2713', 'Copi\u00e9 \u2713', 'Copiato \u2713'),
     micResetLabel: t('Erneut fragen beim n\u00e4chsten Mikrofon-Klick', 'Ask again on next microphone click', 'Redemander au prochain clic sur le microphone', 'Chiedi di nuovo al prossimo clic sul microfono'),
-    micResetDone: t('Erledigt \u2013 Dialog erscheint beim n\u00e4chsten Mikrofon-Klick wieder.', 'Done \u2013 dialog will appear again on next microphone click.', 'Termin\u00e9, le dialogue r\u00e9appara\u00eetra au prochain clic sur le microphone.', 'Fatto, la finestra riapparir\u00e0 al prossimo clic sul microfono.'),
+    micResetDone: t('Erledigt. Der Dialog erscheint beim n\u00e4chsten Mikrofon-Klick wieder.', 'Done. The dialog appears again on the next microphone click.', 'Termin\u00e9, le dialogue r\u00e9appara\u00eetra au prochain clic sur le microphone.', 'Fatto, la finestra riapparir\u00e0 al prossimo clic sul microfono.'),
+    micResetButton: t('Zur\u00fccksetzen', 'Reset', 'R\u00e9initialiser', 'Reimposta'),
     micResetHint: t('Verwirft die letzte Auswahl, sodass der Hinweis-Dialog beim n\u00e4chsten Mikrofon-Zugriff wieder erscheint.', 'Discards the last choice so the consent dialog appears again on the next microphone request.', 'Annule le dernier choix afin que le dialogue de consentement r\u00e9apparaisse lors du prochain acc\u00e8s au microphone.', 'Annulla l\'ultima scelta in modo che la finestra di consenso riappaia al prossimo accesso al microfono.'),
     micSnapStatusConnected: t('Snap: Audio-Record verbunden', 'Snap: audio-record connected', 'Snap : Audio Record connect\u00e9', 'Snap: Audio Record connesso'),
     micSnapStatusDisconnected: t('Snap: Audio-Record nicht verbunden', 'Snap: audio-record not connected', 'Snap : Audio Record non connect\u00e9', 'Snap: Audio Record non connesso'),
@@ -2538,7 +2537,8 @@ function getSettingsHTML() {
     micToggleNeedsConsent: t('Bitte zuerst die Snap-Berechtigung freigeben.', 'Please enable the Snap permission first.', 'Veuillez d\'abord activer l\'autorisation Snap.', 'Attiva prima l\'autorizzazione Snap.'),
     hotkeyQp: t('Neuer Chat (Quick-Prompt)', 'New chat (Quick-Prompt)', 'Nouvelle conversation (Quick-Prompt)', 'Nuova chat (Quick-Prompt)'),
     hotkeyClip: t('Zwischenablage als Prompt einf\u00fcgen', 'Send clipboard text as new prompt', 'Envoyer le presse-papiers comme nouveau prompt', 'Invia gli appunti come nuovo prompt'),
-    press: t('Klick hier und dr\u00fccke eine Tastenkombination', 'Click here and press a key combination', 'Cliquez ici et appuyez sur une combinaison de touches', 'Fai clic qui e premi una combinazione di tasti'),
+    press: t('Kombination festlegen', 'Set shortcut', 'D\u00e9finir un raccourci', 'Imposta scorciatoia'),
+    ctrlKey: t('Strg', 'Ctrl', 'Ctrl', 'Ctrl'),
     pressing: t('Dr\u00fccke die gew\u00fcnschte Tastenkombination\u2026', 'Press your key combination\u2026', 'Appuyez sur la combinaison souhait\u00e9e\u2026', 'Premi la combinazione desiderata\u2026'),
     clear: t('L\u00f6schen', 'Clear', 'Effacer', 'Cancella'),
     close: t('Schlie\u00dfen', 'Close', 'Fermer', 'Chiudi'),
@@ -2552,7 +2552,7 @@ function getSettingsHTML() {
     waylandPortalHint: t('Hinweis: Unter Wayland vergibt das System globale Hotkeys. GNOME ab Version 48 und KDE fragen beim ersten Mal nach, ob die App die Tastenkombination nutzen darf, danach lässt sie sich in den Systemeinstellungen ändern. Ältere Desktops kennen das nicht, dort greift der Hotkey nicht.', 'Note: On Wayland the system hands out global hotkeys. GNOME 48 or newer and KDE ask once whether the app may use the shortcut, after that you can change it in the system settings. Older desktops lack this, the hotkey does not work there.', 'Remarque : sous Wayland, c\'est le système qui attribue les raccourcis globaux. GNOME 48 ou plus récent et KDE demandent une fois si l\'application peut utiliser le raccourci, ensuite il se modifie dans les paramètres du système. Les bureaux plus anciens ne le permettent pas, le raccourci n\'y fonctionne pas.', 'Nota: su Wayland è il sistema ad assegnare le scorciatoie globali. GNOME 48 o successivo e KDE chiedono una volta se l\'app può usare la scorciatoia, poi si può modificare nelle impostazioni di sistema. I desktop più vecchi non lo supportano, lì la scorciatoia non funziona.'),
     waylandHint: t('Hinweis: Auf Wayland werden globale Hotkeys vom Compositor begrenzt und können je nach Desktop (GNOME/KDE) nicht systemweit greifen. Wenn die Registrierung fehlschlägt, weicht die App still aus. Du kannst den Quick-Prompt dann nur bei aktivem Fenster auslösen.', 'Note: On Wayland, global hotkeys are gated by the compositor and may not work system-wide depending on the desktop (GNOME/KDE). If registration fails, the app silently skips it. The Quick-Prompt is then only reachable while the window is focused.', 'Remarque : sous Wayland, les raccourcis globaux sont limités par le compositeur et peuvent ne pas fonctionner au niveau du système selon le bureau (GNOME/KDE). Si l\'enregistrement échoue, l\'application l\'ignore silencieusement, le Quick-Prompt n\'est alors accessible que lorsque la fenêtre est active.', 'Nota: su Wayland le scorciatoie globali sono limitate dal compositor e potrebbero non funzionare a livello di sistema a seconda del desktop (GNOME/KDE). Se la registrazione fallisce, l\'app la ignora silenziosamente, il Quick-Prompt è quindi accessibile solo quando la finestra è attiva.'),
     tplEmpty: t('Noch keine Templates. F\u00fcgst du eines hinzu, erscheint es im Quick-Prompt-Fenster als Auswahl.', 'No templates yet. Once added, they appear as a picker in the Quick-Prompt window.', 'Aucun mod\u00e8le pour l\'instant. Lorsque vous en ajoutez un, il appara\u00eet comme choix dans la fen\u00eatre Quick-Prompt.', 'Ancora nessun modello. Quando ne aggiungi uno, appare come scelta nella finestra Quick-Prompt.'),
-    tplName: t('Name (z.B. \u201e\u00dcbersetze")', 'Name (e.g. \u201eTranslate")', 'Nom (par ex. \u00ab Traduire \u00bb)', 'Nome (es. "Traduci")'),
+    tplName: t('Name (z.B. \u201e\u00dcbersetze\u201c)', 'Name (e.g. \u201cTranslate\u201d)', 'Nom (par ex. \u00ab Traduire \u00bb)', 'Nome (es. \u201cTraduci\u201d)'),
     tplPrefix: t('Prefix-Text (wird vor deinem Input eingef\u00fcgt)', 'Prefix text (prepended to your input)', 'Texte de pr\u00e9fixe (ajout\u00e9 avant votre saisie)', 'Testo prefisso (inserito prima del tuo input)'),
     tplAdd: t('Hinzuf\u00fcgen', 'Add', 'Ajouter', 'Aggiungi'),
     tplDelete: t('L\u00f6schen', 'Delete', 'Supprimer', 'Elimina'),
@@ -2564,140 +2564,132 @@ function getSettingsHTML() {
 <style>
 *{box-sizing:border-box}
 html,body{height:100%;margin:0}
-body{padding:0;background:${th.bg};color:${th.textActive};font-family:system-ui,-apple-system,sans-serif;font-size:13.5px;user-select:none;display:flex;flex-direction:column}
-.head{padding:18px 22px 12px;border-bottom:1px solid ${th.border}}
-h1{font-size:16px;margin:0 0 2px;font-weight:600}
-.sub{color:${th.text};font-size:12px}
-.scroll{flex:1;overflow-y:auto;padding:14px 22px 4px;column-count:2;column-gap:26px}
-/* Die Abschnitte sind unabhaengige Bloecke, deshalb Multi-Column: der Browser
-   balanciert sie selbst auf zwei Spalten und das Fenster wird breit statt lang.
-   break-inside haelt einen Abschnitt zusammen. */
-.section{break-inside:avoid}
-@media (max-width:560px){.scroll{column-count:1}}
+body{background:${th.bg};color:${th.textActive};font-family:system-ui,-apple-system,sans-serif;font-size:13.5px;user-select:none;display:flex;flex-direction:column}
+/* Gruppierte Listen wie in den GNOME-Einstellungen: links Titel und Beschreibung, rechts die
+   Bedienung. Zwei Spalten, im schmalen Fenster eine. */
+.scroll{flex:1;overflow-y:auto;padding:18px 22px 12px;display:grid;grid-template-columns:1fr 1fr;gap:22px;align-items:start}
+@media (max-width:600px){.scroll{grid-template-columns:1fr}}
 .scroll::-webkit-scrollbar{width:8px}
 .scroll::-webkit-scrollbar-thumb{background:${th.border};border-radius:4px}
-.section{margin-bottom:18px}
-.section h2{font-size:11px;font-weight:600;letter-spacing:.6px;text-transform:uppercase;color:${th.text};margin:0 0 10px}
-.row{margin:10px 0}
-label{display:block;margin-bottom:5px;font-weight:500}
-.chk{display:flex;align-items:flex-start;gap:8px;cursor:pointer;font-weight:500}
-.chk input{margin-top:2px;accent-color:${ac.from};cursor:pointer}
-.hint{color:${th.text};font-size:11.5px;margin-top:3px;margin-left:24px;line-height:1.5}
-.hotkey-row{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;margin:6px 0}
-.hotkey-row .lab{font-size:12px;color:${th.text};grid-column:1/-1;margin-bottom:-2px;font-weight:500}
-.capture{padding:8px 12px;background:${th.bgHover};border:1px solid ${th.border};border-radius:6px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;cursor:pointer;color:${th.textActive};outline:none;min-height:34px;display:flex;align-items:center}
-.capture.listening{border-color:${ac.from};background:${th.bgActive}}
-button{background:linear-gradient(135deg,${ac.from},${ac.to});color:#fff;border:none;padding:7px 14px;border-radius:6px;cursor:pointer;font-size:12.5px;font-weight:500;font-family:inherit;transition:filter .15s ease,border-color .15s ease,color .15s ease}
-button.secondary{background:${th.bgHover};color:${th.textActive};border:1px solid ${th.border}}
-button.danger{background:transparent;color:${th.text};border:1px solid ${th.border};padding:5px 10px;font-size:11.5px}
-button.danger:hover{color:#e05e3e;border-color:#e05e3e}
+.col{display:flex;flex-direction:column;gap:20px;min-width:0}
+h2{font-size:13px;font-weight:600;margin:0 0 8px 2px;color:${th.textActive}}
+.group{background:${th.bgHover};border:1px solid ${th.border};border-radius:10px;overflow:hidden}
+.item{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:11px 14px}
+label.item{cursor:pointer}
+.group > .item:not(:first-child){border-top:1px solid ${th.border}}
+.txt{display:flex;flex-direction:column;gap:3px;min-width:0;flex:1}
+.ico{flex:0 0 auto;width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;background:${th.bg};border:1px solid ${th.border};color:${ac.from}}
+.ttl{font-weight:500;line-height:1.3}
+.desc{color:${th.text};font-size:12px;line-height:1.45}
+.switch{appearance:none;-webkit-appearance:none;flex:0 0 auto;width:38px;height:22px;margin:0;border-radius:11px;background:${th.border};position:relative;cursor:pointer;transition:background .15s ease}
+.switch::after{content:'';position:absolute;top:3px;left:3px;width:16px;height:16px;border-radius:50%;background:${th.text};transition:transform .15s ease,background .15s ease}
+.switch:checked{background:linear-gradient(135deg,${ac.from},${ac.to})}
+.switch:checked::after{transform:translateX(16px);background:#fff}
+.switch:disabled{opacity:.5;cursor:default}
+.hk{display:grid;grid-template-columns:auto 1fr auto;gap:8px 14px;align-items:center}
+.hk .ico{grid-row:1 / span 2;align-self:start}
+.hk .ttl{grid-column:2 / -1}
+.hk .capture{grid-column:2}
+.hk button{grid-column:3}
+.capture{min-height:36px;display:flex;align-items:center;gap:5px;flex-wrap:wrap;padding:5px 8px;border-radius:7px;border:1px solid ${th.border};background:${th.bg};color:${th.text};font-size:12.5px;cursor:pointer;outline:none}
+.capture.empty{border-style:dashed}
+.capture kbd{font:600 11.5px/1 system-ui,-apple-system,sans-serif;color:${th.textActive};background:${th.bgHover};border:1px solid ${th.border};border-bottom-width:2px;border-radius:5px;padding:5px 7px;min-width:24px;text-align:center}
+.capture.listening{border:1px solid ${ac.from};box-shadow:0 0 0 3px ${ac.from}33;color:${th.textActive}}
+button{background:linear-gradient(135deg,${ac.from},${ac.to});color:#fff;border:1px solid transparent;padding:7px 14px;border-radius:7px;cursor:pointer;font-size:12.5px;font-weight:500;font-family:inherit;white-space:nowrap;transition:filter .15s ease,background .15s ease,border-color .15s ease,color .15s ease}
 button:hover{filter:brightness(1.08)}
-button:focus-visible,.capture:focus-visible{outline:2px solid ${ac.from};outline-offset:2px}
+button.secondary,button.quiet,button.danger{background:transparent;color:${th.textActive};border-color:${th.border};filter:none}
+button.secondary:hover,button.quiet:hover{background:${th.bgActive}}
+button.danger{color:${th.text};padding:5px 10px;font-size:11.5px}
+button.danger:hover{color:#e05e3e;border-color:#e05e3e}
 button:disabled{opacity:.5;cursor:not-allowed}
-.tpl-add{display:grid;grid-template-columns:1fr auto;gap:8px;margin-bottom:10px}
-.tpl-add input,.tpl-add textarea{background:${th.bgHover};border:1px solid ${th.border};color:${th.textActive};border-radius:6px;padding:7px 10px;font-family:inherit;font-size:12.5px;outline:none;width:100%}
-.tpl-add textarea{resize:vertical;min-height:44px;line-height:1.4;grid-column:1/-1}
-.tpl-add input:focus,.tpl-add textarea:focus{border-color:${ac.from}}
-.tpl-list{display:flex;flex-direction:column;gap:6px}
-.tpl-empty{color:${th.text};font-size:11.5px;font-style:italic;padding:8px 0}
-.tpl-item{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 12px;background:${th.bgHover};border:1px solid ${th.border};border-radius:6px}
-.tpl-info{flex:1;min-width:0}
-.tpl-name{font-weight:600;font-size:12.5px;margin-bottom:1px}
-.tpl-prefix{color:${th.text};font-size:11.5px;font-family:ui-monospace,Menlo,Consolas,monospace;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.actions{padding:12px 22px;border-top:1px solid ${th.border};display:flex;gap:8px;justify-content:flex-end}
-.status{color:${th.text};font-size:11.5px;margin-top:5px;min-height:14px}
-.snap-actions{margin-top:8px;margin-left:24px;display:flex;flex-direction:column;gap:6px}
-.snap-cmd-label{color:${th.text};font-size:11.5px;margin-top:4px}
-.snap-cmd-row{display:flex;gap:6px;align-items:center}
-.snap-cmd-text{flex:1;background:${th.bgHover};border:1px solid ${th.border};border-radius:6px;padding:6px 9px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11.5px;color:${th.textActive};user-select:text;-webkit-user-select:text;overflow-x:auto;white-space:nowrap}
+button:focus-visible,.capture:focus-visible,.switch:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px solid ${ac.from};outline-offset:2px}
+.note{color:${th.text};font-size:11.5px;line-height:1.5;margin:8px 2px 0}
+.status{color:${th.text};font-size:11.5px;line-height:1.4;margin:6px 2px 0}
+.status:empty{display:none}
+.extra > *{margin:0 14px 10px}
+.extra .hint{color:${th.text};font-size:12px;line-height:1.45}
+.snap-actions{display:flex;flex-direction:column;gap:6px;align-items:flex-start}
+.snap-cmd-label{color:${th.text};font-size:11.5px}
+.snap-cmd-row{display:flex;gap:6px;align-items:center;align-self:stretch}
+.snap-cmd-text{flex:1;min-width:0;background:${th.bg};border:1px solid ${th.border};border-radius:6px;padding:6px 9px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11.5px;color:${th.textActive};user-select:text;-webkit-user-select:text;overflow-x:auto;white-space:nowrap}
 .snap-cmd-copy-btn{padding:6px 10px!important;font-size:11.5px}
-.hint-block{margin-left:0;margin-top:6px}
-.snap-status-pill{display:inline-flex;align-items:center;gap:6px;margin:6px 0 0 24px;padding:3px 10px;border-radius:999px;font-size:11.5px;border:1px solid ${th.border};background:${th.bgHover};color:${th.text}}
+.snap-status-pill{display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:999px;font-size:11.5px;border:1px solid ${th.border};background:${th.bg};color:${th.text}}
 .snap-status-pill .dot{width:8px;height:8px;border-radius:50%;background:${th.text}}
 .snap-status-pill[data-status="connected"]{background:rgba(46,160,67,.15);border-color:rgba(46,160,67,.4);color:#3aaf52}
 .snap-status-pill[data-status="connected"] .dot{background:#3aaf52;box-shadow:0 0 0 0 rgba(58,175,82,.6);animation:dotpulse 2.4s infinite}
 .snap-status-pill[data-status="disconnected"]{background:rgba(224,94,62,.15);border-color:rgba(224,94,62,.4);color:#e05e3e}
 .snap-status-pill[data-status="disconnected"] .dot{background:#e05e3e}
 @keyframes dotpulse{0%{box-shadow:0 0 0 0 rgba(58,175,82,.6)}70%{box-shadow:0 0 0 6px rgba(58,175,82,0)}100%{box-shadow:0 0 0 0 rgba(58,175,82,0)}}
+.tpl-add{padding:10px;display:flex;flex-direction:column;gap:8px}
+.tpl-row{display:flex;gap:8px;align-items:center}
+input[type=text],textarea{flex:1;min-width:0;background:${th.bg};border:1px solid ${th.border};color:${th.textActive};border-radius:7px;padding:8px 10px;font:inherit;font-size:12.5px;outline:none}
+textarea{resize:vertical;min-height:52px;line-height:1.4}
+input[type=text]:focus,textarea:focus{border-color:${ac.from}}
+.tpl-list{margin-top:8px}
+.tpl-list:has(.tpl-item){background:${th.bgHover};border:1px solid ${th.border};border-radius:10px;overflow:hidden}
+.tpl-item{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 12px}
+.tpl-item + .tpl-item{border-top:1px solid ${th.border}}
+.tpl-info{flex:1;min-width:0}
+.tpl-name{font-weight:500;margin-bottom:2px}
+.tpl-prefix{color:${th.text};font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tpl-empty{color:${th.text};font-size:12px;line-height:1.45;padding:0 2px}
+.actions{padding:12px 22px;border-top:1px solid ${th.border};display:flex;justify-content:flex-end}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 ${customTitlebarCSS()}
 </style></head><body>
 ${customTitlebarHTML(t('Desktop for Claude - Einstellungen', 'Desktop for Claude - Settings', 'Desktop for Claude - Paramètres', 'Desktop for Claude - Impostazioni'))}
-<div class="head">
-  <h1>${i18n.title}</h1>
-  <div class="sub">${i18n.subtitle}</div>
-</div>
-
 <div class="scroll">
-
-  <div class="section">
-    <h2>${i18n.secBackground}</h2>
-    <div class="row">
-      <label class="chk"><input type="checkbox" id="mc"><span>${i18n.minimizeLabel}</span></label>
-      <div class="hint">${i18n.minimizeHint}</div>
-    </div>
-    <div class="row">
-      <label class="chk"><input type="checkbox" id="as"><span>${i18n.autostartLabel}</span></label>
-      <div class="hint">${i18n.autostartHint}</div>
-    </div>
-    <div class="row">
-      <label class="chk"><input type="checkbox" id="bn"><span>${i18n.bgNotifLabel}</span></label>
-      <div class="hint">${i18n.bgNotifHint}</div>
-    </div>
-    <div class="status" id="status-bg"></div>
-  </div>
-
-  <div class="section">
-    <h2>${i18n.secMicrophone}</h2>
-    <div class="row">
-      <label class="chk"><input type="checkbox" id="mic"><span>${i18n.micLabel}</span></label>
-      <div class="snap-status-pill" id="mic-snap-status" style="display:none" data-status="unknown">
-        <span class="dot"></span><span class="text">${i18n.micSnapStatusUnknown}</span>
+  <div class="col">
+    <section>
+      <h2>${i18n.secBackground}</h2>
+      <div class="group">
+        <label class="item"><span class="ico">${uiIcon('tray', 17)}</span><span class="txt"><span class="ttl">${i18n.minimizeLabel}</span><span class="desc">${i18n.minimizeHint}</span></span><input type="checkbox" class="switch" id="mc"></label>
+        <label class="item"><span class="ico">${uiIcon('power', 17)}</span><span class="txt"><span class="ttl">${i18n.autostartLabel}</span><span class="desc">${i18n.autostartHint}</span></span><input type="checkbox" class="switch" id="as"></label>
+        <label class="item"><span class="ico">${uiIcon('bell', 17)}</span><span class="txt"><span class="ttl">${i18n.bgNotifLabel}</span><span class="desc">${i18n.bgNotifHint}</span></span><input type="checkbox" class="switch" id="bn"></label>
       </div>
-      <div class="hint">${i18n.micHint}</div>
-      <div class="hint" id="mic-snap-hint" style="display:none">${i18n.micSnapHint}</div>
-      <div id="mic-snap-actions" class="snap-actions" style="display:none">
-        <button class="secondary" id="mic-snap-open">${i18n.micSnapButton}</button>
-        <div class="snap-cmd-label">${i18n.micSnapCmdLabel}</div>
-        <div class="snap-cmd-row">
-          <code class="snap-cmd-text" id="mic-snap-cmd">sudo snap connect claude-ai-desktop:audio-record</code>
-          <button class="secondary snap-cmd-copy-btn" id="mic-snap-copy">${i18n.micSnapCmdCopy}</button>
+      <div class="status" id="status-bg"></div>
+    </section>
+    <section>
+      <h2>${i18n.secMicrophone}</h2>
+      <div class="group">
+        <label class="item"><span class="ico">${uiIcon('mic', 17)}</span><span class="txt"><span class="ttl">${i18n.micLabel}</span><span class="desc">${i18n.micHint}</span></span><input type="checkbox" class="switch" id="mic"></label>
+        <div class="extra">
+          <div class="snap-status-pill" id="mic-snap-status" style="display:none" data-status="unknown"><span class="dot"></span><span class="text">${i18n.micSnapStatusUnknown}</span></div>
+          <div class="hint" id="mic-snap-hint" style="display:none">${i18n.micSnapHint}</div>
+          <div id="mic-snap-actions" class="snap-actions" style="display:none">
+            <button class="secondary" id="mic-snap-open">${i18n.micSnapButton}</button>
+            <div class="snap-cmd-label">${i18n.micSnapCmdLabel}</div>
+            <div class="snap-cmd-row">
+              <code class="snap-cmd-text" id="mic-snap-cmd">sudo snap connect claude-ai-desktop:audio-record</code>
+              <button class="secondary snap-cmd-copy-btn" id="mic-snap-copy">${i18n.micSnapCmdCopy}</button>
+            </div>
+          </div>
         </div>
+        <div class="item"><span class="ico">${uiIcon('refresh', 17)}</span><span class="txt"><span class="ttl">${i18n.micResetLabel}</span><span class="desc">${i18n.micResetHint}</span></span><button class="quiet" id="mic-reset">${i18n.micResetButton}</button></div>
       </div>
-    </div>
-    <div class="row">
-      <button class="secondary" id="mic-reset">${i18n.micResetLabel}</button>
-      <div class="hint hint-block">${i18n.micResetHint}</div>
-    </div>
-    <div class="status" id="status-mic"></div>
+      <div class="status" id="status-mic"></div>
+    </section>
   </div>
-
-  <div class="section">
-    <h2>${i18n.secHotkeys}</h2>
-    ${isWayland ? `<div class="hint" style="margin-left:0;margin-bottom:10px">${nativeWayland ? i18n.waylandPortalHint : i18n.waylandHint}</div>` : ''}
-    <div class="hotkey-row">
-      <div class="lab">${i18n.hotkeyQp}</div>
-      <div class="capture" data-key="qp" tabindex="0">${i18n.press}</div>
-      <button class="danger" data-clear="qp">${i18n.clear}</button>
-    </div>
-    <div class="hotkey-row">
-      <div class="lab">${i18n.hotkeyClip}</div>
-      <div class="capture" data-key="clip" tabindex="0">${i18n.press}</div>
-      <button class="danger" data-clear="clip">${i18n.clear}</button>
-    </div>
-    <div class="status" id="status-hk"></div>
+  <div class="col">
+    <section>
+      <h2>${i18n.secHotkeys}</h2>
+      <div class="group">
+        <div class="item hk"><span class="ico">${uiIcon('chat', 17)}</span><span class="ttl">${i18n.hotkeyQp}</span><div class="capture empty" data-key="qp" tabindex="0"></div><button class="danger" data-clear="qp">${i18n.clear}</button></div>
+        <div class="item hk"><span class="ico">${uiIcon('clip', 17)}</span><span class="ttl">${i18n.hotkeyClip}</span><div class="capture empty" data-key="clip" tabindex="0"></div><button class="danger" data-clear="clip">${i18n.clear}</button></div>
+      </div>
+      ${isWayland ? `<p class="note">${nativeWayland ? i18n.waylandPortalHint : i18n.waylandHint}</p>` : ''}
+      <div class="status" id="status-hk"></div>
+    </section>
+    <section>
+      <h2>${i18n.secTemplates}</h2>
+      <div class="group tpl-add">
+        <div class="tpl-row"><span class="ico">${uiIcon('file', 17)}</span><input type="text" id="tpl-name" maxlength="40" placeholder="${escapeHtml(i18n.tplName)}"><button id="tpl-add">${i18n.tplAdd}</button></div>
+        <textarea id="tpl-prefix" maxlength="2000" placeholder="${escapeHtml(i18n.tplPrefix)}"></textarea>
+      </div>
+      <div class="tpl-list" id="tpl-list"></div>
+      <div class="status" id="status-tpl"></div>
+    </section>
   </div>
-
-  <div class="section">
-    <h2>${i18n.secTemplates}</h2>
-    <div class="tpl-add">
-      <input type="text" id="tpl-name" maxlength="40" placeholder="${i18n.tplName}">
-      <button id="tpl-add">${i18n.tplAdd}</button>
-      <textarea id="tpl-prefix" maxlength="2000" placeholder="${i18n.tplPrefix}"></textarea>
-    </div>
-    <div class="tpl-list" id="tpl-list"></div>
-    <div class="status" id="status-tpl"></div>
-  </div>
-
 </div>
 
 <div class="actions">
@@ -2729,12 +2721,26 @@ const statusMic = document.getElementById('status-mic');
 let statusMicTimer = null;
 
 const captures = { qp: null, clip: null };
-const display = { qp: I.press, clip: I.press };
+const display = { qp: null, clip: null };
+// Hotkey als Tastenkappen zeigen, leer als gestrichelter Platz zum Anklicken.
+const KEYNAMES = { CommandOrControl: I.ctrlKey, Control: I.ctrlKey, Ctrl: I.ctrlKey };
+function renderCapture(key) {
+  const el = captures[key];
+  el.replaceChildren();
+  el.classList.toggle('empty', !display[key]);
+  if (!display[key]) { el.textContent = I.press; return; }
+  for (const part of display[key].split('+')) {
+    const k = document.createElement('kbd');
+    k.textContent = KEYNAMES[part] || part;
+    el.appendChild(k);
+  }
+}
 let listeningKey = null;
 
 document.querySelectorAll('.capture').forEach(el => {
   const key = el.dataset.key;
   captures[key] = el;
+  renderCapture(key);
   el.addEventListener('click', () => startListening(key));
   el.addEventListener('blur', () => { if (listeningKey === key) resetCapture(key); });
   el.addEventListener('keydown', (e) => onKeydown(e, key));
@@ -2755,7 +2761,7 @@ function startListening(key) {
 function resetCapture(key) {
   if (listeningKey === key) listeningKey = null;
   captures[key].classList.remove('listening');
-  captures[key].textContent = display[key];
+  renderCapture(key);
 }
 
 function onKeydown(e, key) {
@@ -2794,8 +2800,8 @@ function applyHotkey(key, accel) {
 
 function clearHotkey(key) {
   applyHotkey(key, null).then(() => {
-    display[key] = I.press;
-    captures[key].textContent = I.press;
+    display[key] = null;
+    renderCapture(key);
     statusHk.textContent = I.removed;
   });
 }
@@ -2881,8 +2887,10 @@ api.get().then(s => {
       if (micSnapPollHandle) { clearInterval(micSnapPollHandle); micSnapPollHandle = null; }
     });
   }
-  if (s.hotkey) { display.qp = s.hotkey; captures.qp.textContent = s.hotkey; }
-  if (s.clipboardHotkey) { display.clip = s.clipboardHotkey; captures.clip.textContent = s.clipboardHotkey; }
+  if (s.hotkey) display.qp = s.hotkey;
+  if (s.clipboardHotkey) display.clip = s.clipboardHotkey;
+  renderCapture('qp');
+  renderCapture('clip');
   renderTemplates(s.templates || []);
 });
 
@@ -3158,8 +3166,8 @@ function getAboutHTML() {
     tagline: t('Inoffizieller claude.ai-Wrapper für Linux', 'Unofficial claude.ai wrapper for Linux', 'Wrapper claude.ai non officiel pour Linux', 'Wrapper claude.ai non ufficiale per Linux'),
     secAbout: t('Über die App', 'About this app', 'À propos de l’application', 'Informazioni sull’app'),
     aboutText: t(
-      'Eine inoffizielle Community-App, die claude.ai als native Desktop-Anwendung auf Linux bringt – mit Tabs, Tray, Quick-Prompt, Voice-Input und mehr. Open Source unter MIT-Lizenz.',
-      'An unofficial community app that brings claude.ai to Linux as a native desktop application – with tabs, tray, quick-prompt, voice input and more. Open source under the MIT licence.',
+      'Eine inoffizielle Community-App, die claude.ai als native Desktop-Anwendung auf Linux bringt, mit Tabs, Tray, Quick-Prompt, Voice-Input und mehr. Open Source unter MIT-Lizenz.',
+      'An unofficial community app that brings claude.ai to Linux as a native desktop application, with tabs, tray, quick-prompt, voice input and more. Open source under the MIT licence.',
       'Une application communautaire non officielle qui amène claude.ai sur Linux comme application de bureau native, avec onglets, zone de notification, Quick-Prompt, saisie vocale et plus encore. Open source sous licence MIT.',
       'Un\'app comunitaria non ufficiale che porta claude.ai su Linux come applicazione desktop nativa, con schede, area di notifica, Quick-Prompt, input vocale e altro ancora. Open source con licenza MIT.'
     ),
@@ -3194,7 +3202,8 @@ body{display:flex;flex-direction:column;overflow:hidden}
 .body{flex:1;padding:18px 28px 12px;overflow-y:auto;display:flex;flex-direction:column;gap:16px}
 .body::-webkit-scrollbar{width:8px}
 .body::-webkit-scrollbar-thumb{background:${th.border};border-radius:4px}
-h2{font-size:11px;font-weight:600;letter-spacing:.6px;text-transform:uppercase;color:${th.text};margin-bottom:6px}
+h2{font-size:13px;font-weight:600;color:${th.textActive};margin-bottom:8px;display:flex;align-items:center;gap:7px}
+h2 .ui-ico{color:${ac.from};flex:0 0 auto}
 .about-text{font-size:13px;line-height:1.55;color:${th.textActive}}
 .legal-text{font-size:12px;color:${th.text};line-height:1.5}
 .link-list{display:flex;flex-direction:column;gap:6px}
@@ -3220,11 +3229,11 @@ ${customTitlebarHTML(t('Über Desktop for Claude', 'About Desktop for Claude', '
 </div>
 <div class="body">
   <div>
-    <h2>${i18n.secAbout}</h2>
+    <h2>${uiIcon('info', 15)}${i18n.secAbout}</h2>
     <div class="about-text">${i18n.aboutText}</div>
   </div>
   <div>
-    <h2>${i18n.secLinks}</h2>
+    <h2>${uiIcon('link', 15)}${i18n.secLinks}</h2>
     <div class="link-list">
       <a data-href="https://github.com/simonlinuxcraft/claude-ai-desktop-app">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 00-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0020 4.77 5.07 5.07 0 0019.91 1S18.73.65 16 2.48a13.38 13.38 0 00-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 005 4.77a5.44 5.44 0 00-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 009 18.13V22"/></svg>
@@ -3241,7 +3250,7 @@ ${customTitlebarHTML(t('Über Desktop for Claude', 'About Desktop for Claude', '
     </div>
   </div>
   <div>
-    <h2>${i18n.secLegal}</h2>
+    <h2>${uiIcon('file', 15)}${i18n.secLegal}</h2>
     <div class="legal-text">${i18n.legalText}</div>
   </div>
 </div>
@@ -3297,7 +3306,7 @@ function openSettingsWindow() {
   }
   // Der Inhalt braucht gemessene 1007px. 960 laesst sichtbaren Rand und kuerzt das
   // Scrollen von ueber 500px auf wenige Dutzend.
-  const swSize = fitToWorkArea(660, 740);
+  const swSize = fitToWorkArea(820, 780);
   const swBase = {
     width: swSize.width, height: swSize.height,
     parent: mainWindow && !mainWindow.isDestroyed() ? mainWindow : undefined,
@@ -3826,6 +3835,43 @@ function getSupportHTML(channel) {
 
 // Custom App-Menü (HTML-Popup statt OS-nativ)
 
+// Gemeinsames Symbolset fuer Menue und Fenster: 24er-Raster, 2px Linie, runde Enden.
+const UI_ICONS = {
+    plus:    '<path d="M12 5v14M5 12h14"/>',
+    x:       '<path d="M18 6L6 18M6 6l12 12"/>',
+    download:'<path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/>',
+    refresh: '<path d="M3 12a9 9 0 0115-6.7L21 8M21 3v5h-5M21 12a9 9 0 01-15 6.7L3 16M3 21v-5h5"/>',
+    palette: '<circle cx="12" cy="12" r="9"/><circle cx="7.5" cy="10.5" r="1"/><circle cx="12" cy="7.5" r="1"/><circle cx="16.5" cy="10.5" r="1"/><circle cx="14.5" cy="15.5" r="1"/>',
+    cog:     '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.6 1.6 0 00.3 1.8l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.6 1.6 0 00-1.8-.3 1.6 1.6 0 00-1 1.5V21a2 2 0 11-4 0v-.1a1.6 1.6 0 00-1-1.5 1.6 1.6 0 00-1.8.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.6 1.6 0 00.3-1.8 1.6 1.6 0 00-1.5-1H3a2 2 0 110-4h.1a1.6 1.6 0 001.5-1 1.6 1.6 0 00-.3-1.8l-.1-.1a2 2 0 112.8-2.8l.1.1a1.6 1.6 0 001.8.3h0a1.6 1.6 0 001-1.5V3a2 2 0 114 0v.1a1.6 1.6 0 001 1.5 1.6 1.6 0 001.8-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.6 1.6 0 00-.3 1.8v0a1.6 1.6 0 001.5 1H21a2 2 0 110 4h-.1a1.6 1.6 0 00-1.5 1z"/>',
+    bug:     '<rect x="8" y="6" width="8" height="14" rx="4"/><path d="M12 11v9M4 13h4M16 13h4M5 8l3 2M19 8l-3 2M5 19l3-2M19 19l-3-2M10 3.5l.8 2.3M14 3.5l-.8 2.3"/>',
+    export:  '<path d="M13 3H7a2 2 0 00-2 2v14a2 2 0 002 2h7"/><path d="M13 3v5h5v3"/><path d="M14 17h7M18 14l3 3-3 3"/>',
+    package: '<path d="M12 3l8 4.5v9L12 21l-8-4.5v-9z"/><path d="M4 7.5l8 4.5 8-4.5M12 12v9"/>',
+    shieldReset: '<path d="M12 21s7-3.5 7-9V5.5L12 3 5 5.5V12c0 5.5 7 9 7 9z"/><path d="M14.5 10.2A3 3 0 1012 15"/><path d="M14.8 7.8v2.6h-2.6"/>',
+    info:    '<circle cx="12" cy="12" r="9"/><path d="M12 8h.01M11 12h1v5h1"/>',
+    bolt:    '<polyline points="13 2 4 14 12 14 11 22 20 10 12 10 13 2"/>',
+    check:   '<circle cx="12" cy="12" r="9"/><path d="M8 12l3 3 5-6"/>',
+    shield:  '<path d="M12 2L4 5v6c0 5 3.5 9.5 8 11 4.5-1.5 8-6 8-11V5l-8-3z"/><path d="M9 12l2 2 4-4"/>',
+    power:   '<path d="M18.36 6.64a9 9 0 11-12.73 0M12 2v10"/>',
+    heart:   '<path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/>',
+    tray:    '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 14h5l1.5 2.5h5L16 14h5"/>',
+    bell:    '<path d="M6 8a6 6 0 0112 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 003.4 0"/>',
+    mic:     '<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0014 0M12 18v3M9 21h6"/>',
+    chat:    '<path d="M5 4h14a2 2 0 012 2v9a2 2 0 01-2 2H9l-5 4V6a2 2 0 011-2z"/>',
+    clip:    '<rect x="8" y="3" width="8" height="4" rx="1"/><path d="M16 5h2a2 2 0 012 2v12a2 2 0 01-2 2H6a2 2 0 01-2-2V7a2 2 0 012-2h2"/>',
+    file:    '<path d="M14 3H7a2 2 0 00-2 2v14a2 2 0 002 2h10a2 2 0 002-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h4"/>',
+    theme:   '<circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 010 18z" fill="currentColor"/>',
+    rain:    '<path d="M7 4v5M12 3v9M17 5v4M7 13v7M12 15v6M17 12v6"/>',
+    corner:  '<path d="M4 20v-9a7 7 0 017-7h9"/>',
+    link:    '<path d="M10 14a4 4 0 005.66 0l3-3a4 4 0 00-5.66-5.66l-1 1"/><path d="M14 10a4 4 0 00-5.66 0l-3 3a4 4 0 005.66 5.66l1-1"/>',
+    terminal:'<path d="M4 17l6-5-6-5M12 19h8"/>',
+    mail:    '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/>',
+    user:    '<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0116 0"/>',
+    chevron: '<path d="M9 6l6 6-6 6"/>'
+};
+function uiIcon(name, size = 16) {
+  return `<svg class="ui-ico" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${UI_ICONS[name] || ''}</svg>`;
+}
+
 function getAppMenuItems() {
   return [
     { type: 'item', action: 'new-tab', label: t('Neuer Tab', 'New Tab', 'Nouvel onglet', 'Nuova scheda'), accel: 'Ctrl+T', icon: 'plus' },
@@ -3856,20 +3902,7 @@ function getAppMenuHTML(left, top) {
   const ac = accent();
   const dark = currentThemeMode() !== 'light';
   const items = getAppMenuItems();
-  const ICONS = {
-    plus:    '<path d="M12 5v14M5 12h14"/>',
-    x:       '<path d="M18 6L6 18M6 6l12 12"/>',
-    download:'<path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/>',
-    refresh: '<path d="M3 12a9 9 0 0115-6.7L21 8M21 3v5h-5M21 12a9 9 0 01-15 6.7L3 16M3 21v-5h5"/>',
-    palette: '<circle cx="12" cy="12" r="9"/><circle cx="7.5" cy="10.5" r="1"/><circle cx="12" cy="7.5" r="1"/><circle cx="16.5" cy="10.5" r="1"/><circle cx="14.5" cy="15.5" r="1"/>',
-    cog:     '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.6 1.6 0 00.3 1.8l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.6 1.6 0 00-1.8-.3 1.6 1.6 0 00-1 1.5V21a2 2 0 11-4 0v-.1a1.6 1.6 0 00-1-1.5 1.6 1.6 0 00-1.8.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.6 1.6 0 00.3-1.8 1.6 1.6 0 00-1.5-1H3a2 2 0 110-4h.1a1.6 1.6 0 001.5-1 1.6 1.6 0 00-.3-1.8l-.1-.1a2 2 0 112.8-2.8l.1.1a1.6 1.6 0 001.8.3h0a1.6 1.6 0 001-1.5V3a2 2 0 114 0v.1a1.6 1.6 0 001 1.5 1.6 1.6 0 001.8-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.6 1.6 0 00-.3 1.8v0a1.6 1.6 0 001.5 1H21a2 2 0 110 4h-.1a1.6 1.6 0 00-1.5 1z"/>',
-    bug:     '<path d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>',
-    info:    '<circle cx="12" cy="12" r="9"/><path d="M12 8h.01M11 12h1v5h1"/>',
-    bolt:    '<polyline points="13 2 4 14 12 14 11 22 20 10 12 10 13 2"/>',
-    shield:  '<path d="M12 2L4 5v6c0 5 3.5 9.5 8 11 4.5-1.5 8-6 8-11V5l-8-3z"/><path d="M9 12l2 2 4-4"/>',
-    power:   '<path d="M18.36 6.64a9 9 0 11-12.73 0M12 2v10"/>',
-    heart:   '<path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/>'
-  };
+  const ICONS = UI_ICONS;
 
   const renderItem = (it, idx) => {
     if (it.type === 'sep') return '<div class="sep"></div>';
