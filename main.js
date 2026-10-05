@@ -1574,10 +1574,12 @@ async function copyDiagnosticsInfo() {
   const text = lines.join('\n');
   try { await clipboard.writeText(text); } catch {}
   showCustomMessageBox({
-    type: 'info',
+    type: 'success',
     title: 'Desktop for Claude',
-    message: t('Diagnose-Info in Zwischenablage kopiert', 'Diagnostics info copied to clipboard', 'Infos de diagnostic copiées dans le presse-papiers', 'Informazioni di diagnostica copiate negli appunti'),
-    detail: text
+    heading: t('Diagnose-Infos kopiert', 'Diagnostics copied', 'Diagnostic copié', 'Diagnostica copiata'),
+    message: t('Füge sie in deinen Fehlerbericht oder ein GitHub-Issue ein.', 'Paste them into your bug report or a GitHub issue.', 'Collez-le dans votre rapport de bug ou un ticket GitHub.', 'Incollala nella tua segnalazione o in una issue su GitHub.'),
+    detail: text,
+    width: 460
   });
 }
 
@@ -1585,13 +1587,14 @@ async function resetClaudeVerification(targetTab) {
   const confirm = await showCustomMessageBox({
     type: 'warning',
     title: 'Desktop for Claude',
-    message: t(
+    danger: true,
+    heading: t(
       'claude.ai-Cache und -Cookies zurücksetzen?',
       'Reset claude.ai cache and cookies?',
       'Réinitialiser le cache et les cookies de claude.ai ?',
       'Reimpostare cache e cookie di claude.ai?'
     ),
-    detail: t(
+    message: t(
       'Du wirst danach erneut bei claude.ai angemeldet sein müssen. Hilft, wenn die Verifizierungs-Seite („Performing security verification") in einer Schleife hängt.',
       'You will need to sign in to claude.ai again afterwards. This helps when the verification page ("Performing security verification") gets stuck in a loop.',
       'Vous devrez ensuite vous reconnecter à claude.ai. Utile lorsque la page de vérification (« Performing security verification ») tourne en boucle.',
@@ -2557,6 +2560,7 @@ async function exportActiveConversation() {
     if (err) {
       showCustomMessageBox({
         type: 'error', title: t('Export fehlgeschlagen', 'Export failed', 'Échec de l’export', 'Esportazione non riuscita'),
+        heading: t('Export fehlgeschlagen', 'Export failed', 'Échec de l’export', 'Esportazione non riuscita'),
         message: err.message || String(err)
       });
       return;
@@ -4064,9 +4068,10 @@ function showCustomMessageBox(opts) {
       resolve({ response: typeof index === 'number' ? index : cancelId });
     };
 
+    // Eigene HTML-Dialoge bringen ihre Groesse mit, der Standarddialog misst sich selbst (msgbox-fit).
     const win = createDialogWindow({
-      width: opts.width || 480,
-      height: opts.height || (detail ? 260 : 200),
+      width: opts.width || 400,
+      height: opts.height || 300,
       title
     });
 
@@ -4078,23 +4083,32 @@ function showCustomMessageBox(opts) {
 
     win.on('closed', () => finish(cancelId));
 
-    const html = opts.html ? opts.html(channel) : getMessageBoxHTML({ type, title, message, detail, buttons, defaultId, cancelId, channel });
+    const html = opts.html ? opts.html(channel) : getMessageBoxHTML({ type, title, heading: opts.heading, message, detail, buttons, defaultId, cancelId, danger: opts.danger === true, channel });
     win.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(html));
   });
 }
 
-function getMessageBoxHTML({ type, title, message, detail, buttons, defaultId, cancelId, channel }) {
+// Aufbau wie der Ko-fi-Dialog: farbiges Rund oben, Ueberschrift, Text, Knoepfe untereinander.
+// heading fehlt bei aelteren Aufrufen, dann wird message zur Ueberschrift und detail zum Text.
+function getMessageBoxHTML({ type, heading, message, detail, buttons, defaultId, cancelId, danger, channel, title }) {
   const th = subTheme();
   const ac = accent();
-  const iconColor = type === 'error' ? '#e05e3e' : (type === 'warning' ? warnColor().fg : ac.from);
-  const iconSvg = {
-    info:    '<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>',
-    warning: '<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>',
-    error:   '<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>'
-  }[type] || '';
-  const buttonsHtml = buttons.map((label, i) => {
-    const primary = i === defaultId;
-    return `<button class="btn${primary ? ' primary' : ''}" data-idx="${i}">${escapeHtml(label)}</button>`;
+  const w = warnColor();
+  const look = {
+    success: { icon: 'check', from: ac.from, to: ac.to },
+    warning: { icon: 'warn', from: w.fg, to: w.fg },
+    error:   { icon: 'error', from: '#e05e3e', to: '#c8402a' }
+  }[type] || { icon: 'info', from: ac.from, to: ac.to };
+  const head = heading || message;
+  const body = heading ? message : '';
+  // Mehrzeilige Details (Diagnose, Fehlermeldungen) als Kasten in Festbreitenschrift.
+  const detailHtml = !detail ? ''
+    : detail.includes('\n') ? `<pre class="box">${escapeHtml(detail)}</pre>`
+    : `<p class="sub">${escapeHtml(detail)}</p>`;
+  const order = [defaultId, ...buttons.map((_, i) => i).filter(i => i !== defaultId)];
+  const buttonsHtml = order.map(i => {
+    const cls = i === defaultId ? (danger ? 'danger' : 'primary') : 'ghost';
+    return `<button class="btn ${cls}" data-idx="${i}">${escapeHtml(buttons[i])}</button>`;
   }).join('');
   return `<!DOCTYPE html>
 <html>
@@ -4103,25 +4117,33 @@ function getMessageBoxHTML({ type, title, message, detail, buttons, defaultId, c
 <title>${escapeHtml(title)}</title>
 <style>
   ${sharedDialogCSS()}
-  .container { display: flex; flex-direction: column; height: 100%; padding: 22px; }
-  .top { display: flex; gap: 16px; flex: 1; align-items: flex-start; min-height: 0; }
-  .icon { color: ${iconColor}; flex: 0 0 auto; line-height: 0; }
-  .content { flex: 1; min-width: 0; }
-  .msg { font-weight: 500; margin: 0 0 8px; line-height: 1.4; word-wrap: break-word; }
-  .detail { color: ${th.text}; font-size: 13px; line-height: 1.4; white-space: pre-wrap; word-wrap: break-word; max-height: 120px; overflow-y: auto; }
-  .buttons { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; flex: 0 0 auto; }
+  body { overflow: hidden; }
+  .wrap { display: flex; flex-direction: column; align-items: center; text-align: center; padding: 28px 28px 22px; }
+  .badge { width: 58px; height: 58px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #fff; margin-bottom: 16px;
+    background: linear-gradient(135deg, ${look.from}, ${look.to}); box-shadow: 0 6px 20px color-mix(in srgb, ${look.from} 35%, transparent); }
+  h1 { font-size: 17px; font-weight: 600; letter-spacing: -.2px; line-height: 1.3; margin: 0 0 8px; word-wrap: break-word; }
+  .msg { color: ${th.text}; font-size: 13.5px; line-height: 1.55; margin: 0; word-wrap: break-word; }
+  .sub { color: ${th.text}; font-size: 12.5px; line-height: 1.5; margin: 8px 0 0; word-wrap: break-word; }
+  .box { width: 100%; margin: 14px 0 0; padding: 9px 11px; text-align: left; border-radius: 8px; background: ${th.bgHover}; border: 1px solid ${th.border};
+    color: ${th.text}; font: 11.5px/1.55 ui-monospace, Menlo, Consolas, monospace; white-space: pre-wrap; word-break: break-word; max-height: 170px; overflow-y: auto;
+    user-select: text; -webkit-user-select: text; }
+  .actions { width: 100%; display: flex; flex-direction: column; gap: 8px; margin-top: 20px; }
+  .btn { width: 100%; padding: 10px 16px; font-size: 13.5px; border-radius: 8px; }
+  .btn.danger { background: #d9532f; color: #fff; border-color: transparent; font-weight: 500; }
+  .btn.danger:hover { filter: brightness(1.08); }
+  .btn.ghost { background: transparent; border-color: transparent; color: ${th.text}; }
+  .btn.ghost:hover { background: ${th.bgHover}; color: ${th.textActive}; }
+  .btn:focus { outline: none; }
+  .btn:focus-visible { outline: 2px solid ${ac.from}; outline-offset: 2px; }
 </style>
 </head>
 <body>
-<div class="container">
-  <div class="top">
-    <div class="icon">${iconSvg}</div>
-    <div class="content">
-      <div class="msg">${escapeHtml(message)}</div>
-      ${detail ? `<div class="detail">${escapeHtml(detail)}</div>` : ''}
-    </div>
-  </div>
-  <div class="buttons">${buttonsHtml}</div>
+<div class="wrap" id="wrap">
+  <div class="badge">${uiIcon(look.icon, 27)}</div>
+  <h1>${escapeHtml(head)}</h1>
+  ${body ? `<p class="msg">${escapeHtml(body)}</p>` : ''}
+  ${detailHtml}
+  <div class="actions">${buttonsHtml}</div>
 </div>
 <script>
 (function(){
@@ -4136,10 +4158,8 @@ function getMessageBoxHTML({ type, title, message, detail, buttons, defaultId, c
     if (e.key === 'Escape') { e.preventDefault(); respond(cancelIdx); }
     else if (e.key === 'Enter') { e.preventDefault(); respond(defaultIdx); }
   });
-  setTimeout(() => {
-    const primary = document.querySelector('.btn.primary') || document.querySelector('.btn');
-    if (primary) primary.focus();
-  }, 50);
+  // Fensterhoehe an den Inhalt anpassen, dann ist nichts abgeschnitten und nichts leer.
+  requestAnimationFrame(() => { try { window.msgboxAPI.fit(Math.ceil(document.getElementById('wrap').offsetHeight)); } catch (e) {} });
 })();
 </script>
 </body>
@@ -4408,7 +4428,7 @@ function triggerManualUpdateCheck() {
     return;
   }
   if (isSnap) {
-    showCustomMessageBox({ type: 'info', title: 'Desktop for Claude', message: t('Updates werden über den Snap Store verwaltet und automatisch installiert.', 'Updates are managed by the Snap Store and installed automatically.', 'Les mises à jour sont gérées par le Snap Store et installées automatiquement.', 'Gli aggiornamenti sono gestiti dallo Snap Store e installati automaticamente.') });
+    showCustomMessageBox({ type: 'info', title: 'Desktop for Claude', heading: t('Updates über den Snap Store', 'Updates through the Snap Store', 'Mises à jour via le Snap Store', 'Aggiornamenti tramite lo Snap Store'), message: t('Updates werden über den Snap Store verwaltet und automatisch installiert.', 'Updates are managed by the Snap Store and installed automatically.', 'Les mises à jour sont gérées par le Snap Store et installées automatiquement.', 'Gli aggiornamenti sono gestiti dallo Snap Store e installati automaticamente.') });
     return;
   }
   manualUpdateCheck = true;
@@ -4427,7 +4447,11 @@ function setupAutoUpdater() {
     if (isQuitting) return;
     if (manualUpdateCheck) {
       manualUpdateCheck = false;
-      showCustomMessageBox({ type: 'info', title: t('Update verf\u00fcgbar', 'Update available', 'Mise à jour disponible', 'Aggiornamento disponibile'), message: `v${info.version} ${t('wird heruntergeladen\u2026', 'is downloading\u2026', 'en cours de téléchargement…', 'in download…')}` });
+      showCustomMessageBox({
+        type: 'info', title: t('Update verf\u00fcgbar', 'Update available', 'Mise à jour disponible', 'Aggiornamento disponibile'),
+        heading: t(`Version ${info.version} wird geladen`, `Downloading version ${info.version}`, `Téléchargement de la version ${info.version}`, `Download della versione ${info.version}`),
+        message: t('Danach erscheint oben in der Tab-Leiste ein Knopf zum Neustarten.', 'A restart button then appears in the tab bar.', 'Un bouton de redémarrage apparaît ensuite dans la barre d’onglets.', 'Poi nella barra delle schede compare un pulsante per riavviare.')
+      });
     } else {
       new Notification({ title: t('Update verf\u00fcgbar', 'Update available', 'Mise à jour disponible', 'Aggiornamento disponibile'), body: `v${info.version} ${t('wird geladen\u2026', 'downloading\u2026', 'téléchargement…', 'download…')}` }).show();
     }
@@ -4438,7 +4462,11 @@ function setupAutoUpdater() {
     if (isQuitting) return;
     if (manualUpdateCheck) {
       manualUpdateCheck = false;
-      showCustomMessageBox({ type: 'info', title: t('Kein Update', 'No Update', 'Aucune mise à jour', 'Nessun aggiornamento'), message: t('Du verwendest bereits die neueste Version.', 'You are already on the latest version.', 'Vous utilisez déjà la dernière version.', 'Stai già usando l’ultima versione.'), detail: `v${app.getVersion()}` });
+      showCustomMessageBox({
+        type: 'success', title: t('Kein Update', 'No Update', 'Aucune mise à jour', 'Nessun aggiornamento'),
+        heading: t('Du bist auf dem neuesten Stand', 'You’re up to date', 'Vous êtes à jour', 'Sei aggiornato'),
+        message: t(`Desktop for Claude ${app.getVersion()} ist die aktuelle Version.`, `Desktop for Claude ${app.getVersion()} is the latest version.`, `Desktop for Claude ${app.getVersion()} est la dernière version.`, `Desktop for Claude ${app.getVersion()} è la versione più recente.`)
+      });
     }
   });
 
@@ -4466,7 +4494,12 @@ function setupAutoUpdater() {
     if (manualUpdateCheck) {
       manualUpdateCheck = false;
       const short = (err.message || '').split('\n')[0].slice(0, 200);
-      showCustomMessageBox({ type: 'error', title: t('Update-Fehler', 'Update Error', 'Erreur de mise à jour', 'Errore di aggiornamento'), message: t('Update-Pr\u00fcfung fehlgeschlagen.', 'Update check failed.', 'Échec de la vérification des mises à jour.', 'Controllo aggiornamenti non riuscito.'), detail: short });
+      showCustomMessageBox({
+        type: 'error', title: t('Update-Fehler', 'Update Error', 'Erreur de mise à jour', 'Errore di aggiornamento'),
+        heading: t('Update-Prüfung fehlgeschlagen', 'Update check failed', 'Échec de la vérification', 'Controllo non riuscito'),
+        message: t('Versuch es später noch einmal.', 'Try again later.', 'Réessayez plus tard.', 'Riprova più tardi.'),
+        detail: short
+      });
     }
   });
 
@@ -5345,6 +5378,14 @@ ipcMain.on('win-toggle-maximize', (event) => {
   else mainWindow.maximize();
 });
 ipcMain.on('win-close', (event) => { if (fromMainWindow(event)) mainWindow.close(); });
+ipcMain.on('msgbox-fit', (event, cssHeight) => {
+  const win = BrowserWindow.fromWebContents(event.sender);
+  if (!win || win.isDestroyed() || win === mainWindow) return;
+  const h = Math.max(160, Math.min(900, Number(cssHeight) || 0));
+  const work = screen.getDisplayMatching(win.getBounds()).workArea;
+  const [w] = win.getContentSize();
+  win.setContentSize(w, Math.min(Math.round(h * event.sender.getZoomFactor()), work.height - 60));
+});
 ipcMain.on('win-state-request', (event) => { if (fromMainWindow(event)) sendWindowState(); });
 ipcMain.on('update-state-request', (event) => { if (fromMainWindow(event) && updateState) event.sender.send('update-state', updateState); });
 ipcMain.on('update-install', (event) => {

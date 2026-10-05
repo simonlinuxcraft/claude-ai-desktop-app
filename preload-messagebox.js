@@ -15,6 +15,7 @@ contextBridge.exposeInMainWorld('msgboxAPI', {
   respond: (channel, index) => {
     if (isAllowed(channel)) ipcRenderer.send(channel, index);
   },
+  fit: (h) => { if (Number.isFinite(h)) ipcRenderer.send('msgbox-fit', h); },
   openSnapPermissions: (channel) => {
     if (isAllowed(channel)) ipcRenderer.send(channel);
   },
