@@ -3289,7 +3289,7 @@ function getDesignHTML() {
   const styleAccent = ACCENT[designStyle] || ACCENT.modern;
   const mode = currentThemeMode();
   const i18n = {
-    title: 'Design',
+    title: t('App-Theme', 'App Theme', 'Thème de l’app', 'Tema dell’app'),
     subtitle: t('Farbthema, Stil, Zeichenregen und Tray-Symbol', 'Colour theme, style, character rain and tray icon', 'Thème, style, pluie de caractères et icône de notification', 'Tema, stile, pioggia di caratteri e icona di notifica'),
     secTheme: t('Farbthema', 'Colour theme', 'Thème de couleur', 'Tema colore'),
     secStyle: t('Stil', 'Style', 'Style', 'Stile'),
@@ -3467,7 +3467,7 @@ body{border:${WINDOW_BORDER}px solid var(--flo);border-image:linear-gradient(180
 .cd-titlebar,.cd-titlebar-title,.cd-titlebar-btn{color:var(--ta)}
 .cd-titlebar-btn:hover{background:var(--bgh)}
 </style></head><body data-style="${designStyle}">
-${customTitlebarHTML('Desktop for Claude - Design')}
+${customTitlebarHTML('Desktop for Claude - ' + t('App-Theme', 'App Theme', 'Thème de l’app', 'Tema dell’app'))}
 <div class="head">
   <h1>${i18n.title}</h1>
   <div class="sub">${i18n.subtitle}</div>
@@ -3554,7 +3554,7 @@ function openDesignWindow() {
     ...centerOnMainWindow(size.width, size.height),
     parent: mainWindow && !mainWindow.isDestroyed() ? mainWindow : undefined,
     modal: false, resizable: false, minimizable: false, maximizable: false,
-    title: 'Desktop for Claude - Design',
+    title: 'Desktop for Claude - ' + t('App-Theme', 'App Theme', 'Thème de l’app', 'Tema dell’app'),
     backgroundColor: subTheme().bg,
     icon: icon(),
     autoHideMenuBar: true,
@@ -3612,7 +3612,7 @@ function getAppMenuItems() {
     { type: 'item', action: 'export', label: t('Konversation exportieren', 'Export conversation', 'Exporter la conversation', 'Esporta la conversazione'), accel: 'Ctrl+Shift+E', icon: 'download' },
     { type: 'item', action: 'reload', label: t('Neu laden', 'Reload', 'Recharger', 'Ricarica'), accel: 'Ctrl+R', icon: 'refresh' },
     { type: 'sep' },
-    { type: 'item', action: 'design-open', label: 'Design', icon: 'palette' },
+    { type: 'item', action: 'design-open', label: t('App-Theme', 'App Theme', 'Thème de l’app', 'Tema dell’app'), icon: 'palette' },
     { type: 'item', action: 'settings', label: t('App-Einstellungen', 'App Settings', 'Paramètres de l\'application', 'Impostazioni dell\'app'), accel: 'Ctrl+,', icon: 'cog' },
     { type: 'sep' },
     { type: 'item', action: 'check-updates', label: t('Nach Updates suchen', 'Check for Updates', 'Rechercher des mises à jour', 'Controlla aggiornamenti'), icon: 'refresh' },
@@ -3976,7 +3976,7 @@ function updateMenu(force = false) {
         }},
         { label: t('App-Einstellungen\u2026', 'App Settings\u2026', 'Paramètres de l’application…', 'Impostazioni dell’app…'), click: () => openSettingsWindow() },
         { type: 'separator' },
-        { label: 'Design\u2026', click: () => openDesignWindow() },
+        { label: t('App-Theme', 'App Theme', 'Thème de l’app', 'Tema dell’app') + '\u2026', click: () => openDesignWindow() },
         { label: t('Nach Updates suchen\u2026', 'Check for Updates\u2026', 'Rechercher des mises à jour…', 'Controlla aggiornamenti…'), click: () => triggerManualUpdateCheck() },
         { label: (bugReportStrings[sysLang] || bugReportStrings.en).title, click: showBugReportDialog },
         { type: 'separator' },
