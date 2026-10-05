@@ -3140,6 +3140,7 @@ function getAboutHTML() {
     ),
     secLinks: t('Links', 'Links', 'Liens', 'Link'),
     linkRepo: t('Quellcode & Issues auf GitHub', 'Source code & issues on GitHub', 'Code source et tickets sur GitHub', 'Codice sorgente e issue su GitHub'),
+    linkKofi: t('Die App unterstützen (Ko-fi)', 'Support the app (Ko-fi)', 'Soutenir l’app (Ko-fi)', 'Sostieni l’app (Ko-fi)'),
     linkSupport: t('Anthropic-Support (offizielle Hilfe für claude.ai)', 'Anthropic Support (official help for claude.ai)', 'Support Anthropic (aide officielle pour claude.ai)', 'Supporto Anthropic (aiuto ufficiale per claude.ai)'),
     secLegal: t('Rechtliches', 'Legal', 'Mentions légales', 'Note legali'),
     legalText: t(
@@ -3203,6 +3204,10 @@ ${customTitlebarHTML(t('Über Desktop for Claude', 'About Desktop for Claude', '
       <a data-href="https://github.com/simonlinuxcraft/claude-ai-desktop-app">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 00-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0020 4.77 5.07 5.07 0 0019.91 1S18.73.65 16 2.48a13.38 13.38 0 00-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 005 4.77a5.44 5.44 0 00-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 009 18.13V22"/></svg>
         <span>${i18n.linkRepo}</span>
+      </a>
+      <a data-href="${SUPPORT_URL}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>
+        <span>${i18n.linkKofi}</span>
       </a>
       <a data-href="https://support.anthropic.com">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
@@ -3627,6 +3632,85 @@ async function showOfficialAppInfo() {
   if (res.response === 0) openExternalSafe(OFFICIAL_APP_DOCS);
 }
 
+// Ko-fi statt PayPal-Knopf: _donations ist in Deutschland gemeinnuetzigen Organisationen vorbehalten,
+// _xclick sieht aus wie ein Shop. Die Widget-Adresse zeigt nur das Bezahlfeld, ohne Profil und Feed.
+const SUPPORT_URL = 'https://ko-fi.com/simonlinuxcraft/?hidefeed=true&widget=true&embed=true';
+
+async function showSupportInfo() {
+  const res = await showCustomMessageBox({
+    title: t('App unterstützen', 'Support the app', 'Soutenir l’app', 'Sostieni l’app'),
+    width: 420,
+    height: 430,
+    cancelId: 1,
+    html: getSupportHTML
+  });
+  if (res.response === 0) openExternalSafe(SUPPORT_URL);
+}
+
+function getSupportHTML(channel) {
+  const th = subTheme();
+  const ac = accent();
+  const check = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
+  const pills = [
+    t('Kostenlos', 'Free', 'Gratuit', 'Gratuita'),
+    t('Ohne Werbung', 'No ads', 'Sans publicité', 'Senza pubblicità'),
+    t('Alle Funktionen', 'Every feature', 'Toutes les fonctions', 'Tutte le funzioni')
+  ].map(p => `<span class="pill">${check}${escapeHtml(p)}</span>`).join('');
+  return `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>${escapeHtml(t('App unterstützen', 'Support the app', 'Soutenir l’app', 'Sostieni l’app'))}</title>
+<style>
+  ${sharedDialogCSS()}
+  body { overflow: hidden; }
+  .wrap { height: 100%; display: flex; flex-direction: column; align-items: center; text-align: center; padding: 30px 32px 24px; }
+  .heart { width: 60px; height: 60px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+    background: linear-gradient(135deg, ${ac.from}, ${ac.to}); color: #fff; box-shadow: 0 6px 20px ${ac.from}55; margin-bottom: 18px; }
+  h1 { font-size: 19px; font-weight: 600; margin: 0 0 10px; letter-spacing: -.2px; }
+  .lead { color: ${th.text}; font-size: 13.5px; line-height: 1.55; margin: 0 0 18px; }
+  .pills { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; margin-bottom: 22px; }
+  .pill { display: inline-flex; align-items: center; gap: 5px; padding: 5px 11px; border-radius: 999px; font-size: 12px;
+    background: ${th.bgHover}; border: 1px solid ${th.border}; color: ${th.textActive}; }
+  .pill svg { color: ${ac.from}; }
+  .actions { margin-top: auto; width: 100%; display: flex; flex-direction: column; gap: 8px; }
+  .btn { width: 100%; padding: 10px 16px; font-size: 13.5px; border-radius: 8px; }
+  .btn.primary { display: flex; align-items: center; justify-content: center; gap: 8px; }
+  .btn.ghost { background: transparent; border-color: transparent; color: ${th.text}; }
+  .btn.ghost:hover { background: ${th.bgHover}; color: ${th.textActive}; }
+  .note { color: ${th.text}; font-size: 11.5px; opacity: .8; margin-top: 12px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="heart"><svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg></div>
+  <h1>${escapeHtml(t('Desktop for Claude bleibt kostenlos', 'Desktop for Claude stays free', 'Desktop for Claude reste gratuit', 'Desktop for Claude resta gratuito'))}</h1>
+  <p class="lead">${escapeHtml(t(
+    'Die App entsteht in meiner Freizeit. Wenn sie dir hilft, kannst du die Entwicklungskosten mit einer freiwilligen Zahlung über Ko-fi unterstützen.',
+    'I build this app in my spare time. If it helps you, you can support the development costs with a voluntary payment on Ko-fi.',
+    'Je développe cette application sur mon temps libre. Si elle vous est utile, vous pouvez soutenir les frais de développement par un paiement volontaire sur Ko-fi.',
+    'Sviluppo questa app nel tempo libero. Se ti è utile, puoi sostenere i costi di sviluppo con un pagamento volontario su Ko-fi.'
+  ))}</p>
+  <div class="pills">${pills}</div>
+  <div class="actions">
+    <button class="btn primary" data-idx="0"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M11.351 2.715c-2.7 0-4.986.025-6.83.26C2.078 3.285 0 5.154 0 8.61c0 3.506.182 6.13 1.585 8.493 1.584 2.701 4.233 4.182 7.662 4.182h.83c4.209 0 6.494-2.234 7.637-4a9.5 9.5 0 0 0 1.091-2.338C21.792 14.688 24 12.22 24 9.208v-.415c0-3.247-2.13-5.507-5.792-5.87-1.558-.156-2.65-.208-6.857-.208m0 1.947c4.208 0 5.09.052 6.571.182 2.624.311 4.13 1.584 4.13 4v.39c0 2.156-1.792 3.844-3.87 3.844h-.935l-.156.649c-.208 1.013-.597 1.818-1.039 2.546-.909 1.428-2.545 3.064-5.922 3.064h-.805c-2.571 0-4.831-.883-6.078-3.195-1.09-2-1.298-4.155-1.298-7.506 0-2.181.857-3.402 3.012-3.714 1.533-.233 3.559-.26 6.39-.26m6.547 2.287c-.416 0-.65.234-.65.546v2.935c0 .311.234.545.65.545 1.324 0 2.051-.754 2.051-2s-.727-2.026-2.052-2.026m-10.39.182c-1.818 0-3.013 1.48-3.013 3.142 0 1.533.858 2.857 1.949 3.897.727.701 1.87 1.429 2.649 1.896a1.47 1.47 0 0 0 1.507 0c.78-.467 1.922-1.195 2.623-1.896 1.117-1.039 1.974-2.364 1.974-3.897 0-1.662-1.247-3.142-3.039-3.142-1.065 0-1.792.545-2.338 1.298-.493-.753-1.246-1.298-2.312-1.298"/></svg>${escapeHtml(t('Auf Ko-fi unterstützen', 'Support on Ko-fi', 'Soutenir sur Ko-fi', 'Sostieni su Ko-fi'))}</button>
+    <button class="btn ghost" data-idx="1">${escapeHtml(t('Vielleicht später', 'Maybe later', 'Plus tard', 'Forse più tardi'))}</button>
+  </div>
+  <div class="note">${escapeHtml(t('Freiwillig. An der App ändert sich dadurch nichts.', 'Entirely optional. Nothing about the app changes.', 'Entièrement facultatif. Rien ne change dans l’application.', 'Del tutto facoltativo. Nell’app non cambia nulla.'))}</div>
+</div>
+<script>
+(function(){
+  const channel = ${JSON.stringify(channel)};
+  const respond = (i) => { try { window.msgboxAPI.respond(channel, i); } catch (e) {} };
+  document.querySelectorAll('.btn').forEach(b => b.addEventListener('click', () => respond(parseInt(b.dataset.idx, 10))));
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { e.preventDefault(); respond(1); } });
+  setTimeout(() => document.querySelector('.btn.primary').focus(), 50);
+})();
+</script>
+</body>
+</html>`;
+}
+
 // Custom App-Menü (HTML-Popup statt OS-nativ)
 
 function getAppMenuItems() {
@@ -3646,6 +3730,7 @@ function getAppMenuItems() {
     { type: 'item', action: 'reset-verification', label: t('claude.ai-Verifizierung zurücksetzen', 'Reset claude.ai verification', 'Réinitialiser la vérification claude.ai', 'Reimposta la verifica claude.ai'), icon: 'shield' },
     { type: 'sep' },
     { type: 'item', action: 'official-app', label: t('Offizielle Claude-App', 'Official Claude app', 'Application Claude officielle', 'App Claude ufficiale'), icon: 'download' },
+    { type: 'item', action: 'support', label: t('App unterstützen', 'Support the app', 'Soutenir l’app', 'Sostieni l’app'), icon: 'heart' },
     { type: 'item', action: 'whats-new', label: t('Was ist neu?', 'What’s New', 'Nouveautés', 'Novità'), icon: 'bolt' },
     { type: 'item', action: 'about', label: t('Über Desktop for Claude', 'About Desktop for Claude', 'À propos de Desktop for Claude', 'Informazioni su Desktop for Claude'), icon: 'info' },
     { type: 'sep' },
@@ -3669,7 +3754,8 @@ function getAppMenuHTML() {
     info:    '<circle cx="12" cy="12" r="9"/><path d="M12 8h.01M11 12h1v5h1"/>',
     bolt:    '<polyline points="13 2 4 14 12 14 11 22 20 10 12 10 13 2"/>',
     shield:  '<path d="M12 2L4 5v6c0 5 3.5 9.5 8 11 4.5-1.5 8-6 8-11V5l-8-3z"/><path d="M9 12l2 2 4-4"/>',
-    power:   '<path d="M18.36 6.64a9 9 0 11-12.73 0M12 2v10"/>'
+    power:   '<path d="M18.36 6.64a9 9 0 11-12.73 0M12 2v10"/>',
+    heart:   '<path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/>'
   };
 
   const renderItem = (it, idx) => {
@@ -3886,8 +3972,8 @@ function showCustomMessageBox(opts) {
     };
 
     const win = createDialogWindow({
-      width: 480,
-      height: detail ? 260 : 200,
+      width: opts.width || 480,
+      height: opts.height || (detail ? 260 : 200),
       title
     });
 
@@ -3899,7 +3985,7 @@ function showCustomMessageBox(opts) {
 
     win.on('closed', () => finish(cancelId));
 
-    const html = getMessageBoxHTML({ type, title, message, detail, buttons, defaultId, cancelId, channel });
+    const html = opts.html ? opts.html(channel) : getMessageBoxHTML({ type, title, message, detail, buttons, defaultId, cancelId, channel });
     win.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(html));
   });
 }
@@ -5176,6 +5262,7 @@ ipcMain.on('appmenu-action', (event, name) => {
       break;
     case 'design-open': openDesignWindow(); break;
     case 'official-app': showOfficialAppInfo(); break;
+    case 'support': showSupportInfo(); break;
     case 'settings': openSettingsWindow(); break;
     case 'check-updates':
       triggerManualUpdateCheck();

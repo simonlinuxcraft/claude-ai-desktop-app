@@ -94,6 +94,8 @@ description: |
   Source code: https://github.com/simonlinuxcraft/claude-ai-desktop-app
   (MIT licence)
 
+donation: https://ko-fi.com/simonlinuxcraft
+
 base: core24
 grade: stable
 confinement: strict

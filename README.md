@@ -203,6 +203,12 @@ Known limitation: `--no-sandbox` required for AppImage (SUID sandbox incompatibi
 
 ---
 
+## Support
+
+The app is and stays free, with no ads and no locked features. If it helps you, you can support development with a voluntary contribution on [Ko-fi](https://ko-fi.com/simonlinuxcraft). Nothing about the app changes either way.
+
+---
+
 ## License
 
 This project is an unofficial wrapper. Claude and claude.ai are property of Anthropic.
