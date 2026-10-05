@@ -14,6 +14,8 @@
   <a href="https://snapcraft.io/claude-ai-desktop"><img src="https://snapcraft.io/static/images/badges/en/snap-store-black.svg" alt="Get it from the Snap Store"></a>
   <br>
   <a href="https://snapcraft.io/claude-ai-desktop"><img src="https://snapcraft.io/claude-ai-desktop/badge.svg" alt="Snap build status"></a>
+  <br>
+  <a href="https://ko-fi.com/simonlinuxcraft"><img src="https://ko-fi.com/img/githubbutton_sm.svg" alt="Support me on Ko-fi"></a>
 </p>
 
 > [!IMPORTANT]
@@ -206,6 +208,8 @@ Known limitation: `--no-sandbox` required for AppImage (SUID sandbox incompatibi
 ## Support
 
 The app is and stays free, with no ads and no locked features. If it helps you, you can support development with a voluntary contribution on [Ko-fi](https://ko-fi.com/simonlinuxcraft). Nothing about the app changes either way.
+
+[![Support me on Ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/simonlinuxcraft)
 
 ---
 
