@@ -3662,28 +3662,88 @@ const OFFICIAL_APP_DOCS = 'https://code.claude.com/docs/en/desktop-linux';
 
 async function showOfficialAppInfo() {
   const res = await showCustomMessageBox({
-    type: 'info',
     title: t('Offizielle Claude-App', 'Official Claude app', 'Application Claude officielle', 'App Claude ufficiale'),
-    message: t(
-      'Anthropic bietet seit dem 30. Juni 2026 eine eigene Claude-App für Linux an.',
-      'Anthropic has shipped its own Claude app for Linux since 30 June 2026.',
-      'Anthropic propose sa propre application Claude pour Linux depuis le 30 juin 2026.',
-      'Dal 30 giugno 2026 Anthropic distribuisce una propria app Claude per Linux.'
-    ),
-    detail: t(
-      'Sie läuft auf Ubuntu 22.04 und neuer sowie Debian 12 und neuer (amd64/arm64) und wird über Anthropics apt-Quelle installiert. Enthalten sind Chat, Cowork und Claude Code mit Terminal und Editor. Auf Ubuntu 20.04 läuft sie nicht, und ein offizielles Snap gibt es nicht.\n\nDiese App hier ist nicht von Anthropic und wird nicht eingestellt. Updates und Fehlerbehebungen kommen weiter, neue Funktionen seltener als bisher.',
-      'It runs on Ubuntu 22.04 and newer and Debian 12 and newer (amd64/arm64), installed through Anthropic’s apt repository. It includes Chat, Cowork and Claude Code with a terminal and editor. It does not run on Ubuntu 20.04, and there is no official snap.\n\nThis app is not from Anthropic and is not being discontinued. Updates and fixes keep coming, new features less often than before.',
-      'Elle fonctionne sur Ubuntu 22.04 et plus récent ainsi que Debian 12 et plus récent (amd64/arm64), via le dépôt apt d’Anthropic. Elle inclut Chat, Cowork et Claude Code avec terminal et éditeur. Elle ne fonctionne pas sous Ubuntu 20.04 et il n’existe pas de snap officiel.\n\nCette application n’est pas d’Anthropic et n’est pas abandonnée. Les mises à jour et correctifs continuent, les nouvelles fonctions plus rarement qu’avant.',
-      'Funziona su Ubuntu 22.04 e successivi e Debian 12 e successivi (amd64/arm64), tramite il repository apt di Anthropic. Include Chat, Cowork e Claude Code con terminale ed editor. Su Ubuntu 20.04 non funziona e non esiste uno snap ufficiale.\n\nQuesta app non è di Anthropic e non viene abbandonata. Aggiornamenti e correzioni continuano, nuove funzioni più raramente di prima.'
-    ),
-    buttons: [
-      t('Anleitung öffnen', 'Open install guide', 'Ouvrir le guide', 'Apri la guida'),
-      t('Schließen', 'Close', 'Fermer', 'Chiudi')
-    ],
-    defaultId: 0,
-    cancelId: 1
+    width: 440,
+    height: 520,
+    cancelId: 1,
+    html: getOfficialAppHTML
   });
   if (res.response === 0) openExternalSafe(OFFICIAL_APP_DOCS);
+}
+
+// Gleicher Aufbau wie der Unterstuetzen-Dialog: Symbol, Ueberschrift, Text, Chips, Knoepfe.
+function getOfficialAppHTML(channel) {
+  const th = subTheme();
+  const ac = accent();
+  const check = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
+  const pills = ['Ubuntu 22.04+', 'Debian 12+', 'amd64 / arm64'].map(p => `<span class="pill">${check}${escapeHtml(p)}</span>`).join('');
+  return `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>${escapeHtml(t('Offizielle Claude-App', 'Official Claude app', 'Application Claude officielle', 'App Claude ufficiale'))}</title>
+<style>
+  ${sharedDialogCSS()}
+  body { overflow: hidden; }
+  .wrap { height: 100%; display: flex; flex-direction: column; align-items: center; text-align: center; padding: 28px 32px 22px; }
+  .badge { width: 60px; height: 60px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+    background: linear-gradient(135deg, ${ac.from}, ${ac.to}); color: #fff; box-shadow: 0 6px 20px ${ac.from}55; margin-bottom: 18px; }
+  h1 { font-size: 19px; font-weight: 600; margin: 0 0 10px; letter-spacing: -.2px; }
+  .lead { color: ${th.text}; font-size: 13.5px; line-height: 1.55; margin: 0 0 16px; }
+  .pills { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; margin-bottom: 16px; }
+  .pill { display: inline-flex; align-items: center; gap: 5px; padding: 5px 11px; border-radius: 999px; font-size: 12px;
+    background: ${th.bgHover}; border: 1px solid ${th.border}; color: ${th.textActive}; }
+  .pill svg { color: ${ac.from}; }
+  .card { width: 100%; text-align: left; background: ${th.bgHover}; border: 1px solid ${th.border}; border-radius: 10px;
+    padding: 10px 13px; font-size: 12.5px; line-height: 1.5; color: ${th.text}; }
+  .card b { color: ${th.textActive}; font-weight: 600; }
+  .actions { margin-top: auto; width: 100%; display: flex; flex-direction: column; gap: 8px; padding-top: 18px; }
+  .btn { width: 100%; padding: 10px 16px; font-size: 13.5px; border-radius: 8px; }
+  .btn.primary { display: flex; align-items: center; justify-content: center; gap: 8px; }
+  .btn.ghost { background: transparent; border-color: transparent; color: ${th.text}; }
+  .btn.ghost:hover { background: ${th.bgHover}; color: ${th.textActive}; }
+  .note { color: ${th.text}; font-size: 11.5px; opacity: .8; margin-top: 12px; line-height: 1.45; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="badge"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg></div>
+  <h1>${escapeHtml(t('Die offizielle Claude-App für Linux', 'The official Claude app for Linux', 'L’application Claude officielle pour Linux', 'L’app Claude ufficiale per Linux'))}</h1>
+  <p class="lead">${escapeHtml(t(
+    'Anthropic bietet seit dem 30. Juni 2026 eine eigene Claude-App für Linux an. Enthalten sind Chat, Cowork und Claude Code mit Terminal und Editor.',
+    'Anthropic has shipped its own Claude app for Linux since 30 June 2026. It includes Chat, Cowork and Claude Code with a terminal and editor.',
+    'Anthropic propose sa propre application Claude pour Linux depuis le 30 juin 2026. Elle inclut Chat, Cowork et Claude Code avec terminal et éditeur.',
+    'Dal 30 giugno 2026 Anthropic distribuisce una propria app Claude per Linux. Include Chat, Cowork e Claude Code con terminale ed editor.'
+  ))}</p>
+  <div class="pills">${pills}</div>
+  <div class="card">${escapeHtml(t(
+    'Diese App hier ist nicht von Anthropic und wird nicht eingestellt. Updates und Fehlerbehebungen kommen weiter, neue Funktionen seltener als bisher.',
+    'This app is not from Anthropic and is not being discontinued. Updates and fixes keep coming, new features less often than before.',
+    'Cette application n’est pas d’Anthropic et n’est pas abandonnée. Les mises à jour et correctifs continuent, les nouvelles fonctions plus rarement qu’avant.',
+    'Questa app non è di Anthropic e non viene abbandonata. Aggiornamenti e correzioni continuano, nuove funzioni più raramente di prima.'
+  ))}</div>
+  <div class="actions">
+    <button class="btn primary" data-idx="0">${escapeHtml(t('Anleitung öffnen', 'Open install guide', 'Ouvrir le guide', 'Apri la guida'))}</button>
+    <button class="btn ghost" data-idx="1">${escapeHtml(t('Schließen', 'Close', 'Fermer', 'Chiudi'))}</button>
+  </div>
+  <div class="note">${escapeHtml(t(
+    'Installiert wird sie über Anthropics apt-Quelle. Auf Ubuntu 20.04 läuft sie nicht, und ein offizielles Snap gibt es nicht.',
+    'It is installed through Anthropic’s apt repository. It does not run on Ubuntu 20.04, and there is no official snap.',
+    'Elle s’installe via le dépôt apt d’Anthropic. Elle ne fonctionne pas sous Ubuntu 20.04 et il n’existe pas de snap officiel.',
+    'Si installa tramite il repository apt di Anthropic. Su Ubuntu 20.04 non funziona e non esiste uno snap ufficiale.'
+  ))}</div>
+</div>
+<script>
+(function(){
+  const channel = ${JSON.stringify(channel)};
+  const respond = (i) => { try { window.msgboxAPI.respond(channel, i); } catch (e) {} };
+  document.querySelectorAll('.btn').forEach(b => b.addEventListener('click', () => respond(parseInt(b.dataset.idx, 10))));
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { e.preventDefault(); respond(1); } });
+  setTimeout(() => document.querySelector('.btn.primary').focus(), 50);
+})();
+</script>
+</body>
+</html>`;
 }
 
 // Ko-fi statt PayPal-Knopf: _donations ist in Deutschland gemeinnuetzigen Organisationen vorbehalten,
