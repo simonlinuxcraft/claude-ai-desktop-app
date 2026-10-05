@@ -43,7 +43,7 @@
       "maintainer": "Simon Gettkandt",
       "desktop": {
         "entry": {
-          "StartupWMClass": "claude-desktop"
+          "StartupWMClass": "io.github.simonlinuxcraft.DesktopForClaude"
         }
       }
     },

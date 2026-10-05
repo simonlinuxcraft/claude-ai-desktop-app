@@ -65,6 +65,18 @@ const chromeUA = `Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, lik
 // nutzen wir parent+center:true und ueberlassen die Platzierung dem Compositor.
 const isWayland = process.platform === 'linux'
   && (process.env.XDG_SESSION_TYPE === 'wayland' || !!process.env.WAYLAND_DISPLAY);
+// Reverse-DNS-App-ID: Wayland-app_id, X11-Fensterklasse und Identitaet am Portal. Ohne sie
+// und ohne gleichnamige .desktop-Datei bindet das GlobalShortcuts-Portal nichts (GNOME 50:
+// "App info not found"). Der Snap behaelt seine Identitaet, dort haengt die Zuordnung der
+// Benachrichtigungen an CHROME_DESKTOP.
+const APP_ID = 'io.github.simonlinuxcraft.DesktopForClaude';
+if (!process.env.SNAP) app.setDesktopName(`${APP_ID}.desktop`);
+// Nativ statt ueber XWayland: die Wrapper setzen --ozone-platform=x11, ein danach
+// angehaengtes --ozone-platform=wayland gewinnt.
+const nativeWayland = isWayland && app.commandLine.getSwitchValue('ozone-platform') !== 'x11';
+// Globale Hotkeys gibt es nativ unter Wayland nur ueber das Portal, in Electron 44.5 noch
+// nicht standardmaessig an.
+if (nativeWayland) app.commandLine.appendSwitch('enable-features', 'GlobalShortcutsPortal,GlobalShortcutsPortalPreferredTrigger');
 
 const TAB_BAR_HEIGHT = 40;
 const WINDOW_BORDER = 1; // dezenter Fensterrahmen: 1px der Tab-Bar-Border scheint im View-Inset durch
@@ -2515,7 +2527,8 @@ function getSettingsHTML() {
     conflictClip: t('Diese Kombination ist bereits dem Clipboard-Hotkey zugewiesen.', 'This combination is already assigned to the Clipboard hotkey.', 'Cette combinaison est déjà attribuée au raccourci du presse-papiers.', 'Questa combinazione è già assegnata alla scorciatoia degli appunti.'),
     removed: t('Hotkey entfernt.', 'Hotkey removed.', 'Raccourci supprimé.', 'Scorciatoia rimossa.'),
     needMod: t('Bitte mindestens eine Modifikator-Taste (Strg/Alt/Shift) verwenden.', 'Please use at least one modifier key (Ctrl/Alt/Shift).', 'Veuillez utiliser au moins une touche de modification (Ctrl/Alt/Maj).', 'Usa almeno un tasto modificatore (Ctrl/Alt/Maiusc).'),
-    waylandHint: t('Hinweis: Auf Wayland werden globale Hotkeys vom Compositor begrenzt und können je nach Desktop (GNOME/KDE) nicht systemweit greifen. Wenn die Registrierung fehlschlägt, weicht die App still aus – du kannst den Quick-Prompt dann nur bei aktivem Fenster auslösen.', 'Note: On Wayland, global hotkeys are gated by the compositor and may not work system-wide depending on the desktop (GNOME/KDE). If registration fails, the app silently skips it – the Quick-Prompt is then only reachable while the window is focused.', 'Remarque : sous Wayland, les raccourcis globaux sont limités par le compositeur et peuvent ne pas fonctionner au niveau du système selon le bureau (GNOME/KDE). Si l\'enregistrement échoue, l\'application l\'ignore silencieusement, le Quick-Prompt n\'est alors accessible que lorsque la fenêtre est active.', 'Nota: su Wayland le scorciatoie globali sono limitate dal compositor e potrebbero non funzionare a livello di sistema a seconda del desktop (GNOME/KDE). Se la registrazione fallisce, l\'app la ignora silenziosamente, il Quick-Prompt è quindi accessibile solo quando la finestra è attiva.'),
+    waylandPortalHint: t('Hinweis: Unter Wayland vergibt das System globale Hotkeys. GNOME ab Version 48 und KDE fragen beim ersten Mal nach, ob die App die Tastenkombination nutzen darf, danach lässt sie sich in den Systemeinstellungen ändern. Ältere Desktops kennen das nicht, dort greift der Hotkey nicht.', 'Note: On Wayland the system hands out global hotkeys. GNOME 48 or newer and KDE ask once whether the app may use the shortcut, after that you can change it in the system settings. Older desktops lack this, the hotkey does not work there.', 'Remarque : sous Wayland, c\'est le système qui attribue les raccourcis globaux. GNOME 48 ou plus récent et KDE demandent une fois si l\'application peut utiliser le raccourci, ensuite il se modifie dans les paramètres du système. Les bureaux plus anciens ne le permettent pas, le raccourci n\'y fonctionne pas.', 'Nota: su Wayland è il sistema ad assegnare le scorciatoie globali. GNOME 48 o successivo e KDE chiedono una volta se l\'app può usare la scorciatoia, poi si può modificare nelle impostazioni di sistema. I desktop più vecchi non lo supportano, lì la scorciatoia non funziona.'),
+    waylandHint: t('Hinweis: Auf Wayland werden globale Hotkeys vom Compositor begrenzt und können je nach Desktop (GNOME/KDE) nicht systemweit greifen. Wenn die Registrierung fehlschlägt, weicht die App still aus. Du kannst den Quick-Prompt dann nur bei aktivem Fenster auslösen.', 'Note: On Wayland, global hotkeys are gated by the compositor and may not work system-wide depending on the desktop (GNOME/KDE). If registration fails, the app silently skips it. The Quick-Prompt is then only reachable while the window is focused.', 'Remarque : sous Wayland, les raccourcis globaux sont limités par le compositeur et peuvent ne pas fonctionner au niveau du système selon le bureau (GNOME/KDE). Si l\'enregistrement échoue, l\'application l\'ignore silencieusement, le Quick-Prompt n\'est alors accessible que lorsque la fenêtre est active.', 'Nota: su Wayland le scorciatoie globali sono limitate dal compositor e potrebbero non funzionare a livello di sistema a seconda del desktop (GNOME/KDE). Se la registrazione fallisce, l\'app la ignora silenziosamente, il Quick-Prompt è quindi accessibile solo quando la finestra è attiva.'),
     tplEmpty: t('Noch keine Templates. F\u00fcgst du eines hinzu, erscheint es im Quick-Prompt-Fenster als Auswahl.', 'No templates yet. Once added, they appear as a picker in the Quick-Prompt window.', 'Aucun mod\u00e8le pour l\'instant. Lorsque vous en ajoutez un, il appara\u00eet comme choix dans la fen\u00eatre Quick-Prompt.', 'Ancora nessun modello. Quando ne aggiungi uno, appare come scelta nella finestra Quick-Prompt.'),
     tplName: t('Name (z.B. \u201e\u00dcbersetze")', 'Name (e.g. \u201eTranslate")', 'Nom (par ex. \u00ab Traduire \u00bb)', 'Nome (es. "Traduci")'),
     tplPrefix: t('Prefix-Text (wird vor deinem Input eingef\u00fcgt)', 'Prefix text (prepended to your input)', 'Texte de pr\u00e9fixe (ajout\u00e9 avant votre saisie)', 'Testo prefisso (inserito prima del tuo input)'),
@@ -2638,7 +2651,7 @@ ${customTitlebarHTML(t('Desktop for Claude - Einstellungen', 'Desktop for Claude
 
   <div class="section">
     <h2>${i18n.secHotkeys}</h2>
-    ${isWayland ? `<div class="hint" style="margin-left:0;margin-bottom:10px">${i18n.waylandHint}</div>` : ''}
+    ${isWayland ? `<div class="hint" style="margin-left:0;margin-bottom:10px">${nativeWayland ? i18n.waylandPortalHint : i18n.waylandHint}</div>` : ''}
     <div class="hotkey-row">
       <div class="lab">${i18n.hotkeyQp}</div>
       <div class="capture" data-key="qp" tabindex="0">${i18n.press}</div>
@@ -4895,13 +4908,41 @@ function selfHealDesktopFiles() {
       const content = fs.readFileSync(file, 'utf8');
       const updated = content
         .replace(/^Exec=.*$/m, () => `Exec="${appImagePath}" --no-sandbox %U`)
-        .replace(/^X-AppImage-Version=.*$/m, () => `X-AppImage-Version=${version}`);
+        .replace(/^X-AppImage-Version=.*$/m, () => `X-AppImage-Version=${version}`)
+        .replace(/^StartupWMClass=.*$/m, () => `StartupWMClass=${APP_ID}`);
       if (updated !== content) {
         fs.writeFileSync(file, updated);
         appsChanged = true;
       }
     } catch (_) {}
   }
+
+  // Starter mit fremdem Namen (AppImageLauncher, Gear Lever) erkennt man am Exec. Dort nur die
+  // Fensterzuordnung nachziehen, ihr Exec gehoert dem Werkzeug.
+  try {
+    for (const f of fs.readdirSync(appsDir)) {
+      const file = path.join(appsDir, f);
+      if (!f.endsWith('.desktop') || desktopCandidates.includes(file)) continue;
+      const content = fs.readFileSync(file, 'utf8');
+      if (!content.includes(appImagePath)) continue;
+      const updated = content.replace(/^StartupWMClass=.*$/m, () => `StartupWMClass=${APP_ID}`);
+      if (updated !== content) { fs.writeFileSync(file, updated); appsChanged = true; }
+    }
+  } catch (_) {}
+
+  // Das Wayland-Portal sucht eine .desktop-Datei, die genau wie die App-ID heisst. Versteckt und
+  // ohne StartupWMClass, damit ein angehefteter Starter von oben die Fensterzuordnung behaelt.
+  const idFile = path.join(appsDir, `${APP_ID}.desktop`);
+  const idEntry = ['[Desktop Entry]', 'Type=Application', 'Name=Desktop for Claude',
+    `Exec="${appImagePath}" --no-sandbox %U`, `Icon=${isBeta ? 'desktop-for-claude-beta' : 'desktop-for-claude'}`,
+    'NoDisplay=true', ''].join('\n');
+  try {
+    if (!fs.existsSync(idFile) || fs.readFileSync(idFile, 'utf8') !== idEntry) {
+      fs.mkdirSync(appsDir, { recursive: true });
+      fs.writeFileSync(idFile, idEntry, { mode: 0o644 });
+      appsChanged = true;
+    }
+  } catch (_) {}
 
   try {
     if (fs.existsSync(AUTOSTART_FILE)) {
