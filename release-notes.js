@@ -56,10 +56,10 @@ const RELEASE_NOTES = {
         it: 'Segnalazioni più precise'
       },
       text: {
-        de: 'Die kopierten Diagnose-Infos und der Fehlerbericht nennen jetzt auch Distribution, Desktop-Umgebung und die Skalierung der Monitore. Damit lassen sich Darstellungsfehler wie unscharfer Text bei 125 % schneller zuordnen.',
-        en: 'Copied diagnostics and bug reports now also name the distribution, the desktop environment and the display scale. That makes rendering issues such as soft text at 125% easier to pin down.',
-        fr: 'Les infos de diagnostic copiées et le rapport de bug indiquent désormais aussi la distribution, l’environnement de bureau et la mise à l’échelle des écrans. Les problèmes d’affichage, comme un texte flou à 125 %, sont ainsi plus faciles à cerner.',
-        it: 'Le informazioni di diagnostica copiate e la segnalazione di bug indicano ora anche la distribuzione, l’ambiente desktop e il ridimensionamento degli schermi. Così i problemi di visualizzazione, come il testo sfocato al 125%, si individuano più in fretta.'
+        de: 'Die kopierten Diagnose-Infos und der Fehlerbericht nennen jetzt auch Distribution, Desktop-Umgebung und die Skalierung der Monitore. Das hilft mir bei der Arbeit an einer besseren Darstellung unter Wayland, die gerade läuft.',
+        en: 'Copied diagnostics and bug reports now also name the distribution, the desktop environment and the display scale. That helps with the work on better rendering under Wayland, which is under way.',
+        fr: 'Les infos de diagnostic copiées et le rapport de bug indiquent désormais aussi la distribution, l’environnement de bureau et la mise à l’échelle des écrans. Cela m’aide pour le travail en cours sur un meilleur rendu sous Wayland.',
+        it: 'Le informazioni di diagnostica copiate e la segnalazione di bug indicano ora anche la distribuzione, l’ambiente desktop e il ridimensionamento degli schermi. Questo mi aiuta nel lavoro in corso per una resa migliore sotto Wayland.'
       }
     }
   ],
