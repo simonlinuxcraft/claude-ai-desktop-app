@@ -3332,37 +3332,27 @@ function getDesignHTML() {
   const styleAccent = ACCENT[designStyle] || ACCENT.modern;
   const mode = currentThemeMode();
   const i18n = {
-    title: t('App-Theme', 'App Theme', 'Thème de l’app', 'Tema dell’app'),
-    subtitle: t('Farbthema, Stil, Zeichenregen und Tray-Symbol', 'Colour theme, style, character rain and tray icon', 'Thème, style, pluie de caractères et icône de notification', 'Tema, stile, pioggia di caratteri e icona di notifica'),
     secTheme: t('Farbthema', 'Colour theme', 'Thème de couleur', 'Tema colore'),
     secStyle: t('Stil', 'Style', 'Style', 'Stile'),
     styleNote: t(
-      'Der Stil setzt die Akzentfarbe: Sende-Pfeil, Muster, Highlights und den Composer-Rand, den nur Classic weglässt. Jeder Stil lässt sich mit jedem Farbthema kombinieren.',
-      'The style sets the accent colour: send arrow, pattern, highlights and the composer border, which only Classic leaves out. Every style combines with every colour theme.',
-      'Le style définit la couleur d’accent : flèche d’envoi, motif, surbrillances et la bordure du composeur, que seul Classic omet. Chaque style se combine avec chaque thème.',
-      'Lo stile imposta il colore d’accento: freccia di invio, motivo, evidenziazioni e il bordo del composer, che solo Classic omette. Ogni stile si combina con ogni tema.'
+      'Der Stil setzt die Akzentfarbe und passt zu jedem Farbthema. Classic lässt den Rand ums Eingabefeld weg.',
+      'The style sets the accent colour and works with every colour theme. Classic leaves out the border around the input field.',
+      'Le style définit la couleur d’accent et se combine avec chaque thème. Classic omet la bordure autour du champ de saisie.',
+      'Lo stile imposta il colore d’accento e si combina con ogni tema. Classic omette il bordo attorno al campo di inserimento.'
     ),
-    secTray: t('Tray-Symbol', 'Tray icon', 'Icône de la zone de notification', 'Icona nell’area di notifica'),
-    secCorners: t('Fensterecken (experimentell)', 'Window corners (experimental)', 'Coins des fenêtres (expérimental)', 'Angoli delle finestre (sperimentale)'),
-    cornersNote: t('Wird beim nächsten Start der App übernommen.', 'Takes effect the next time the app starts.', 'Pris en compte au prochain démarrage de l’app.', 'Viene applicato al prossimo avvio dell’app.'),
-    secRain: t('Zeichenregen / Matrix-Thema', 'Character rain / Matrix theme', 'Pluie de caractères / thème Matrix', 'Pioggia di caratteri / tema Matrix'),
-    rainNote: t(
-      'Gilt nur im Matrix-Thema. Der Regen springt zeilenweise statt zu gleiten, dadurch braucht er kaum Rechenleistung. Auf älteren Geräten kannst du ihn hier abschalten.',
-      'Only applies to the Matrix theme. The rain steps line by line instead of gliding, so it needs very little processing power. On older machines you can turn it off here.',
-      'Ne concerne que le thème Matrix. La pluie avance ligne par ligne au lieu de glisser, elle demande donc très peu de ressources. Sur une machine ancienne, désactivez-la ici.',
-      'Vale solo per il tema Matrix. La pioggia avanza riga per riga invece di scorrere, quindi richiede pochissime risorse. Su macchine più vecchie puoi disattivarla qui.'
+    secMore: t('Weitere Optionen', 'More options', 'Autres options', 'Altre opzioni'),
+    rainLabel: t('Zeichenregen', 'Character rain', 'Pluie de caractères', 'Pioggia di caratteri'),
+    rainHint: t(
+      'Nur im Matrix-Thema. Der Regen springt zeilenweise und braucht kaum Rechenleistung.',
+      'Matrix theme only. The rain steps line by line and needs very little processing power.',
+      'Thème Matrix uniquement. La pluie avance ligne par ligne et demande très peu de ressources.',
+      'Solo nel tema Matrix. La pioggia avanza riga per riga e richiede pochissime risorse.'
     ),
+    trayLabel: t('Monochromes Tray-Symbol', 'Monochrome tray icon', 'Icône de notification monochrome', 'Icona di notifica monocromatica'),
+    trayHint: t('Weiß wie die Systemsymbole in der Leiste.', 'White like the system icons in the panel.', 'Blanche comme les icônes système du panneau.', 'Bianca come le icone di sistema nel pannello.'),
+    cornersLabel: t('Runde Fensterecken', 'Rounded window corners', 'Coins de fenêtre arrondis', 'Angoli delle finestre arrotondati'),
+    cornersHint: t('Experimentell. Wird beim nächsten Start der App übernommen.', 'Experimental. Takes effect the next time the app starts.', 'Expérimental. Pris en compte au prochain démarrage de l’app.', 'Sperimentale. Viene applicato al prossimo avvio dell’app.'),
     close: t('Schließen', 'Close', 'Fermer', 'Chiudi')
-  };
-  const TRAY_LABELS = {
-    color: {
-      name: t('Farbig', 'Colour', 'Couleur', 'Colori'),
-      hint: t('Das App-Logo mit Verlauf.', 'The app logo with its gradient.', 'Le logo de l’app avec son dégradé.', 'Il logo dell’app con la sfumatura.')
-    },
-    mono: {
-      name: t('Monochrom', 'Monochrome', 'Monochrome', 'Monocromatico'),
-      hint: t('Weiß wie die Systemsymbole.', 'White like the system icons.', 'Blanc comme les icônes système.', 'Bianco come le icone di sistema.')
-    }
   };
   const THEME_LABELS = {
     dark: {
@@ -3392,6 +3382,7 @@ function getDesignHTML() {
     neon: { name: 'Neon', hint: t('Blau, auch in den anderen Themes.', 'Blue, in the other themes too.', 'Bleu, aussi dans les autres thèmes.', 'Blu, anche negli altri temi.') },
     matrix: { name: 'Matrix', hint: t('Smaragdgrün, am stärksten auf OLED.', 'Emerald green, strongest on OLED.', 'Vert émeraude, plus intense en OLED.', 'Verde smeraldo, più intenso su OLED.') }
   };
+  const tick = '<svg class="tick" viewBox="0 0 16 16"><path d="M3 8.5l3.2 3.2L13 5" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 
   const card = (m) => {
     const p = THEME[m], s = PREVIEW_SURFACE[m], a = styleAccent;
@@ -3401,7 +3392,7 @@ function getDesignHTML() {
       `--cf:${a.neonFrom || a.from}`, `--ct:${a.neonTo || a.to}`
     ].join(';');
     const chrome = JSON.stringify({ bg: p.bg, bgHover: p.bgHover, bgActive: p.bgActive, text: p.text, textActive: p.textActive, border: p.border, frameHi: p.frameHi, frameLo: p.frameLo, from: a.from, to: a.to });
-    return `<button class="card" data-mode="${m}" data-chrome='${chrome}' aria-pressed="${m === mode}">
+    return `<button class="card" data-mode="${m}" data-chrome='${chrome}' aria-pressed="${m === mode}" title="${escapeHtml(THEME_LABELS[m].hint)}">
   <span class="prev" style="${vars}">
     <span class="prev-bar"><i class="tab"></i><i class="tab dim"></i></span>
     <span class="prev-body">
@@ -3409,58 +3400,24 @@ function getDesignHTML() {
       <span class="prev-main"><i class="ln w1"></i><i class="ln w2"></i><i class="ln w3"></i><span class="prev-comp"></span></span>
     </span>
   </span>
-  <span class="card-name">${THEME_LABELS[m].name}<svg class="tick" viewBox="0 0 16 16"><path d="M3 8.5l3.2 3.2L13 5" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
-  <span class="card-hint">${THEME_LABELS[m].hint}</span>
+  <span class="card-name">${THEME_LABELS[m].name}${tick}</span>
 </button>`;
   };
 
   const styleCard = (key) => {
     const a = ACCENT[key];
-    return `<button class="style-card" data-design="${key}" data-from="${a.from}" data-to="${a.to}" data-cf="${a.neonFrom || a.from}" data-ct="${a.neonTo || a.to}" aria-pressed="${key === designStyle}">
-  <span class="swatch" style="background:linear-gradient(135deg,${a.from},${a.to})"></span>
-  <span class="style-text"><span class="card-name">${STYLE_LABELS[key].name}<svg class="tick" viewBox="0 0 16 16"><path d="M3 8.5l3.2 3.2L13 5" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
-  <span class="card-hint">${STYLE_LABELS[key].hint}</span></span>
+    return `<button class="card" data-design="${key}" data-from="${a.from}" data-to="${a.to}" data-cf="${a.neonFrom || a.from}" data-ct="${a.neonTo || a.to}" aria-pressed="${key === designStyle}" title="${escapeHtml(STYLE_LABELS[key].hint)}">
+  <span class="bar" style="background:linear-gradient(135deg,${a.neonFrom || a.from},${a.neonTo || a.to})"></span>
+  <span class="card-name">${STYLE_LABELS[key].name}${tick}</span>
 </button>`;
   };
 
-  const CORNER_LABELS = {
-    round:  { name: t('Abgerundet', 'Rounded', 'Arrondis', 'Arrotondati'), hint: t('Weiche Ecken am Fensterrand.', 'Soft corners on the window edge.', 'Coins doux au bord de la fenêtre.', 'Angoli morbidi sul bordo della finestra.') },
-    square: { name: t('Eckig', 'Square', 'Droits', 'Squadrati'), hint: t('Der bisherige Look.', 'The previous look.', 'L’ancien style.', 'Lo stile precedente.') }
+  // Die GNOME-Leiste ist schwarz, darum zeigt die Kachel das Tray-Symbol auf Schwarz.
+  const trayImg = (mono) => {
+    try { return nativeImage.createFromPath(trayIcon(mono)).resize({ width: 32 }).toDataURL(); } catch { return ''; }
   };
-
-  const cornerCard = (key) => {
-    const rund = key === 'round';
-    return `<button class="style-card" data-corners="${key}" aria-pressed="${rund === roundedCorners}">
-  <span class="swatch" style="border:2px solid var(--ta);border-radius:${rund ? 7 : 1}px;opacity:.7"></span>
-  <span class="style-text"><span class="card-name">${CORNER_LABELS[key].name}<svg class="tick" viewBox="0 0 16 16"><path d="M3 8.5l3.2 3.2L13 5" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
-  <span class="card-hint">${CORNER_LABELS[key].hint}</span></span>
-</button>`;
-  };
-
-  const RAIN_LABELS = {
-    on:  { name: t('An', 'On', 'Activée', 'Attiva'), hint: t('Der Regen fällt Zeile für Zeile.', 'The rain falls line by line.', 'La pluie tombe ligne par ligne.', 'La pioggia cade riga per riga.') },
-    off: { name: t('Aus', 'Off', 'Désactivée', 'Disattiva'), hint: t('Muster steht still.', 'Pattern stays still.', 'Le motif reste fixe.', 'Il motivo resta fermo.') }
-  };
-
-  const rainCard = (key) => {
-    const an = key === 'on';
-    return `<button class="style-card" data-rain="${key}" aria-pressed="${an === matrixRain}">
-  <span class="swatch" style="background:linear-gradient(180deg,#247F3B,#185427)"></span>
-  <span class="style-text"><span class="card-name">${RAIN_LABELS[key].name}<svg class="tick" viewBox="0 0 16 16"><path d="M3 8.5l3.2 3.2L13 5" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
-  <span class="card-hint">${RAIN_LABELS[key].hint}</span></span>
-</button>`;
-  };
-
-  const trayCard = (key) => {
-    const mono = key === 'mono';
-    let src = '';
-    try { src = nativeImage.createFromPath(trayIcon(mono)).resize({ width: 32 }).toDataURL(); } catch {}
-    return `<button class="style-card" data-tray="${key}" aria-pressed="${mono === trayMono}">
-  <span class="swatch tray-prev"><img src="${src}" alt=""></span>
-  <span class="style-text"><span class="card-name">${TRAY_LABELS[key].name}<svg class="tick" viewBox="0 0 16 16"><path d="M3 8.5l3.2 3.2L13 5" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
-  <span class="card-hint">${TRAY_LABELS[key].hint}</span></span>
-</button>`;
-  };
+  const tray = { color: trayImg(false), mono: trayImg(true) };
+  const row = (id, ico, label, hint, on) => `<label class="item"><span class="ico${id === 'tray' ? ' tray-ico' : ''}">${ico}</span><span class="txt"><span class="ttl">${label}</span><span class="desc">${hint}</span></span><input type="checkbox" class="switch" id="${id}"${on ? ' checked' : ''}></label>`;
 
   return `<!DOCTYPE html><html><head>
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src data:; style-src 'unsafe-inline'; script-src 'unsafe-inline';">
@@ -3472,53 +3429,59 @@ body{background:var(--bg);color:var(--ta);font-family:system-ui,-apple-system,sa
   transition:background-color .2s ease,color .2s ease}
 :root{--bg:${th.bg};--bgh:${th.bgHover};--bga:${th.bgActive};--tt:${th.text};--ta:${th.textActive};
   --bd:${th.border};--fhi:${th.frameHi};--flo:${th.frameLo};--ac-from:${ac.from};--ac-to:${ac.to}}
-.head{padding:18px 22px 12px;border-bottom:1px solid var(--bd)}
-h1{font-size:16px;margin:0 0 2px;font-weight:600}
-.sub{color:var(--tt);font-size:12px}
-.scroll{flex:1;overflow-y:auto;padding:14px 22px 4px}
+.scroll{flex:1;overflow-y:auto;padding:16px 22px 6px}
 .scroll::-webkit-scrollbar{width:8px}
 .scroll::-webkit-scrollbar-thumb{background:var(--bd);border-radius:4px}
 .section{margin-bottom:18px}
-.section h2{font-size:11px;font-weight:600;letter-spacing:.6px;text-transform:uppercase;color:var(--tt);margin:0 0 10px}
-.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.grid-theme{grid-template-columns:1fr 1fr 1fr}
-.card,.style-card{font-family:inherit;text-align:left;cursor:pointer;padding:8px;border-radius:10px;
-  background:var(--bgh);border:1.5px solid var(--bd);color:var(--ta);
+.section h2{font-size:13px;font-weight:600;color:var(--ta);margin:0 0 10px;display:flex;align-items:center;gap:7px}
+.section h2 .ui-ico{color:var(--ac-from);flex:0 0 auto}
+.grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px}
+.grid-style{grid-template-columns:repeat(4,minmax(0,1fr))}
+.card{font-family:inherit;text-align:left;cursor:pointer;padding:7px;border-radius:10px;min-width:0;
+  background:var(--bgh);border:1.5px solid var(--bd);color:var(--ta);display:flex;flex-direction:column;gap:7px;
   transition:border-color .15s ease,background .15s ease}
-.card{display:flex;flex-direction:column;gap:6px}
-.card:hover,.style-card:hover{background:var(--bga)}
-.card[aria-pressed="true"],.style-card[aria-pressed="true"]{border-color:var(--ac-from)}
-.card:focus-visible,.style-card:focus-visible{outline:2px solid var(--ac-from);outline-offset:2px}
-.card-name{display:flex;align-items:center;gap:5px;font-weight:600;font-size:12.5px}
+.card:hover{background:var(--bga)}
+.card[aria-pressed="true"]{border-color:var(--ac-from)}
+.card:focus-visible,.switch:focus-visible{outline:2px solid var(--ac-from);outline-offset:2px}
+.card-name{display:flex;align-items:center;gap:5px;font-weight:600;font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .tick{width:13px;height:13px;flex:0 0 auto;color:var(--ac-from);opacity:0}
 [aria-pressed="true"] .tick{opacity:1}
-.card-hint{color:var(--tt);font-size:11px;line-height:1.4;display:block}
 /* Vorschau: Fensterleiste, Seitenleiste, Textzeilen und Eingabefeld in den echten Farben */
-.prev{display:block;border-radius:6px;overflow:hidden;border:1px solid var(--l);background:var(--p);height:86px}
-.prev-bar{display:flex;gap:3px;align-items:center;height:15px;padding:0 4px;background:var(--bar);border-bottom:1px solid var(--l)}
-.prev-bar .tab{width:26px;height:8px;border-radius:2px;background:var(--bara);display:block}
+.prev{display:block;border-radius:6px;overflow:hidden;border:1px solid var(--l);background:var(--p);height:72px}
+.prev-bar{display:flex;gap:3px;align-items:center;height:13px;padding:0 4px;background:var(--bar);border-bottom:1px solid var(--l)}
+.prev-bar .tab{width:22px;height:7px;border-radius:2px;background:var(--bara);display:block}
 .prev-bar .tab.dim{background:var(--l)}
-.prev-body{display:flex;height:calc(100% - 15px)}
-.prev-side{width:26px;flex:0 0 26px;padding:5px 3px;background:var(--bar);border-right:1px solid var(--l);display:flex;flex-direction:column;gap:4px}
+.prev-body{display:flex;height:calc(100% - 13px)}
+.prev-side{width:22px;flex:0 0 22px;padding:5px 3px;background:var(--bar);border-right:1px solid var(--l);display:flex;flex-direction:column;gap:4px}
 .prev-side i{height:4px;border-radius:2px;background:var(--tt);opacity:.45;display:block}
 .prev-main{flex:1;padding:6px 6px 0;display:flex;flex-direction:column;gap:4px}
 .prev-main .ln{height:4px;border-radius:2px;background:var(--ta);opacity:.55;display:block}
 .prev-main .w1{width:70%}.prev-main .w2{width:88%}.prev-main .w3{width:52%}
-.prev-comp{margin-top:auto;margin-bottom:6px;height:20px;border-radius:5px;background:var(--s);
+.prev-comp{margin-top:auto;margin-bottom:6px;height:17px;border-radius:5px;background:var(--s);
   border:1.5px solid transparent;background-image:linear-gradient(var(--s),var(--s)),linear-gradient(135deg,var(--cf),var(--ct));
   background-origin:border-box;background-clip:padding-box,border-box;display:block}
 [data-style="classic"] .prev-comp{background-image:none;border-color:var(--l)}
-.style-card{display:flex;align-items:center;gap:8px;min-width:0}
-.swatch{width:22px;height:22px;flex:0 0 22px;border-radius:6px;display:block}
-/* Die GNOME-Leiste ist schwarz, darum zeigt die Vorschau beide Varianten auf Schwarz */
-.tray-prev{background:#000;display:flex;align-items:center;justify-content:center}
-.tray-prev img{width:16px;height:16px}
-.style-text{min-width:0}
-.note{color:var(--tt);font-size:11px;line-height:1.5;margin-top:8px}
+.bar{display:block;height:24px;border-radius:6px}
+.note{color:var(--tt);font-size:11.5px;line-height:1.5;margin-top:9px}
+/* Gruppierte Liste mit Schaltern wie im Einstellungsfenster */
+.group{background:var(--bgh);border:1px solid var(--bd);border-radius:10px;overflow:hidden}
+.item{display:flex;align-items:center;gap:14px;padding:11px 14px;cursor:pointer}
+.item + .item{border-top:1px solid var(--bd)}
+.ico{flex:0 0 auto;width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;background:var(--bg);border:1px solid var(--bd);color:var(--ac-from)}
+.tray-ico{background:#000}
+.tray-ico img{width:18px;height:18px}
+.txt{display:flex;flex-direction:column;gap:3px;min-width:0;flex:1}
+.ttl{font-weight:500;line-height:1.3}
+.desc{color:var(--tt);font-size:12px;line-height:1.45}
+.switch{appearance:none;-webkit-appearance:none;flex:0 0 auto;width:38px;height:22px;margin:0;border-radius:11px;background:var(--bd);position:relative;cursor:pointer;transition:background .15s ease}
+.switch::after{content:'';position:absolute;top:3px;left:3px;width:16px;height:16px;border-radius:50%;background:var(--tt);transition:transform .15s ease,background .15s ease}
+.switch:checked{background:linear-gradient(135deg,var(--ac-from),var(--ac-to))}
+.switch:checked::after{transform:translateX(16px);background:#fff}
 .actions{padding:12px 22px;border-top:1px solid var(--bd);display:flex;justify-content:flex-end}
 button.done{background:linear-gradient(135deg,var(--ac-from),var(--ac-to));color:#fff;border:none;
   padding:7px 14px;border-radius:6px;cursor:pointer;font-size:12.5px;font-weight:500;font-family:inherit}
 button.done:hover{filter:brightness(1.08)}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
 ${customTitlebarCSS()}
 /* customTitlebarCSS backt die Farben beim Oeffnen ein. Hier auf die Variablen umbiegen,
    sonst bleibt die Titelleiste beim Wechsel im alten Theme stehen. */
@@ -3528,55 +3491,37 @@ ${roundFrameCSS('var(--fhi)', 'var(--flo)')}
 .cd-titlebar-btn:hover{background:var(--bgh)}
 </style></head><body data-style="${designStyle}">
 ${customTitlebarHTML('Desktop for Claude - ' + t('App-Theme', 'App Theme', 'Thème de l’app', 'Tema dell’app'))}
-<div class="head">
-  <h1>${i18n.title}</h1>
-  <div class="sub">${i18n.subtitle}</div>
-</div>
 <div class="scroll">
   <div class="section">
-    <h2>${i18n.secTheme}</h2>
-    <div class="grid grid-theme">${THEME_MODES.map(card).join('')}</div>
+    <h2>${uiIcon('theme', 15)}${i18n.secTheme}</h2>
+    <div class="grid">${THEME_MODES.map(card).join('')}</div>
   </div>
   <div class="section">
-    <h2>${i18n.secStyle}</h2>
-    <div class="grid">${styleCard('modern')}${styleCard('classic')}${styleCard('neon')}${styleCard('matrix')}</div>
+    <h2>${uiIcon('palette', 15)}${i18n.secStyle}</h2>
+    <div class="grid grid-style">${['modern', 'classic', 'neon', 'matrix'].map(styleCard).join('')}</div>
     <div class="note">${i18n.styleNote}</div>
   </div>
   <div class="section">
-    <h2>${i18n.secRain}</h2>
-    <div class="grid">${rainCard('on')}${rainCard('off')}</div>
-    <div class="note">${i18n.rainNote}</div>
-  </div>
-  <div class="section">
-    <h2>${i18n.secTray}</h2>
-    <div class="grid">${trayCard('color')}${trayCard('mono')}</div>
-  </div>
-  <div class="section">
-    <h2>${i18n.secCorners}</h2>
-    <div class="grid">${cornerCard('round')}${cornerCard('square')}</div>
-    <div class="note">${i18n.cornersNote}</div>
+    <h2>${uiIcon('cog', 15)}${i18n.secMore}</h2>
+    <div class="group">
+      ${row('rain', uiIcon('rain', 17), i18n.rainLabel, i18n.rainHint, matrixRain)}
+      ${row('tray', `<img id="tray-img" src="${trayMono ? tray.mono : tray.color}" alt="">`, i18n.trayLabel, i18n.trayHint, trayMono)}
+      ${row('corners', uiIcon('corner', 17), i18n.cornersLabel, i18n.cornersHint, roundedCorners)}
+    </div>
   </div>
 </div>
 <div class="actions"><button class="done" id="done">${i18n.close}</button></div>
 <script>
 const r=document.documentElement.style;
+const TRAY=${JSON.stringify(tray)};
 function pick(list,el){for(const b of list)b.setAttribute('aria-pressed',String(b===el));}
-const cards=[...document.querySelectorAll('.card')];
+const cards=[...document.querySelectorAll('[data-mode]')];
 const styles=[...document.querySelectorAll('[data-design]')];
-const trays=[...document.querySelectorAll('[data-tray]')];
-for(const b of trays)b.addEventListener('click',()=>{
-  pick(trays,b);
-  window.designAPI.setTrayMono(b.dataset.tray==='mono');
-});
-const corners=[...document.querySelectorAll('[data-corners]')];
-for(const b of corners)b.addEventListener('click',()=>{
-  pick(corners,b);
-  window.designAPI.setRoundedCorners(b.dataset.corners==='round');
-});
-const rains=[...document.querySelectorAll('[data-rain]')];
-for(const b of rains)b.addEventListener('click',()=>{
-  pick(rains,b);
-  window.designAPI.setMatrixRain(b.dataset.rain==='on');
+document.getElementById('rain').addEventListener('change',e=>window.designAPI.setMatrixRain(e.target.checked));
+document.getElementById('corners').addEventListener('change',e=>window.designAPI.setRoundedCorners(e.target.checked));
+document.getElementById('tray').addEventListener('change',e=>{
+  document.getElementById('tray-img').src=e.target.checked?TRAY.mono:TRAY.color;
+  window.designAPI.setTrayMono(e.target.checked);
 });
 // Das Fenster faerbt sich selbst sofort um, statt bis zum naechsten Oeffnen im alten
 // Theme zu bleiben. Die Werte liegen schon in der Karte, es geht kein IPC-Roundtrip weg.
@@ -3618,7 +3563,7 @@ function openDesignWindow() {
     designWindow.focus();
     return;
   }
-  const size = fitToWorkArea(720, 900);
+  const size = fitToWorkArea(720, 650);
   designWindow = new BrowserWindow({
     width: size.width, height: size.height,
     ...centerOnMainWindow(size.width, size.height),
