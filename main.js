@@ -1442,6 +1442,26 @@ function getAppMode() {
   return 'Packaged';
 }
 
+// Im Snap ist die os-release des Hosts ohne system-observe gesperrt, dort verraet /proc/version
+// die Distro ueber Kernel- und Compiler-Kennung.
+function hostSystemInfo() {
+  let distro = '?';
+  try {
+    if (process.env.SNAP) {
+      distro = fs.readFileSync('/proc/version', 'utf8').trim();
+    } else {
+      const m = fs.readFileSync('/etc/os-release', 'utf8').match(/^PRETTY_NAME="?([^"\n]*)/m);
+      if (m) distro = m[1];
+    }
+  } catch {}
+  const desktop = process.env.XDG_CURRENT_DESKTOP || process.env.XDG_SESSION_DESKTOP || '?';
+  let displays = '?';
+  try {
+    displays = screen.getAllDisplays().map(d => `${d.size.width}x${d.size.height}@${d.scaleFactor}`).join(', ');
+  } catch {}
+  return { distro, desktop, displays };
+}
+
 async function copyDiagnosticsInfo() {
   const lines = [];
   lines.push(`App: Desktop for Claude v${app.getVersion()}`);
@@ -1449,6 +1469,10 @@ async function copyDiagnosticsInfo() {
   lines.push(`Electron: ${process.versions.electron}  Chrome: ${process.versions.chrome}  Node: ${process.versions.node}`);
   lines.push(`OS: ${process.platform} ${process.arch}  Kernel: ${os.release()}`);
   lines.push(`Session: XDG_SESSION_TYPE=${process.env.XDG_SESSION_TYPE || '?'}  WAYLAND_DISPLAY=${process.env.WAYLAND_DISPLAY || ''}  DISPLAY=${process.env.DISPLAY || ''}`);
+  const sys = hostSystemInfo();
+  lines.push(`Distro: ${sys.distro}`);
+  lines.push(`Desktop: ${sys.desktop}`);
+  lines.push(`Displays: ${sys.displays}`);
   lines.push(`Locale: ${app.getLocale()}  sysLang: ${sysLang}`);
   lines.push(`UA: ${chromeUA}`);
   lines.push(`Surface-Repairs: ${surfaceRepairs}  Stufe: ${repairStep}`);
@@ -1586,9 +1610,10 @@ function showBugReportDialog() {
   const btnDisabled = th.bgActive;
   const successColor = '#3da66a';
 
+  const sys = hostSystemInfo();
   const meta = {
     version: app.getVersion(),
-    os: `${process.platform} ${process.arch} (${os.release()})`,
+    os: `${process.platform} ${process.arch} (${os.release()}) | ${sys.distro} | ${sys.desktop} ${process.env.XDG_SESSION_TYPE || '?'} | ${sys.displays}`,
     locale: app.getLocale() || sysLang || 'unknown',
     mode: getAppMode()
   };
