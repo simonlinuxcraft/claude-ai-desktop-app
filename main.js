@@ -80,6 +80,8 @@ if (nativeWayland) app.commandLine.appendSwitch('enable-features', 'GlobalShortc
 
 const TAB_BAR_HEIGHT = 40;
 const WINDOW_BORDER = 1; // dezenter Fensterrahmen: 1px der Tab-Bar-Border scheint im View-Inset durch
+// Eckradius, mit dem Electron 43+ rahmenlose Fenster unter Linux rundet (gemessen an 44.5: 8px).
+const CORNER_RADIUS = 8;
 const POOL_SIZE = 2;
 const MAX_CRASH_RELOADS = 3;
 const CRASH_WINDOW_MS = 60_000;
@@ -235,6 +237,8 @@ let appMenuView = null;
 let bugReportWindow = null;
 let minimizeOnClose = false;
 let trayMono = false;
+let roundedCorners = true;   // Einstellung, greift beim naechsten Start
+let windowsRounded = true;   // was die Fenster dieser Sitzung tatsaechlich nutzen
 let matrixRain = true;   // animierter Zeichenregen im Matrix-Theme
 let currentHotkey = null;
 let currentClipboardHotkey = null;
@@ -275,6 +279,8 @@ const STATE_SCHEMA = [
     set: v => { minimizeOnClose = v === true; } },
   { key: 'trayMono', get: () => trayMono,
     set: v => { trayMono = v === true; } },
+  { key: 'roundedCorners', get: () => roundedCorners,
+    set: v => { roundedCorners = v !== false; } },
   { key: 'matrixRain', get: () => matrixRain,
     set: v => { matrixRain = v !== false; } },
   { key: 'hotkey', get: () => currentHotkey,
@@ -562,6 +568,7 @@ body{background:var(--bg);font:500 12px/1 -apple-system,BlinkMacSystemFont,'Sego
   display:flex;flex-direction:column;contain:layout style;
   border:${WINDOW_BORDER}px solid var(--frame-lo);
   border-image:linear-gradient(180deg,var(--frame-hi),var(--frame-lo)) 1}
+${roundFrameCSS('var(--frame-hi)', 'var(--frame-lo)')}
 #notif-bar{display:flex;flex-direction:column;flex-shrink:0;-webkit-app-region:no-drag}
 #notif-bar:empty{display:none}
 .notif{display:flex;align-items:center;gap:14px;min-height:${NOTIFICATION_BANNER_HEIGHT}px;padding:10px 14px 10px 0;font-family:inherit;line-height:1.35;color:var(--ta);border-bottom:1px solid var(--bd);background:var(--bgh);position:relative}
@@ -1090,6 +1097,8 @@ function createContentView() {
     }
   });
   view.setBackgroundColor(theme().bg);
+  // Die Ansicht liegt unten ueber dem Rahmen-Ring der Tab-Leiste; ohne eigene Rundung verdeckt sie ihn.
+  if (windowsRounded) view.setBorderRadius(CORNER_RADIUS - WINDOW_BORDER);
   view.setVisible(false);
   view.webContents.setUserAgent(chromeUA);
   return view;
@@ -1622,7 +1631,7 @@ function showBugReportDialog() {
     title: s.title, icon: icon(),
     backgroundColor: bg,
     autoHideMenuBar: true,
-    frame: false,
+    frame: false, roundedCorners: windowsRounded,
     webPreferences: {
       preload: path.join(__dirname, 'preload-bugreport.js'),
       nodeIntegration: false, contextIsolation: true, sandbox: true
@@ -2065,7 +2074,7 @@ function openQuickPrompt() {
   const qpSize = fitToWorkArea(600, 160);
   const qpBase = {
     width: qpSize.width, height: qpSize.height,
-    frame: false, resizable: false, movable: true,
+    frame: false, roundedCorners: windowsRounded, resizable: false, movable: true,
     alwaysOnTop: true, skipTaskbar: true, show: false,
     transparent: true, hasShadow: false,
     backgroundColor: '#00000000',
@@ -2137,6 +2146,18 @@ function submitQuickPrompt(text) {
   wc.once('did-finish-load', inject);
 }
 
+// Runde Ecken: border-image kann keine Rundung, deshalb ein maskierter Ring ueber dem Fenster,
+// der genau Electrons Eckradius folgt. Er ragt 1px ueber den Rand: so glaettet am Bogen nur
+// Electrons Zuschnitt, sonst wird die Kante doppelt geglaettet und der Bogen blass.
+// Ohne Rundung bleibt der eckige border-image-Rahmen.
+function roundFrameCSS(hi, lo) {
+  if (!windowsRounded) return '';
+  return `body{border-image:none;border-color:transparent}
+html::after{content:'';position:fixed;inset:-1px;border-radius:${CORNER_RADIUS + 1}px;padding:${WINDOW_BORDER + 1}px;
+  background:linear-gradient(180deg,${hi},${lo});pointer-events:none;z-index:2147483647;
+  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude}`;
+}
+
 function customTitlebarCSS() {
   const th = subTheme();
   // Sub-Fenster nutzen pro Theme nur ihre flache Theme-Farbe (kein Brand-Glow mehr).
@@ -2144,6 +2165,7 @@ function customTitlebarCSS() {
   // alle Dialoge die diese Titlebar einbinden (Bug-Report/Settings/What's-New/About).
   return `
 body{border:${WINDOW_BORDER}px solid ${th.frameLo};border-image:linear-gradient(180deg,${th.frameHi},${th.frameLo}) ${WINDOW_BORDER}}
+${roundFrameCSS(th.frameHi, th.frameLo)}
 .cd-titlebar{height:36px;-webkit-app-region:drag;display:flex;align-items:center;
   padding:0 0 0 14px;background:transparent;color:${th.textActive};
   font-size:12.5px;flex-shrink:0;user-select:none}
@@ -3111,7 +3133,7 @@ function openWhatsNewWindow(force = false) {
     backgroundColor: subTheme().bg,
     icon: icon(),
     autoHideMenuBar: true,
-    frame: false,
+    frame: false, roundedCorners: windowsRounded,
     webPreferences: {
       preload: path.join(__dirname, 'preload-whatsnew.js'),
       nodeIntegration: false, contextIsolation: true, sandbox: true,
@@ -3254,7 +3276,7 @@ function openAboutWindow() {
     backgroundColor: subTheme().bg,
     icon: icon(),
     autoHideMenuBar: true,
-    frame: false,
+    frame: false, roundedCorners: windowsRounded,
     webPreferences: {
       preload: path.join(__dirname, 'preload-about.js'),
       nodeIntegration: false, contextIsolation: true, sandbox: true,
@@ -3284,7 +3306,7 @@ function openSettingsWindow() {
     backgroundColor: subTheme().bg,
     icon: icon(),
     autoHideMenuBar: true,
-    frame: false,
+    frame: false, roundedCorners: windowsRounded,
     webPreferences: {
       preload: path.join(__dirname, 'preload-settings.js'),
       nodeIntegration: false, contextIsolation: true, sandbox: true,
@@ -3333,6 +3355,8 @@ function getDesignHTML() {
       'Lo stile imposta il colore d’accento: freccia di invio, motivo, evidenziazioni e il bordo del composer, che solo Classic omette. Ogni stile si combina con ogni tema.'
     ),
     secTray: t('Tray-Symbol', 'Tray icon', 'Icône de la zone de notification', 'Icona nell’area di notifica'),
+    secCorners: t('Fensterecken (experimentell)', 'Window corners (experimental)', 'Coins des fenêtres (expérimental)', 'Angoli delle finestre (sperimentale)'),
+    cornersNote: t('Wird beim nächsten Start der App übernommen.', 'Takes effect the next time the app starts.', 'Pris en compte au prochain démarrage de l’app.', 'Viene applicato al prossimo avvio dell’app.'),
     secRain: t('Zeichenregen / Matrix-Thema', 'Character rain / Matrix theme', 'Pluie de caractères / thème Matrix', 'Pioggia di caratteri / tema Matrix'),
     rainNote: t(
       'Gilt nur im Matrix-Thema. Der Regen springt zeilenweise statt zu gleiten, dadurch braucht er kaum Rechenleistung. Auf älteren Geräten kannst du ihn hier abschalten.',
@@ -3408,6 +3432,20 @@ function getDesignHTML() {
   <span class="swatch" style="background:linear-gradient(135deg,${a.from},${a.to})"></span>
   <span class="style-text"><span class="card-name">${STYLE_LABELS[key].name}<svg class="tick" viewBox="0 0 16 16"><path d="M3 8.5l3.2 3.2L13 5" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
   <span class="card-hint">${STYLE_LABELS[key].hint}</span></span>
+</button>`;
+  };
+
+  const CORNER_LABELS = {
+    round:  { name: t('Abgerundet', 'Rounded', 'Arrondis', 'Arrotondati'), hint: t('Weiche Ecken am Fensterrand.', 'Soft corners on the window edge.', 'Coins doux au bord de la fenêtre.', 'Angoli morbidi sul bordo della finestra.') },
+    square: { name: t('Eckig', 'Square', 'Droits', 'Squadrati'), hint: t('Der bisherige Look.', 'The previous look.', 'L’ancien style.', 'Lo stile precedente.') }
+  };
+
+  const cornerCard = (key) => {
+    const rund = key === 'round';
+    return `<button class="style-card" data-corners="${key}" aria-pressed="${rund === roundedCorners}">
+  <span class="swatch" style="border:2px solid var(--ta);border-radius:${rund ? 7 : 1}px;opacity:.7"></span>
+  <span class="style-text"><span class="card-name">${CORNER_LABELS[key].name}<svg class="tick" viewBox="0 0 16 16"><path d="M3 8.5l3.2 3.2L13 5" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+  <span class="card-hint">${CORNER_LABELS[key].hint}</span></span>
 </button>`;
   };
 
@@ -3497,6 +3535,7 @@ ${customTitlebarCSS()}
 /* customTitlebarCSS backt die Farben beim Oeffnen ein. Hier auf die Variablen umbiegen,
    sonst bleibt die Titelleiste beim Wechsel im alten Theme stehen. */
 body{border:${WINDOW_BORDER}px solid var(--flo);border-image:linear-gradient(180deg,var(--fhi),var(--flo)) ${WINDOW_BORDER}}
+${roundFrameCSS('var(--fhi)', 'var(--flo)')}
 .cd-titlebar,.cd-titlebar-title,.cd-titlebar-btn{color:var(--ta)}
 .cd-titlebar-btn:hover{background:var(--bgh)}
 </style></head><body data-style="${designStyle}">
@@ -3524,6 +3563,11 @@ ${customTitlebarHTML('Desktop for Claude - ' + t('App-Theme', 'App Theme', 'Thè
     <h2>${i18n.secTray}</h2>
     <div class="grid">${trayCard('color')}${trayCard('mono')}</div>
   </div>
+  <div class="section">
+    <h2>${i18n.secCorners}</h2>
+    <div class="grid">${cornerCard('round')}${cornerCard('square')}</div>
+    <div class="note">${i18n.cornersNote}</div>
+  </div>
 </div>
 <div class="actions"><button class="done" id="done">${i18n.close}</button></div>
 <script>
@@ -3535,6 +3579,11 @@ const trays=[...document.querySelectorAll('[data-tray]')];
 for(const b of trays)b.addEventListener('click',()=>{
   pick(trays,b);
   window.designAPI.setTrayMono(b.dataset.tray==='mono');
+});
+const corners=[...document.querySelectorAll('[data-corners]')];
+for(const b of corners)b.addEventListener('click',()=>{
+  pick(corners,b);
+  window.designAPI.setRoundedCorners(b.dataset.corners==='round');
 });
 const rains=[...document.querySelectorAll('[data-rain]')];
 for(const b of rains)b.addEventListener('click',()=>{
@@ -3591,7 +3640,7 @@ function openDesignWindow() {
     backgroundColor: subTheme().bg,
     icon: icon(),
     autoHideMenuBar: true,
-    frame: false,
+    frame: false, roundedCorners: windowsRounded,
     webPreferences: {
       preload: path.join(__dirname, 'preload-design.js'),
       nodeIntegration: false, contextIsolation: true, sandbox: true,
@@ -5095,6 +5144,11 @@ ipcMain.on('design-set-tray-mono', (event, on) => {
   refreshTrayImage();
   saveWindowState();
 });
+ipcMain.on('design-set-rounded-corners', (event, on) => {
+  if (!designWindow || designWindow.isDestroyed() || event.sender !== designWindow.webContents) return;
+  roundedCorners = on === true;
+  saveWindowState();
+});
 ipcMain.on('design-close', (event) => {
   if (designWindow && !designWindow.isDestroyed() && event.sender === designWindow.webContents) designWindow.close();
 });
@@ -5254,6 +5308,9 @@ function createWindow() {
   // claude.ais prefers-color-scheme (siehe theme-toggle).
   nativeTheme.themeSource = 'dark';
 
+  // Runde Ecken nur fuer diese Sitzung festlegen: roundedCorners geht nur im Konstruktor, und Rahmen-CSS
+  // und Fenster muessen zusammenpassen. Eine Aenderung im App-Theme-Fenster greift beim naechsten Start.
+  windowsRounded = roundedCorners;
   mainWindow = new BrowserWindow({
     width: state.width, height: state.height, x: state.x, y: state.y,
     // Mindestmasse gegen die Arbeitsflaeche deckeln: auf einem 1024x600-Netbook liesse
@@ -5263,7 +5320,7 @@ function createWindow() {
     icon: icon(),
     backgroundColor: theme().bg,
     autoHideMenuBar: true,
-    frame: false,
+    frame: false, roundedCorners: windowsRounded,
     show: false,
     webPreferences: {
       nodeIntegration: false, contextIsolation: true, sandbox: true,

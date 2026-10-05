@@ -6,5 +6,6 @@ contextBridge.exposeInMainWorld('designAPI', {
   setDesign: (s) => { if (typeof s === 'string') ipcRenderer.send('design-set-design', s); },
   setTrayMono: (on) => ipcRenderer.send('design-set-tray-mono', on === true),
   setMatrixRain: (on) => ipcRenderer.send('design-set-matrix-rain', on === true),
+  setRoundedCorners: (on) => ipcRenderer.send('design-set-rounded-corners', on === true),
   close: () => ipcRenderer.send('design-close')
 });
