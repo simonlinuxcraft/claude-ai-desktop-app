@@ -24,6 +24,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The "Design" menu entry, window title and heading are now "App Theme". Users read "Design" as
   Claude Design and did not look there for the colour themes.
 
+### Fixed
+
+- The "New" entry in claude.ai's sidebar showed two tones in OLED, Midnight Blue and Matrix.
+  claude.ai now highlights the whole row around it, and the theme still painted the link inside.
+  The link stays transparent in that row, so selection and hover look as claude.ai draws them.
+
 ---
 
 ## [1.4.20] - 2026-09-26 - Theme Fixes

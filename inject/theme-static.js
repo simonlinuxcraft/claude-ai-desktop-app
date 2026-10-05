@@ -339,7 +339,10 @@
       W + '[data-cd-design="modern"] .cd-composer::before,' + W + '[data-cd-design="modern"] fieldset .rounded-composer::before{filter:invert(1) hue-rotate(180deg)}',
       'html[data-cd-design="classic"] .cd-composer::before{content:none !important}',
       ''
-    ].concat(matrixRegeln).concat(brandVorab).concat(surfVorab).join('');
+    ].concat(matrixRegeln).concat(brandVorab).concat(surfVorab).concat([O, M, X].map(function (S) {
+      // Die Zeile um "Neu" traegt Auswahl und Hover selbst, ein gefaerbter Link darin wirkt zweifarbig.
+      return S + ' [class*="df-row-h"]>a,' + S + ' [class*="df-row-h"]>a:hover{background-color:transparent !important}';
+    })).join('');
   }
 
   return { buildStaticCSS: buildStaticCSS, sparkleBg: sparkleBg };
