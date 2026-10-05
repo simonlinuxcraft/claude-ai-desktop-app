@@ -1620,8 +1620,8 @@ function showBugReportDialog() {
     mode: getAppMode()
   };
 
-  // Hoehe am gemessenen Inhalt, damit der Dialog nicht scrollt.
-  const brSize = fitToWorkArea(640, 690);
+  // Startet in der Hoehe der Auswahl, danach passt die Seite die Hoehe je Schritt an.
+  const brSize = fitToWorkArea(600, 380);
   const brPos = centerOnMainWindow(brSize.width, brSize.height);
   const win = new BrowserWindow({
     width: brSize.width, height: brSize.height, ...brPos, resizable: false,
@@ -1653,65 +1653,71 @@ function showBugReportDialog() {
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; connect-src ${new URL(BUG_SUBMIT_URL).origin};">
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-body{background:${bg};color:${fg};font-family:system-ui,-apple-system,sans-serif;font-size:14px;
-  display:flex;flex-direction:column;height:100vh;padding:0;overflow:hidden}
+body{background:${bg};color:${fg};font-family:system-ui,-apple-system,sans-serif;font-size:13.5px;
+  display:flex;flex-direction:column;height:100vh;overflow:hidden}
+${customTitlebarCSS()}
+.main{flex:1;padding:20px 24px 12px;overflow-y:auto;display:flex;flex-direction:column;min-height:0}
+.main::-webkit-scrollbar{width:8px}
+.main::-webkit-scrollbar-thumb{background:${inputBorder};border-radius:4px}
+[hidden]{display:none!important}
+/* Schritt 1: Weiche. Account-Fragen landen bei Anthropic, bevor jemand ein Formular ausfuellt. */
+#choose-view{margin:auto 0}
+h1{font-size:18px;font-weight:600;letter-spacing:-.2px;margin-bottom:5px}
+.lead{color:${sub};font-size:12.5px;line-height:1.5;margin-bottom:16px}
+.choice{display:flex;align-items:flex-start;gap:13px;width:100%;padding:14px;margin-bottom:10px;text-align:left;font:inherit;color:${fg};
+  background:${inputBg};border:1.5px solid ${inputBorder};border-radius:11px;cursor:pointer;transition:border-color .15s,background .15s}
+.choice:hover{border-color:${ac.from};background:${th.bgActive}}
+.ci{flex:0 0 auto;width:40px;height:40px;border-radius:11px;display:flex;align-items:center;justify-content:center}
+.ci.app{background:color-mix(in srgb,${ac.from} 15%,transparent);color:${ac.from}}
+.ci.acc{background:${w.a(0.14)};color:${w.fg}}
+.ct{display:block;font-weight:600;margin:2px 0 3px}
+.cd{display:block;color:${sub};font-size:12px;line-height:1.45}
+.chev{margin:auto 0 auto auto;color:${sub};flex:0 0 auto}
+.center{margin:auto;text-align:center;max-width:420px;display:flex;flex-direction:column;align-items:center}
+.center .ci{width:58px;height:58px;border-radius:16px;margin-bottom:16px}
+.center h1{margin-bottom:8px}
+.center .lead{font-size:13px;margin-bottom:20px}
+/* Schritt 2: Formular */
 .field{margin-bottom:12px;display:flex;flex-direction:column}
-label{font-size:12px;font-weight:500;color:${sub};margin-bottom:6px;letter-spacing:.02em}
+label.lbl{display:flex;align-items:center;gap:6px;font-size:12.5px;font-weight:500;color:${fg};margin-bottom:6px}
+label.lbl .ui-ico{color:${ac.from};flex:0 0 auto}
 textarea,input[type=email]{background:${inputBg};color:${fg};border:1px solid ${inputBorder};
   border-radius:8px;padding:10px 12px;font-size:13.5px;font-family:inherit;outline:none;
   transition:border-color .15s,box-shadow .15s;resize:none}
-textarea:focus,input[type=email]:focus{border-color:${inputFocus};box-shadow:0 0 0 3px ${inputFocus}22}
-textarea.desc{min-height:92px;line-height:1.5}
-textarea.errcodes{min-height:54px;line-height:1.45;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12.5px}
-.auto-info-row{display:flex;align-items:flex-start;gap:10px;margin:6px 0 14px;
-  padding:10px 12px;background:${inputBg};border:1px solid ${inputBorder};border-radius:8px;cursor:pointer;
-  user-select:none;transition:border-color .15s}
-.auto-info-row:hover{border-color:${inputFocus}}
-.auto-info-row input[type=checkbox]{margin-top:2px;accent-color:${inputFocus};cursor:pointer;flex-shrink:0}
-.auto-info-row .text{display:flex;flex-direction:column;gap:2px}
-.auto-info-row .label{font-size:13px;color:${fg};font-weight:500}
-.auto-info-row .hint{font-size:11.5px;color:${sub};line-height:1.4}
-.confirm-row{display:flex;align-items:flex-start;gap:10px;margin:2px 0 16px;
-  padding:11px 13px;border-radius:8px;cursor:pointer;user-select:none;
-  background:${w.a(0.10)};
-  border:1.5px solid ${w.a(0.45)};
-  transition:border-color .15s,background .15s}
-.confirm-row:hover{border-color:${inputFocus}}
-.confirm-row.checked{background:${inputBg};border-color:${inputBorder}}
-.confirm-row input[type=checkbox]{margin-top:2px;accent-color:${inputFocus};cursor:pointer;flex-shrink:0}
-.confirm-row .text{display:flex;flex-direction:column;gap:2px}
-.confirm-row .label{font-size:13px;color:${fg};font-weight:600}
-.confirm-row .hint{font-size:11.5px;color:${sub};line-height:1.4}
-.nudge{display:none;gap:9px;align-items:flex-start;padding:10px 12px;margin:-4px 0 14px;
-  background:${w.a(0.12)};
-  border:1px solid ${w.a(0.5)};
-  border-radius:8px;font-size:12.5px;line-height:1.45}
+textarea:focus,input[type=email]:focus{border-color:${ac.from};box-shadow:0 0 0 3px ${ac.from}22}
+textarea.desc{min-height:110px;line-height:1.5}
+textarea.errcodes{min-height:64px;line-height:1.45;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12.5px}
+.add{align-self:flex-start;display:inline-flex;align-items:center;gap:6px;margin:-2px 0 14px;padding:2px 0;background:none;border:none;
+  color:${ac.from};font:inherit;font-size:12.5px;cursor:pointer}
+.add:hover{text-decoration:underline}
+.group{background:${inputBg};border:1px solid ${inputBorder};border-radius:10px;overflow:hidden}
+.item{display:flex;align-items:center;gap:14px;padding:11px 14px;cursor:pointer}
+.txt{display:flex;flex-direction:column;gap:3px;flex:1;min-width:0}
+.ttl{font-weight:500}
+.desc-s{color:${sub};font-size:12px;line-height:1.4}
+.switch{appearance:none;-webkit-appearance:none;flex:0 0 auto;width:38px;height:22px;margin:0;border-radius:11px;background:${inputBorder};position:relative;cursor:pointer;transition:background .15s ease}
+.switch::after{content:'';position:absolute;top:3px;left:3px;width:16px;height:16px;border-radius:50%;background:${sub};transition:transform .15s ease,background .15s ease}
+.switch:checked{background:linear-gradient(135deg,${ac.from},${ac.to})}
+.switch:checked::after{transform:translateX(16px);background:#fff}
+.nudge{display:none;gap:9px;align-items:flex-start;padding:10px 12px;margin:-2px 0 14px;
+  background:${w.a(0.12)};border:1px solid ${w.a(0.5)};border-radius:8px;font-size:12.5px;line-height:1.45}
 .nudge.show{display:flex}
 .nudge .ico{flex:0 0 auto;color:${w.fg};line-height:0;margin-top:1px}
-.nudge .txt{flex:1;color:${fg}}
-.nudge a{color:${inputFocus};text-decoration:underline;cursor:pointer;font-weight:500}
-.nudge a:hover{filter:brightness(1.15)}
-.actions{display:flex;gap:10px;justify-content:flex-end;margin-top:auto;padding-top:8px}
-button{border:none;padding:10px 20px;border-radius:9px;font-size:13.5px;cursor:pointer;
-  font-weight:500;font-family:inherit;transition:filter .15s,background .15s,opacity .15s}
+.nudge .t{flex:1;color:${fg}}
+.nudge a{color:${ac.from};text-decoration:underline;cursor:pointer;font-weight:500}
+.honeypot{position:absolute;left:-9999px;width:1px;height:1px;opacity:0}
+.footer{display:flex;align-items:center;gap:10px;padding:12px 24px 16px;border-top:1px solid ${inputBorder};flex-shrink:0}
+.grow{flex:1}
+button.primary,button.secondary{border:none;padding:9px 18px;border-radius:8px;font-size:13px;cursor:pointer;
+  font-weight:500;font-family:inherit;transition:filter .15s,background .15s,color .15s}
 button.primary{background:linear-gradient(135deg,${ac.from},${ac.to});color:#fff}
 button.primary:hover:not(:disabled){filter:brightness(1.08)}
-button.primary:disabled{background:${btnDisabled};cursor:not-allowed;filter:none}
+button.primary:disabled{background:${btnDisabled};color:${sub};cursor:not-allowed}
 button.secondary{background:transparent;color:${sub};border:1px solid ${inputBorder}}
 button.secondary:hover{background:${inputBg};color:${fg}}
 button:focus-visible{outline:2px solid ${ac.from};outline-offset:2px}
-.honeypot{position:absolute;left:-9999px;width:1px;height:1px;opacity:0}
-.disclaimer{display:flex;gap:10px;align-items:flex-start;padding:11px 13px;margin:-2px 0 16px;
-  background:${w.a(0.10)};
-  border:1px solid ${w.a(0.35)};
-  border-radius:8px;font-size:12.5px;line-height:1.5}
-.disclaimer .ico{flex:0 0 auto;color:${w.fg};line-height:0;margin-top:1px}
-.disclaimer .txt{flex:1;color:${fg}}
-.disclaimer .ttl{font-weight:600;display:block;margin-bottom:3px;color:${w.title}}
-.disclaimer a{color:${inputFocus};text-decoration:underline;cursor:pointer;font-weight:500}
-.disclaimer a:hover{filter:brightness(1.15)}
-.status{display:none;flex-direction:column;align-items:center;justify-content:center;
-  height:100%;text-align:center;padding:20px}
+.choice:focus-visible{outline:none;border-color:${ac.from};box-shadow:0 0 0 3px ${ac.from}33}
+.status{display:none;flex-direction:column;align-items:center;justify-content:center;margin:auto;text-align:center;padding:20px}
 .status.visible{display:flex}
 .status .icon{margin-bottom:14px;line-height:0;color:${sub}}
 .status .icon svg{width:48px;height:48px}
@@ -1721,65 +1727,49 @@ button:focus-visible{outline:2px solid ${ac.from};outline-offset:2px}
 .status .email{font-size:14px;font-weight:600;color:${fg};margin-bottom:14px;word-break:break-all;
   background:${inputBg};padding:8px 14px;border-radius:6px;border:1px solid ${inputBorder}}
 .error-row{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
-${customTitlebarCSS()}
-.bugreport-main{flex:1;padding:18px 24px 24px;overflow-y:auto;display:flex;flex-direction:column;min-height:0}
-.bugreport-main::-webkit-scrollbar{width:10px}
-.bugreport-main::-webkit-scrollbar-track{background:transparent}
-.bugreport-main::-webkit-scrollbar-thumb{background:${inputBorder};border-radius:6px;border:3px solid ${bg};background-clip:padding-box}
-.bugreport-main::-webkit-scrollbar-thumb:hover{background:${sub};border:3px solid ${bg};background-clip:padding-box}
-.status-host{flex:1;display:flex;align-items:center;justify-content:center}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style></head><body>
 ${customTitlebarHTML(s.title)}
-<div class="bugreport-main">
-<div id="form-view">
-  <div class="disclaimer" role="note">
-    <span class="ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></span>
-    <span class="txt"><span class="ttl">${s.disclaimerTitle}</span>${s.disclaimerBody} <a id="anthropic-link" href="#" tabindex="0">${s.disclaimerLink}</a></span>
-  </div>
+<div class="main">
+<section id="choose-view">
+  <h1>${s.chooseTitle}</h1>
+  <p class="lead">${s.chooseSub}</p>
+  <button class="choice" id="choose-app"><span class="ci app">${uiIcon('bug', 20)}</span><span><span class="ct">${s.choiceAppTitle}</span><span class="cd">${s.choiceAppHint}</span></span><span class="chev">${uiIcon('chevron', 16)}</span></button>
+  <button class="choice" id="choose-acc"><span class="ci acc">${uiIcon('user', 20)}</span><span><span class="ct">${s.choiceAccTitle}</span><span class="cd">${s.choiceAccHint}</span></span><span class="chev">${uiIcon('chevron', 16)}</span></button>
+</section>
 
+<section id="acc-view" class="center" hidden>
+  <span class="ci acc">${uiIcon('user', 28)}</span>
+  <h1>${s.accTitle}</h1>
+  <p class="lead">${s.accBody}</p>
+  <button class="primary" id="acc-btn">${s.accBtn}</button>
+</section>
+
+<section id="form-view" hidden>
   <form id="bugform" novalidate>
     <div class="field">
-      <label for="desc">${s.descLabel}</label>
+      <label for="desc" class="lbl">${uiIcon('chat', 15)}${s.descLabel}</label>
       <textarea id="desc" class="desc" required placeholder="${s.descPlaceholder}"></textarea>
     </div>
-
     <div class="nudge" id="support-nudge" role="note">
-      <span class="ico"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></span>
-      <span class="txt">${s.nudgeText} <a id="nudge-link" href="#" tabindex="0">${s.disclaimerLink}</a></span>
+      <span class="ico">${uiIcon('info', 17)}</span>
+      <span class="t">${s.nudgeText} <a id="nudge-link" href="#" tabindex="0">${s.disclaimerLink}</a></span>
     </div>
-
-    <div class="field">
-      <label for="errcodes">${s.errorLabel}</label>
+    <button type="button" class="add" id="add-errors">${uiIcon('plus', 14)}${s.addErrors}</button>
+    <div class="field" id="err-field" hidden>
+      <label for="errcodes" class="lbl">${uiIcon('terminal', 15)}${s.errorLabel}</label>
       <textarea id="errcodes" class="errcodes" placeholder="${s.errorPlaceholder}"></textarea>
     </div>
     <div class="field">
-      <label for="email">${s.emailLabel}</label>
+      <label for="email" class="lbl">${uiIcon('mail', 15)}${s.emailLabel}</label>
       <input type="email" id="email" placeholder="${s.emailPlaceholder}" autocomplete="email">
     </div>
-
-    <label class="auto-info-row" for="autoinfo">
-      <input type="checkbox" id="autoinfo" checked>
-      <span class="text">
-        <span class="label">${s.autoInfoLabel}</span>
-      </span>
-    </label>
-
-    <input type="text" name="botcheck" id="botcheck" class="honeypot" tabindex="-1" autocomplete="off">
-
-    <label class="confirm-row" for="confirmapp" id="confirm-row">
-      <input type="checkbox" id="confirmapp">
-      <span class="text">
-        <span class="label">${s.confirmLabel}</span>
-        <span class="hint">${s.confirmHint}</span>
-      </span>
-    </label>
-
-    <div class="actions">
-      <button type="button" class="secondary" id="cancel-btn">${s.cancelBtn}</button>
-      <button type="submit" class="primary" id="send-btn" disabled>${s.sendBtn}</button>
+    <div class="group">
+      <label class="item" for="autoinfo"><span class="txt"><span class="ttl">${s.autoInfoLabel}</span><span class="desc-s">${s.autoInfoHint}</span></span><input type="checkbox" class="switch" id="autoinfo" checked></label>
     </div>
+    <input type="text" name="botcheck" id="botcheck" class="honeypot" tabindex="-1" autocomplete="off">
   </form>
-</div>
+</section>
 
 <div class="status success" id="success-view">
   <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="8 12 11 15 16 9"/></svg></div>
@@ -1799,25 +1789,62 @@ ${customTitlebarHTML(s.title)}
   </div>
 </div>
 </div>
+<div class="footer" id="footer">
+  <button class="secondary" id="back-btn" hidden>${s.backBtn}</button>
+  <span class="grow"></span>
+  <button class="secondary" id="cancel-btn">${s.cancelBtn}</button>
+  <button type="submit" form="bugform" class="primary" id="send-btn" hidden disabled>${s.sendBtn}</button>
+</div>
 
 <script>
 (function(){
   const cfg = ${cfg};
-  const formView = document.getElementById('form-view');
-  const successView = document.getElementById('success-view');
-  const errorView = document.getElementById('error-view');
-  const form = document.getElementById('bugform');
-  const sendBtn = document.getElementById('send-btn');
-  const cancelBtn = document.getElementById('cancel-btn');
-  const desc = document.getElementById('desc');
-  const errcodes = document.getElementById('errcodes');
-  const emailInput = document.getElementById('email');
-  const autoInfoCheckbox = document.getElementById('autoinfo');
-  const confirmCheckbox = document.getElementById('confirmapp');
-  const confirmRow = document.getElementById('confirm-row');
-  const botcheck = document.getElementById('botcheck');
-  const errEmail = document.getElementById('err-email');
-  const copyBtn = document.getElementById('copy-btn');
+  const $ = (id) => document.getElementById(id);
+  const chooseView = $('choose-view'), accView = $('acc-view'), formView = $('form-view');
+  const successView = $('success-view'), errorView = $('error-view'), footer = $('footer');
+  const form = $('bugform'), sendBtn = $('send-btn'), cancelBtn = $('cancel-btn'), backBtn = $('back-btn');
+  const desc = $('desc'), errcodes = $('errcodes'), emailInput = $('email');
+  const autoInfoCheckbox = $('autoinfo'), botcheck = $('botcheck');
+  const errEmail = $('err-email'), copyBtn = $('copy-btn');
+
+  // Wunschhoehe = alles ausser dem Inhaltsbereich plus der Inhalt des sichtbaren Schritts.
+  const main = document.querySelector('.main');
+  function fit() {
+    requestAnimationFrame(() => {
+      const view = [chooseView, accView, formView, successView, errorView].find((v) => v.offsetHeight);
+      if (!view) return;
+      const cs = getComputedStyle(main);
+      const need = document.body.offsetHeight - main.offsetHeight + view.offsetHeight + parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom);
+      try { window.bugAPI.resize(Math.ceil(need)); } catch {}
+    });
+  }
+
+  function showView(which) {
+    chooseView.hidden = which !== 'choose';
+    accView.hidden = which !== 'acc';
+    formView.hidden = which !== 'form';
+    successView.classList.toggle('visible', which === 'success');
+    errorView.classList.toggle('visible', which === 'error');
+    footer.hidden = which === 'success' || which === 'error';
+    backBtn.hidden = which === 'choose';
+    sendBtn.hidden = which !== 'form';
+    cancelBtn.hidden = which === 'form';
+    cancelBtn.textContent = which === 'acc' ? cfg.strings.closeBtn : cfg.strings.cancelBtn;
+    if (which === 'acc') $('acc-btn').focus();
+    else if (which === 'form') desc.focus();
+    fit();
+  }
+
+  $('choose-app').addEventListener('click', () => showView('form'));
+  $('choose-acc').addEventListener('click', () => showView('acc'));
+  backBtn.addEventListener('click', () => showView('choose'));
+  cancelBtn.addEventListener('click', () => window.close());
+  $('add-errors').addEventListener('click', (e) => {
+    e.currentTarget.hidden = true;
+    $('err-field').hidden = false;
+    errcodes.focus();
+    fit();
+  });
 
   errEmail.textContent = cfg.bugEmail;
   copyBtn.textContent = cfg.strings.copyBtn;
@@ -1828,35 +1855,21 @@ ${customTitlebarHTML(s.title)}
     });
   });
 
-  cancelBtn.addEventListener('click', () => window.close());
+  const syncSend = () => { sendBtn.disabled = !desc.value.trim(); };
+  desc.addEventListener('input', syncSend);
 
-  const syncConfirm = () => {
-    sendBtn.disabled = !confirmCheckbox.checked;
-    confirmRow.classList.toggle('checked', confirmCheckbox.checked);
-  };
-  confirmCheckbox.addEventListener('change', syncConfirm);
-  syncConfirm();
-
-  const tbClose = document.getElementById('cd-titlebar-close');
+  const tbClose = $('cd-titlebar-close');
   if (tbClose) tbClose.addEventListener('click', () => window.close());
 
-  function wireSupportLink(el) {
-    if (!el) return;
-    const open = (e) => {
-      if (e) { e.preventDefault(); }
-      try { window.bugAPI.openSupport(); } catch {}
-    };
-    el.addEventListener('click', open);
-    el.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter' || e.key === ' ') open(e);
-    });
-  }
-  wireSupportLink(document.getElementById('anthropic-link'));
-  wireSupportLink(document.getElementById('nudge-link'));
+  const openSupport = (e) => { if (e) e.preventDefault(); try { window.bugAPI.openSupport(); } catch {} };
+  $('acc-btn').addEventListener('click', openSupport);
+  const nudgeLink = $('nudge-link');
+  nudgeLink.addEventListener('click', openSupport);
+  nudgeLink.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') openSupport(e); });
 
-  // Wenn die Beschreibung nach Account/Login/Bezahlung klingt, dezent auf den
-  // Anthropic-Support hinweisen. Nur ein Nudge, das harte Gate bleibt die Checkbox.
-  const supportNudge = document.getElementById('support-nudge');
+  // Wenn die Beschreibung trotz Weiche nach Account/Login/Bezahlung klingt, dezent auf den
+  // Anthropic-Support hinweisen.
+  const supportNudge = $('support-nudge');
   const NUDGE_KW = ['log in','login','logg','einlogg','anmeld','sign in','signin',
     'password','passwort','kennwort','mot de passe','contrase',
     'account','konto','cuenta','compte',
@@ -1869,22 +1882,16 @@ ${customTitlebarHTML(s.title)}
     'upgrade','downgrade'];
   const checkNudge = () => {
     const t = (desc.value + ' ' + errcodes.value).toLowerCase();
-    supportNudge.classList.toggle('show', NUDGE_KW.some((k) => t.includes(k)));
+    const show = NUDGE_KW.some((k) => t.includes(k));
+    if (show !== supportNudge.classList.contains('show')) { supportNudge.classList.toggle('show', show); fit(); }
   };
   desc.addEventListener('input', checkNudge);
   errcodes.addEventListener('input', checkNudge);
-
-  function showView(which) {
-    formView.style.display = which === 'form' ? '' : 'none';
-    successView.classList.toggle('visible', which === 'success');
-    errorView.classList.toggle('visible', which === 'error');
-  }
 
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
     const description = desc.value.trim();
     if (!description) { desc.focus(); return; }
-    if (!confirmCheckbox.checked) { confirmCheckbox.focus(); return; }
     if (botcheck.value) return;
 
     const userEmail = emailInput.value.trim();
@@ -1934,18 +1941,11 @@ ${customTitlebarHTML(s.title)}
       showView('error');
     } finally {
       sendBtn.textContent = cfg.strings.sendBtn;
-      sendBtn.disabled = !confirmCheckbox.checked;
+      syncSend();
     }
   });
 
-  // preventScroll: das Beschreibungsfeld liegt unter dem Disclaimer. Ohne das scrollt der
-  // Fokus es in den Blick und der Dialog oeffnet mitten im Text statt bei der Ueberschrift.
-  // Beim Tippen zieht der Caret die Ansicht dann von selbst nach.
-  setTimeout(() => {
-    desc.focus({ preventScroll: true });
-    const main = document.querySelector('.bugreport-main');
-    if (main) main.scrollTop = 0;
-  }, 50);
+  setTimeout(() => showView('choose'), 50);
 })();
 </script>
 </body></html>`;
@@ -5435,6 +5435,20 @@ app.on('web-contents-created', (_, wc) => {
 
 ipcMain.on('bug-report-open-support', () => {
   openExternalSafe('https://support.anthropic.com');
+});
+
+// Der Fehlerbericht waechst und schrumpft mit dem Schritt. Unter Wayland setzt der
+// Compositor die Position, dort wirkt nur die Hoehe.
+ipcMain.on('bug-report-resize', (event, cssHeight) => {
+  const win = bugReportWindow;
+  if (!win || win.isDestroyed() || event.sender !== win.webContents) return;
+  const h = Math.max(240, Math.min(1000, Number(cssHeight) || 0));
+  const work = screen.getDisplayMatching(win.getBounds()).workArea;
+  const b = win.getBounds();
+  const height = Math.min(Math.round(h * event.sender.getZoomFactor()), work.height);
+  if (height === b.height) return;
+  const y = Math.max(work.y, Math.min(b.y + Math.round((b.height - height) / 2), work.y + work.height - height));
+  win.setBounds({ x: b.x, y, width: b.width, height });
 });
 
 // Web3Forms erkennt Origin: null (unser data:-URL-Renderer) als "server-side"
