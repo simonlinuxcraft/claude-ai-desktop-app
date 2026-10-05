@@ -1508,7 +1508,7 @@ async function copyDiagnosticsInfo() {
   }
 
   const text = lines.join('\n');
-  try { clipboard.writeText(text); } catch {}
+  try { await clipboard.writeText(text); } catch {}
   showCustomMessageBox({
     type: 'info',
     title: 'Desktop for Claude',
@@ -2309,16 +2309,16 @@ function registerHotkey(accel) {
 }
 
 // Feature 6: Clipboard → Chat
-function openClipboardChat() {
+async function openClipboardChat() {
   let text = '';
-  try { text = clipboard.readText() || ''; } catch {}
+  try { text = (await clipboard.readText()) || ''; } catch {}
   text = text.trim();
   if (!text) {
     // Screenshot liegt als Bild in der Zwischenablage, nicht als Text. Ein Bild
     // laesst sich von hier nicht in den claude.ai-Composer injizieren, daher Hinweis
     // auf direktes Einfuegen statt der irrefuehrenden "leer"-Meldung.
     let hasImage = false;
-    try { hasImage = !clipboard.readImage().isEmpty(); } catch {}
+    try { hasImage = await clipboard.has('image/png'); } catch {}
     notify({
       title: 'Desktop for Claude',
       body: hasImage
@@ -4446,7 +4446,7 @@ async function requestMicrophoneConsent() {
       if (!win.isDestroyed()) win.close();
     };
     snapOpenHandler = () => openSnapStorePage();
-    copyCmdHandler = () => { try { clipboard.writeText(SNAP_CONNECT_CMD); } catch {} };
+    copyCmdHandler = () => { clipboard.writeText(SNAP_CONNECT_CMD).catch(() => {}); };
     ipcMain.once(respondChannel, respondHandler);
     ipcMain.on(snapOpenChannel, snapOpenHandler);
     ipcMain.on(copyCmdChannel, copyCmdHandler);
@@ -4793,34 +4793,9 @@ function setupSession() {
 
   ses.setUserAgent(chromeUA);
 
-  const chromeFull = process.versions.chrome;
-  const chromeMajor = chromeFull.split('.')[0];
-  // Muss byte-genau dem entsprechen, was navigator.userAgentData im Renderer meldet,
-  // sonst ist die Differenz (Header behauptet einen Brand, den die JS-API leugnet) ein
-  // CF-Turnstile-Bot-Signal. Electron meldet [Not-A.Brand;v=24, Chromium;v=<major>] und
-  // KEIN "Google Chrome". GREASE-Token/Reihenfolge bei Electron-Upgrades gegenchecken.
-  const secChUa = `"Not-A.Brand";v="24", "Chromium";v="${chromeMajor}"`;
-  const secChUaFullVersionList = `"Not-A.Brand";v="24.0.0.0", "Chromium";v="${chromeFull}"`;
-
-  ses.webRequest.onBeforeSendHeaders({
-    urls: [
-      '*://*.claude.ai/*',
-      '*://*.claudeusercontent.com/*',
-      '*://*.claudemcpcontent.com/*',
-      '*://*.claudemcp.com/*',
-      '*://*.anthropic.com/*',
-      '*://challenges.cloudflare.com/*'
-    ]
-  }, (details, cb) => {
-    const h = details.requestHeaders;
-    h['Sec-Ch-Ua'] = secChUa;
-    h['Sec-Ch-Ua-Mobile'] = '?0';
-    h['Sec-Ch-Ua-Platform'] = '"Linux"';
-    h['Sec-Ch-Ua-Full-Version-List'] = secChUaFullVersionList;
-    // Chrome on Linux always sends an empty platform version; the kernel string was a bot tell.
-    h['Sec-Ch-Ua-Platform-Version'] = '""';
-    cb({ requestHeaders: h });
-  });
+  // Keine eigenen Sec-Ch-Ua-Header: Chromium setzt sie passend zu navigator.userAgentData.
+  // Feste Werte liefen bei jedem Electron-Update auseinander (die GREASE-Marke haengt an
+  // der Hauptversion), und dieser Widerspruch ist ein CF-Turnstile-Bot-Signal.
 
   // Preconnect (mehr Sockets für schnellere erste Requests)
   ses.preconnect({ url: 'https://claude.ai', numSockets: 6 });
@@ -5027,7 +5002,7 @@ ipcMain.on('settings-microphone-reset', () => {
   saveWindowState();
 });
 ipcMain.on('settings-open-snap-permissions', () => openSnapStorePage());
-ipcMain.on('settings-copy-snap-cmd', () => { try { clipboard.writeText(SNAP_CONNECT_CMD); } catch {} });
+ipcMain.on('settings-copy-snap-cmd', () => { clipboard.writeText(SNAP_CONNECT_CMD).catch(() => {}); });
 
 // Live-Notifications (Tab-Bar-Banner)
 ipcMain.on('notification-dismiss', (_, id) => dismissNotification(id));
