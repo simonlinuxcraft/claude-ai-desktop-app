@@ -8,7 +8,7 @@ const { execFile, spawn } = require('child_process');
 const { version } = require('./package.json');
 const { getFilteredNotes } = require('./release-notes');
 const { bugReportStrings } = require('./bug-report-strings');
-const { compareVersions, safeJson, escapeHtml, filterNotifications, scaleWindow, isClaudeAiOrigin, isPaymentFrameDomain, looksLikeOAuthUrl, validateAccelerator, THEME_MODES, resolveThemeMode, DESIGN_STYLES, resolveDesignStyle } = require('./utils/pure');
+const { compareVersions, safeJson, escapeHtml, filterNotifications, scaleWindow, UI_SCALE_FLOOR, isClaudeAiOrigin, isPaymentFrameDomain, looksLikeOAuthUrl, validateAccelerator, THEME_MODES, resolveThemeMode, DESIGN_STYLES, resolveDesignStyle } = require('./utils/pure');
 
 // Electron "Object has been destroyed" Error-Dialog abfangen
 const _origErrorBox = dialog.showErrorBox;
@@ -85,22 +85,6 @@ const MAX_PROMPT_CHARS = 8000;
 // Wie viele weggeklickte Notification-IDs im State bleiben, bevor die aeltesten fallen.
 const MAX_DISMISSED_IDS = 200;
 // Groessen, die im hicolor-Icon-Theme gepflegt werden.
-// Das Menue nimmt beim Oeffnen den Fokus, das Hauptfenster bekommt ihn durch den
-// Klick-Nachlauf aber kurz zurueck. Ein blur in dieser Spanne ist dieser Nachlauf und
-// nicht die Absicht des Nutzers, das Menue wieder zu schliessen.
-const APP_MENU_BLUR_GRACE_MS = 300;
-// Ein blur ist nicht immer die Absicht des Nutzers: der Fenstermanager entzieht einem
-// alwaysOnTop-Popup den Fokus auch mal von sich aus und gibt ihn zurueck. Deshalb kurz
-// gegenpruefen, statt sofort zu schliessen.
-//
-// Die Frist muss laenger sein als ein gemuetlicher Mausklick dauert. Ein Klick auf den
-// Hamburger bei offenem Menue erzeugt erst blur (Mousedown) und erst beim Loslassen den
-// eigentlichen Klick. War das Menue bis dahin schon zu, oeffnet derselbe Klick es wieder
-// und es liess sich nur noch durch Klicken woanders schliessen. Gemessen: bis 150ms
-// Klickdauer ging es, ab 300ms nicht mehr.
-const APP_MENU_BLUR_CONFIRM_MS = 350;
-// Notnagel, falls weder ready-to-show noch did-finish-load kommen.
-const APP_MENU_SHOW_FALLBACK_MS = 500;
 const ICON_THEME_SIZES = ['512x512', '256x256', '128x128', '64x64', '48x48', '32x32', '16x16'];
 
 // Live-Notification-System (GitHub-hosted JSON)
@@ -235,9 +219,8 @@ let designWindow = null;
 let quickPromptWindow = null;
 let whatsNewWindow = null;
 let aboutWindow = null;
-let appMenuWindow = null;
+let appMenuView = null;
 let bugReportWindow = null;
-let appMenuJustClosedAt = 0;
 let minimizeOnClose = false;
 let trayMono = false;
 let matrixRain = true;   // animierter Zeichenregen im Matrix-Theme
@@ -1134,6 +1117,7 @@ function getPooledView() {
 // gleichzeitig claude.ai anfragen.
 function createTab(url = 'https://claude.ai', defer = false) {
   if (!mainWindow || mainWindow.isDestroyed()) return null;
+  closeAppMenu();   // sonst laege die neue View ueber dem offenen Menue (Strg+T)
 
   let view = (!defer && url === 'https://claude.ai') ? getPooledView() : null;
   if (!view) {
@@ -1166,9 +1150,8 @@ let lastViewBounds = '';
 // umlenken. Deferred, weil Electron den nativen Fokus nach dem Event restauriert.
 function focusActiveView() {
   setImmediate(() => {
-    // Offenes App-Menue hat Vorrang: sonst zieht dieser Aufruf den Fokus in die
-    // Content-View, das Menue bekommt blur und schliesst sich sofort wieder.
-    if (appMenuWindow && !appMenuWindow.isDestroyed()) return;
+    // Offenes App-Menue behaelt den Tastaturfokus (Pfeiltasten, Enter, Escape).
+    if (appMenuView) return;
     if (!mainWindow || mainWindow.isDestroyed() || !mainWindow.isFocused()) return;
     const active = tabs[activeTabIndex];
     if (!active || !alive(active.view)) return;
@@ -3746,7 +3729,7 @@ function getAppMenuItems() {
   ];
 }
 
-function getAppMenuHTML() {
+function getAppMenuHTML(left, top) {
   const th = subTheme();
   const ac = accent();
   const dark = currentThemeMode() !== 'light';
@@ -3780,11 +3763,13 @@ function getAppMenuHTML() {
 html,body{height:100%;background:transparent;color:${th.textActive};
   font-family:-apple-system,BlinkMacSystemFont,'Inter','Segoe UI',system-ui,sans-serif;font-size:13px;
   overflow:hidden;user-select:none}
-body{padding:8px}
-.card{background:${th.bg};border:1px solid ${th.border};border-radius:10px;
+.card{position:absolute;left:min(${left}px,100vw - 340px);top:${top}px;width:324px;margin:8px;
+  max-height:calc(100vh - ${top}px - 16px);overflow-y:auto;scrollbar-width:thin;
+  scrollbar-color:${th.border} transparent;
+  background:${th.bg};border:1px solid ${th.border};border-radius:10px;
   box-shadow:0 6px 24px ${dark ? 'rgba(0,0,0,.45)' : 'rgba(0,0,0,.18)'},
     0 1px 3px ${dark ? 'rgba(0,0,0,.4)' : 'rgba(0,0,0,.08)'};
-  padding:5px;overflow:hidden}
+  padding:5px}
 .head{display:flex;align-items:center;gap:11px;padding:8px 11px 9px;margin:-1px -1px 4px;
   border-bottom:1px solid ${th.border}}
 .head .meta{display:flex;flex-direction:column;line-height:1.2;flex:1;min-width:0}
@@ -3818,6 +3803,8 @@ body{padding:8px}
 <script>
 const api = window.appMenuAPI;
 const card = document.getElementById('card');
+// Alles ausserhalb der Karte ist Hintergrund: Druck darauf schliesst, wie bei nativen Menues.
+document.addEventListener('mousedown', (e) => { if (!card.contains(e.target)) api.close(); });
 const buttons = Array.from(card.querySelectorAll('.item'));
 let focusIdx = -1;
 
@@ -3849,109 +3836,63 @@ document.addEventListener('keydown', (e) => {
   }
 });
 
-// Das Schliessen bei Fokusverlust macht der Main-Prozess (blur-Handler am Fenster).
-// Frueher schloss der Renderer hier zusaetzlich sofort - dadurch war das Menue beim
-// Hamburger-Klick schon zu, bevor der Klick ankam, und derselbe Klick oeffnete es
-// wieder. Ein Weg zum Schliessen genuegt, sonst gewinnt immer der schnellere.
-
 </script>
 </body></html>`;
 }
 
-// Menue schliessen und die Referenz SOFORT freigeben, nicht erst im closed-Event.
-// Das Event kommt asynchron; bis dahin sah der naechste Hamburger-Klick ein noch
-// gesetztes appMenuWindow, landete im Toggle-Zweig und schloss statt zu oeffnen.
-//
-// Der Cooldown gilt bei JEDEM Schliessen. Ein Klick auf den Hamburger bei offenem Menue
-// erzeugt zuerst blur (Mousedown) und erst danach den IPC-Klick (Mouseup). Dauert der Klick
-// laenger als die blur-Bestaetigung, ist das Menue beim Eintreffen des Klicks schon zu und
-// derselbe Klick wuerde es sofort wieder oeffnen - das Menue liesse sich dann nur noch
-// durch Klicken woanders schliessen.
+// Das App-Menue ist eine transparente View ueber dem ganzen Hauptfenster, kein eigenes
+// Fenster. Unter Wayland ignoriert der Compositor die x/y eines Toplevel-Fensters, das
+// Menue landete dort irgendwo. Die View deckt auch die Tab-Leiste ab: ein Klick daneben
+// trifft die View und schliesst, statt per blur-Timer zu raten.
 function closeAppMenu() {
-  const win = appMenuWindow;
-  appMenuWindow = null;
-  appMenuJustClosedAt = Date.now();
-  if (win && !win.isDestroyed()) { try { win.close(); } catch {} }
+  const view = appMenuView;
+  if (!view) return;
+  appMenuView = null;
+  try { if (mainWindow && !mainWindow.isDestroyed()) mainWindow.contentView.removeChildView(view); } catch {}
+  // Kommt meist aus einem IPC-Handler dieser View, deshalb erst danach schliessen.
+  setImmediate(() => { try { view.webContents.close(); } catch {} });
+  focusActiveView();
 }
 
-function openAppMenuWindow(rendererX, rendererY) {
-  if (appMenuWindow && !appMenuWindow.isDestroyed()) {
-    closeAppMenu();
-    return;
-  }
+function openAppMenu(rendererX, rendererY) {
+  if (appMenuView) { closeAppMenu(); return; }
   if (!mainWindow || mainWindow.isDestroyed() || !mainWindow.isVisible()) return;
 
   const items = getAppMenuItems();
-  // Höhe: Header ~52px + Items 30px + Separators 11px + 18px card-padding/border + 16px body-padding
+  // Höhe: Header ~52px + Items 30px + Separators 11px + 18px card-padding/border + 16px Abstand
   const itemH = 30, sepH = 11, headerH = 52;
   let designHeight = 18 + 16 + headerH;
   for (const it of items) designHeight += (it.type === 'sep' ? sepH : itemH);
-  // Wie die Dialoge: Masse gelten fuer 1920x1080 und werden mitsamt Inhalt skaliert.
-  const { width, height, scale } = fitToWorkArea(340, designHeight);
-
   const cb = mainWindow.getContentBounds();
-  let screenX = cb.x + (Number.isFinite(rendererX) ? Math.round(rendererX) : 0);
-  let screenY = cb.y + (Number.isFinite(rendererY) ? Math.round(rendererY) : TAB_BAR_HEIGHT);
-  // Am unteren oder rechten Rand geoeffnet lief das Menue bisher aus dem Schirm heraus.
-  try {
-    const wa = screen.getDisplayMatching(cb).workArea;
-    screenX = Math.max(wa.x, Math.min(screenX, wa.x + wa.width - width));
-    screenY = Math.max(wa.y, Math.min(screenY, wa.y + wa.height - height));
-  } catch {}
+  const x = Number.isFinite(rendererX) ? Math.round(rendererX) : 0;
+  const y = Number.isFinite(rendererY) ? Math.round(rendererY) : TAB_BAR_HEIGHT;
+  // Wie die Dialoge mit dem Bildschirm skalieren, aber unter dem Knopf ins Fenster passen.
+  // Unter dem Lesbarkeits-Boden scrollt die Karte.
+  const { scale } = fitToWorkArea(340, designHeight);
+  const s = Math.max(UI_SCALE_FLOOR, Math.min(scale, (cb.height - y) / designHeight));
 
-  // Wayland-Compositor ignoriert x/y -> auf parent+center:true ausweichen,
-  // mutter zentriert dann auf das Hauptfenster. Auf X11 weiter Pixel-genau.
-  const baseOpts = {
-    width, height,
-    x: screenX, y: screenY,
-    frame: false, resizable: false, movable: false,
-    alwaysOnTop: true, skipTaskbar: true, show: false,
-    transparent: true, hasShadow: false,
-    backgroundColor: '#00000000',
+  const view = new WebContentsView({
     webPreferences: {
       preload: path.join(__dirname, 'preload-appmenu.js'),
       nodeIntegration: false, contextIsolation: true, sandbox: true,
       spellcheck: false
     }
-  };
-  // Jeder Handler haelt seine eigene Fensterreferenz und ruehrt das globale
-  // appMenuWindow nur an, wenn es noch dasselbe Fenster ist. Sonst schliesst ein
-  // Nachzuegler des alten Menues das gerade geoeffnete neue.
-  const win = new BrowserWindow(baseOpts);
-  let shownAt = 0;
-  let gezeigt = false;
-  appMenuWindow = win;
-  win.setMenu(null);
-  applyUiScale(win, scale);
-  win.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(getAppMenuHTML()));
-  // ready-to-show verlangt einen ersten gerenderten Frame. Verliert das Fenster den Fokus
-  // waehrend es laedt (schnelle Klickfolge, Fenstermanager), bleibt dieser Frame aus und das
-  // Event kommt nie: zurueck bleibt ein unsichtbares Fenster, das den naechsten Hamburger-
-  // Klick im Toggle-Zweig verbraucht. Deshalb drei Wege, und der erste gewinnt.
-  const zeigeMenue = () => {
-    if (gezeigt || win.isDestroyed() || appMenuWindow !== win) return;
-    gezeigt = true;
-    try { win.show(); win.focus(); } catch {}
-    shownAt = Date.now();
-  };
-  win.once('ready-to-show', zeigeMenue);
-  win.webContents.once('did-finish-load', zeigeMenue);
-  setTimeout(zeigeMenue, APP_MENU_SHOW_FALLBACK_MS);
-  win.on('blur', () => {
-    if (win.isDestroyed() || appMenuWindow !== win) return;
-    if (Date.now() - shownAt < APP_MENU_BLUR_GRACE_MS) {
-      try { win.focus(); } catch {}
-      return;
-    }
-    setTimeout(() => {
-      if (win.isDestroyed() || appMenuWindow !== win) return;
-      if (win.isFocused()) return;   // Fokus kam zurueck, war nur ein Durchreicher
-      closeAppMenu();
-    }, APP_MENU_BLUR_CONFIRM_MS);
   });
-  win.on('closed', () => {
-    if (appMenuWindow === win) appMenuWindow = null;
+  appMenuView = view;
+  view.setBackgroundColor('#00000000');
+  view.setBounds({ x: 0, y: 0, width: cb.width, height: cb.height });
+  // Haengt die Seite, laege eine unsichtbare View ueber dem Fenster und schluckte jeden Klick.
+  view.webContents.once('did-fail-load', () => { if (appMenuView === view) closeAppMenu(); });
+  view.webContents.once('render-process-gone', () => { if (appMenuView === view) closeAppMenu(); });
+  // Zoom erst nach dem Laden setzen (siehe applyUiScale), dann einhaengen: so erscheint
+  // das Menue gleich in seiner Groesse.
+  view.webContents.once('did-finish-load', () => {
+    if (appMenuView !== view || !mainWindow || mainWindow.isDestroyed()) return;
+    try { view.webContents.setZoomFactor(s); } catch {}
+    mainWindow.contentView.addChildView(view);
+    view.webContents.focus();
   });
+  view.webContents.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(getAppMenuHTML(x / s, y / s)));
 }
 
 // Custom MessageBox – zentriert über der App statt GTK-nativ
@@ -5255,13 +5196,10 @@ ipcMain.on('design-toggle', () => {
 ipcMain.on('official-app-info', () => showOfficialAppInfo());
 ipcMain.on('bug-report', showBugReportDialog);
 ipcMain.on('export-conversation', () => exportActiveConversation());
-ipcMain.on('app-menu-popup', (_event, x, y) => {
-  if (Date.now() - appMenuJustClosedAt < 250) return;
-  openAppMenuWindow(x, y);
-});
+ipcMain.on('app-menu-popup', (_event, x, y) => openAppMenu(x, y));
 ipcMain.on('appmenu-action', (event, name) => {
-  if (!appMenuWindow || appMenuWindow.isDestroyed() || event.sender !== appMenuWindow.webContents) return;
-  appMenuWindow.close();
+  if (!appMenuView || event.sender !== appMenuView.webContents) return;
+  closeAppMenu();
   switch (name) {
     case 'new-tab': createTab(); break;
     case 'close-tab': closeTab(activeTabIndex); break;
@@ -5285,9 +5223,7 @@ ipcMain.on('appmenu-action', (event, name) => {
   }
 });
 ipcMain.on('appmenu-close', (event) => {
-  if (appMenuWindow && !appMenuWindow.isDestroyed() && event.sender === appMenuWindow.webContents) {
-    closeAppMenu();
-  }
+  if (appMenuView && event.sender === appMenuView.webContents) closeAppMenu();
 });
 ipcMain.on('theme-toggle', () => {
   const i = THEME_MODES.indexOf(currentThemeMode());
@@ -5334,6 +5270,9 @@ function createWindow() {
   }, 3000);
 
   mainWindow.on('resize', () => { saveWindowState(); resizeActiveView(); settleActiveView(); });
+  // Das Menue sitzt im Fenster: bei Groessenwechsel stimmt die Lage nicht mehr, und wie ein
+  // natives Menue geht es beim Wechsel in eine andere App zu.
+  for (const ev of ['resize', 'blur', 'hide', 'minimize']) mainWindow.on(ev, closeAppMenu);
   // Auf X11 bleibt die Compositor-Surface der WebContentsView gelegentlich schwarz stehen,
   // waehrend die Tab-Bar (eigenes WebContents) weiter rendert. Das Bounds-Delta in
   // settleActiveView haengt sie wieder an. Auf 'move' noetig, weil das Ziehen auf einen

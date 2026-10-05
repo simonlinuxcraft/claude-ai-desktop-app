@@ -217,4 +217,4 @@ function resolveDesignStyle(saved) {
   return 'modern';
 }
 
-module.exports = { compareVersions, safeJson, escapeHtml, filterNotifications, scaleWindow, isClaudeAiOrigin, isPaymentFrameDomain, looksLikeOAuthUrl, validateAccelerator, HOTKEY_RE, THEME_MODES, resolveThemeMode, DESIGN_STYLES, resolveDesignStyle };
+module.exports = { compareVersions, safeJson, escapeHtml, filterNotifications, scaleWindow, UI_SCALE_FLOOR, isClaudeAiOrigin, isPaymentFrameDomain, looksLikeOAuthUrl, validateAccelerator, HOTKEY_RE, THEME_MODES, resolveThemeMode, DESIGN_STYLES, resolveDesignStyle };
