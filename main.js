@@ -2521,8 +2521,8 @@ function getSettingsHTML() {
     clear: t('L\u00f6schen', 'Clear', 'Effacer', 'Cancella'),
     close: t('Schlie\u00dfen', 'Close', 'Fermer', 'Chiudi'),
     registered: t('Hotkey registriert.', 'Hotkey registered.', 'Raccourci enregistré.', 'Scorciatoia registrata.'),
-    failed: t('Diese Kombination konnte nicht registriert werden – evtl. systemweit belegt.', 'Could not register this combination — likely already in use system-wide.', 'Impossible d\'enregistrer cette combinaison, elle est peut-être déjà utilisée au niveau du système.', 'Impossibile registrare questa combinazione, forse è già in uso a livello di sistema.'),
-    failedWayland: t('Globaler Hotkey konnte unter Wayland nicht registriert werden – der Compositor erlaubt das nicht. Quick-Prompt funktioniert nur bei aktivem Fenster.', 'Could not register a global hotkey on Wayland – the compositor does not allow it. Quick-Prompt only works when the window is focused.', 'Impossible d\'enregistrer un raccourci global sous Wayland, le compositeur ne l\'autorise pas. Le Quick-Prompt ne fonctionne que lorsque la fenêtre est active.', 'Impossibile registrare una scorciatoia globale su Wayland, il compositor non lo consente. Il Quick-Prompt funziona solo quando la finestra è attiva.'),
+    failed: t('Diese Kombination konnte nicht registriert werden, sie ist evtl. systemweit belegt.', 'Could not register this combination, it is likely already in use system-wide.', 'Impossible d\'enregistrer cette combinaison, elle est peut-être déjà utilisée au niveau du système.', 'Impossibile registrare questa combinazione, forse è già in uso a livello di sistema.'),
+    failedWayland: t('Globaler Hotkey konnte unter Wayland nicht registriert werden, der Compositor erlaubt das nicht. Quick-Prompt funktioniert nur bei aktivem Fenster.', 'Could not register a global hotkey on Wayland, the compositor does not allow it. Quick-Prompt only works when the window is focused.', 'Impossible d\'enregistrer un raccourci global sous Wayland, le compositeur ne l\'autorise pas. Le Quick-Prompt ne fonctionne que lorsque la fenêtre est active.', 'Impossibile registrare una scorciatoia globale su Wayland, il compositor non lo consente. Il Quick-Prompt funziona solo quando la finestra è attiva.'),
     conflictQp: t('Diese Kombination ist bereits dem Quick-Prompt-Hotkey zugewiesen.', 'This combination is already assigned to the Quick-Prompt hotkey.', 'Cette combinaison est déjà attribuée au raccourci Quick-Prompt.', 'Questa combinazione è già assegnata alla scorciatoia Quick-Prompt.'),
     conflictClip: t('Diese Kombination ist bereits dem Clipboard-Hotkey zugewiesen.', 'This combination is already assigned to the Clipboard hotkey.', 'Cette combinaison est déjà attribuée au raccourci du presse-papiers.', 'Questa combinazione è già assegnata alla scorciatoia degli appunti.'),
     removed: t('Hotkey entfernt.', 'Hotkey removed.', 'Raccourci supprimé.', 'Scorciatoia rimossa.'),
@@ -5400,8 +5400,11 @@ app.whenReady().then(() => {
   setupAutoUpdater();
   setupNotifications();
   setupTray();
-  if (currentHotkey) registerHotkey(currentHotkey);
-  if (currentClipboardHotkey) registerClipboardHotkey(currentClipboardHotkey);
+  // Scheitert die Anmeldung (Taste belegt, Wayland ohne Portal), bleibt die Einstellung gespeichert,
+  // statt beim naechsten saveWindowState still als leer zu landen.
+  const hk = currentHotkey, clip = currentClipboardHotkey;
+  if (hk && registerHotkey(hk) !== 'ok') currentHotkey = hk;
+  if (clip && registerClipboardHotkey(clip) !== 'ok') currentClipboardHotkey = clip;
   handleOnlineChange(net.isOnline());
   onlineCheckInterval = setInterval(() => handleOnlineChange(net.isOnline()), ONLINE_CHECK_MS);
   app.on('activate', () => { if (BrowserWindow.getAllWindows().length === 0) createWindow(); });
