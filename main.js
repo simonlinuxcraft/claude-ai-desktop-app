@@ -541,6 +541,15 @@ function iconDataUrlForCurrentTheme() {
   return iconDataUrl();
 }
 
+// Logo fuer die Fensterkoepfe: Modern und Classic wie in der Taskleiste, Neon und Matrix
+// fuellen die Logoform mit ihrem hellen Deko-Verlauf.
+function styledLogoHTML(cls) {
+  const ac = accent();
+  return ac.neonFrom
+    ? `<span class="${cls}" style="display:block;background:linear-gradient(135deg,${ac.neonFrom},${ac.neonTo});-webkit-mask:url(${iconDataUrl()}) center/contain no-repeat"></span>`
+    : `<img class="${cls}" src="${iconDataUrl()}" alt="">`;
+}
+
 // Tab-Bar HTML
 
 let _tabBarCache = '';
@@ -3011,11 +3020,6 @@ function getWhatsNewHTML(force = false) {
   const nextLbl = t('Weiter', 'Next', 'Suivant', 'Avanti');
   const backLbl = t('Zurück', 'Back', 'Retour', 'Indietro');
   const doneLbl = t('Los geht’s', 'Let’s go', 'C’est parti', 'Iniziamo');
-  // Modern und Classic zeigen ihr Logo wie in der Taskleiste, die anderen Stile fuellen
-  // die Logoform mit ihrem eigenen Verlauf.
-  const logo = ac.neonFrom
-    ? `<span class="logo-tint" style="-webkit-mask-image:url(${iconDataUrl()})"></span>`
-    : `<img class="logo-img" src="${iconDataUrl()}" alt="">`;
   // Optionales Bild pro Note: 'image' ist eine data:-URL oder ein Pfad relativ zum
   // App-Verzeichnis, als String oder {de,en,fr,it}-Objekt (Screenshot pro Sprache).
   const imageSrc = (n) => {
@@ -3056,8 +3060,7 @@ ${customTitlebarCSS()}
 .logo{position:relative;width:84px;height:84px;margin:0 auto 16px;border-radius:50%;display:flex;align-items:center;justify-content:center;
   background:${th.bg};border:1px solid color-mix(in srgb,${glow} 50%,transparent);animation:wnLogo .6s cubic-bezier(.34,1.56,.64,1) both}
 @keyframes wnLogo{from{opacity:0;transform:scale(.7)}}
-.logo-img,.logo-tint{width:60px;height:60px}
-.logo-tint{display:block;background:linear-gradient(135deg,${glow},${glow2});-webkit-mask-size:contain;-webkit-mask-repeat:no-repeat;-webkit-mask-position:center}
+.logo-mark{width:60px;height:60px}
 .hero-title{position:relative;font-size:25px;font-weight:600;letter-spacing:-.4px;line-height:1.2}
 .hero-sub{position:relative;font-size:13px;color:${th.text};margin-top:6px}
 .body{flex:1;overflow-y:auto;display:flex;padding:8px 24px}
@@ -3100,7 +3103,7 @@ ${customTitlebarHTML(t('Was ist neu', 'What’s new', 'Nouveautés', 'Novità'))
   <div class="ring" style="width:130px;height:130px;opacity:.28;animation-delay:.08s"></div>
   <div class="ring" style="width:196px;height:196px;opacity:.15;animation-delay:.16s"></div>
   <div class="ring" style="width:280px;height:280px;opacity:.07;animation-delay:.24s"></div>
-  <div class="logo">${logo}</div>
+  <div class="logo">${styledLogoHTML('logo-mark')}</div>
   <div class="hero-title">${headline}</div>
   <div class="hero-sub">${sub}</div>
 </div>
@@ -3183,97 +3186,91 @@ function openWhatsNewWindow(force = false) {
 function getAboutHTML() {
   const th = subTheme();
   const ac = accent();
+  const glow = ac.neonFrom || ac.from;
+  const glow2 = ac.neonTo || ac.to;
   const i18n = {
-    tagline: t('Inoffizieller claude.ai-Wrapper für Linux', 'Unofficial claude.ai wrapper for Linux', 'Wrapper claude.ai non officiel pour Linux', 'Wrapper claude.ai non ufficiale per Linux'),
-    secAbout: t('Über die App', 'About this app', 'À propos de l’application', 'Informazioni sull’app'),
+    tagline: t('Inoffizielle Desktop-App für claude.ai unter Linux', 'Unofficial desktop app for claude.ai on Linux', 'Application de bureau non officielle pour claude.ai sous Linux', 'App desktop non ufficiale per claude.ai su Linux'),
     aboutText: t(
-      'Eine inoffizielle Community-App, die claude.ai als native Desktop-Anwendung auf Linux bringt, mit Tabs, Tray, Quick-Prompt, Voice-Input und mehr. Open Source unter MIT-Lizenz.',
-      'An unofficial community app that brings claude.ai to Linux as a native desktop application, with tabs, tray, quick-prompt, voice input and more. Open source under the MIT licence.',
-      'Une application communautaire non officielle qui amène claude.ai sur Linux comme application de bureau native, avec onglets, zone de notification, Quick-Prompt, saisie vocale et plus encore. Open source sous licence MIT.',
-      'Un\'app comunitaria non ufficiale che porta claude.ai su Linux come applicazione desktop nativa, con schede, area di notifica, Quick-Prompt, input vocale e altro ancora. Open source con licenza MIT.'
+      'Bringt claude.ai als eigene App auf Linux, mit Tabs, Tray, Quick-Prompt, Spracheingabe und mehr. Open Source unter MIT-Lizenz.',
+      'Brings claude.ai to Linux as its own app, with tabs, tray, quick prompt, voice input and more. Open source under the MIT licence.',
+      'Amène claude.ai sur Linux comme application à part entière, avec onglets, zone de notification, Quick-Prompt, saisie vocale et plus encore. Open source sous licence MIT.',
+      'Porta claude.ai su Linux come app a sé, con schede, area di notifica, Quick-Prompt, input vocale e altro. Open source con licenza MIT.'
     ),
-    secLinks: t('Links', 'Links', 'Liens', 'Link'),
-    linkRepo: t('Quellcode & Issues auf GitHub', 'Source code & issues on GitHub', 'Code source et tickets sur GitHub', 'Codice sorgente e issue su GitHub'),
-    linkKofi: t('Die App unterstützen (Ko-fi)', 'Support the app (Ko-fi)', 'Soutenir l’app (Ko-fi)', 'Sostieni l’app (Ko-fi)'),
-    linkSupport: t('Anthropic-Support (offizielle Hilfe für claude.ai)', 'Anthropic Support (official help for claude.ai)', 'Support Anthropic (aide officielle pour claude.ai)', 'Supporto Anthropic (aiuto ufficiale per claude.ai)'),
-    secLegal: t('Rechtliches', 'Legal', 'Mentions légales', 'Note legali'),
-    legalText: t(
-      'Diese App ist nicht mit Anthropic verbunden und wird nicht von Anthropic unterstützt. „Claude" und das Claude-Logo sind Markenzeichen von Anthropic PBC. Für Fragen zu Account, Login, Abo oder Bezahlung wende dich bitte direkt an den Anthropic-Support.',
-      'This app is not affiliated with or endorsed by Anthropic. "Claude" and the Claude logo are trademarks of Anthropic PBC. For account, login, subscription or billing questions please contact Anthropic Support directly.',
-      'Cette application n\'est ni affiliée à Anthropic ni approuvée par Anthropic. « Claude » et le logo Claude sont des marques d\'Anthropic PBC. Pour toute question concernant le compte, la connexion, l\'abonnement ou le paiement, contactez directement le support Anthropic.',
-      'Questa applicazione non è affiliata ad Anthropic né approvata da Anthropic. "Claude" e il logo Claude sono marchi di Anthropic PBC. Per domande su account, accesso, abbonamento o pagamento, contatta direttamente il supporto Anthropic.'
+    repo: t('Quellcode und Fehlerberichte', 'Source code and issues', 'Code source et tickets', 'Codice sorgente e segnalazioni'),
+    kofi: t('App unterstützen', 'Support the app', 'Soutenir l’app', 'Sostieni l’app'),
+    kofiSub: t('Freiwillig über Ko-fi', 'Optional, through Ko-fi', 'Facultatif, via Ko-fi', 'Facoltativo, tramite Ko-fi'),
+    support: t('Anthropic-Support', 'Anthropic Support', 'Support Anthropic', 'Supporto Anthropic'),
+    supportSub: t('Account, Login, Abo und Bezahlung', 'Account, login, subscription and billing', 'Compte, connexion, abonnement et paiement', 'Account, accesso, abbonamento e pagamento'),
+    legal: t(
+      'Nicht mit Anthropic verbunden. „Claude“ und das Claude-Logo sind Marken von Anthropic PBC.',
+      'Not affiliated with Anthropic. “Claude” and the Claude logo are trademarks of Anthropic PBC.',
+      'Non affilié à Anthropic. « Claude » et le logo Claude sont des marques d’Anthropic PBC.',
+      'Non affiliata ad Anthropic. «Claude» e il logo Claude sono marchi di Anthropic PBC.'
     ),
-    btnWhatsNew: t('Neuigkeiten anzeigen', 'Show What’s New', 'Afficher les nouveautés', 'Mostra le novità'),
+    btnWhatsNew: t('Was ist neu', 'What’s new', 'Nouveautés', 'Novità'),
     btnClose: t('Schließen', 'Close', 'Fermer', 'Chiudi')
   };
+  const row = (href, ico, title, sub) => `<a class="row" data-href="${href}"><span class="ico">${ico}</span><span class="rt"><span class="rt-t">${title}</span><span class="rt-s">${sub}</span></span><span class="ext">${uiIcon('external', 15)}</span></a>`;
   return `<!DOCTYPE html><html><head>
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src data:;">
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{height:100%;background:${th.bg};color:${th.textActive};font-family:system-ui,-apple-system,sans-serif;font-size:13.5px;user-select:none}
 body{display:flex;flex-direction:column;overflow:hidden}
-.hero{position:relative;padding:24px 28px 22px;background:linear-gradient(135deg,${ac.from},${ac.to});color:#fff;overflow:hidden;display:flex;align-items:center;gap:16px}
-.hero::before{content:'';position:absolute;right:-70px;top:-70px;width:210px;height:210px;border-radius:50%;background:rgba(255,255,255,.12);pointer-events:none}
-.hero::after{content:'';position:absolute;right:36px;bottom:-46px;width:126px;height:126px;border-radius:50%;background:rgba(255,255,255,.08);pointer-events:none}
-.hero-logo{width:64px;height:64px;border-radius:15px;flex-shrink:0;position:relative;z-index:1;box-shadow:0 2px 12px rgba(0,0,0,.28);background:#0d0d0d;object-fit:contain}
-.hero-text{position:relative;z-index:1;flex:1;min-width:0}
-.hero-name{font-size:21px;font-weight:700;letter-spacing:-.2px;margin-bottom:2px}
-.hero-version{font-size:12px;opacity:.85;font-family:ui-monospace,Menlo,Consolas,monospace;margin-bottom:6px}
-.hero-tagline{font-size:13px;opacity:.92}
-.body{flex:1;padding:18px 28px 12px;overflow-y:auto;display:flex;flex-direction:column;gap:16px}
+/* Kopf wie im What's-New-Fenster: Logo im Kreis, Ringe wachsen beim Oeffnen einmal auf. */
+.hero{position:relative;flex-shrink:0;overflow:hidden;padding:26px 28px 20px;text-align:center;border-bottom:1px solid ${th.border};
+  background:radial-gradient(110% 100% at 50% 0%,color-mix(in srgb,${glow} 30%,transparent),color-mix(in srgb,${glow2} 8%,transparent) 55%,transparent 80%)}
+.ring{position:absolute;left:50%;top:68px;border-radius:50%;border:1px solid ${glow};transform:translate(-50%,-50%);animation:abRing 1s cubic-bezier(.22,1,.36,1) both}
+@keyframes abRing{from{opacity:0;transform:translate(-50%,-50%) scale(.55)}}
+.logo{position:relative;width:84px;height:84px;margin:0 auto 14px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  background:${th.bg};border:1px solid color-mix(in srgb,${glow} 50%,transparent);animation:abLogo .6s cubic-bezier(.34,1.56,.64,1) both}
+@keyframes abLogo{from{opacity:0;transform:scale(.7)}}
+.logo-mark{width:60px;height:60px}
+.name{position:relative;font-size:21px;font-weight:600;letter-spacing:-.3px}
+.ver{position:relative;display:inline-block;margin-top:8px;padding:3px 10px;border-radius:999px;font-size:11.5px;
+  background:color-mix(in srgb,${glow} 12%,transparent);border:1px solid color-mix(in srgb,${glow} 30%,transparent)}
+.tag{position:relative;font-size:12.5px;color:${th.text};margin-top:8px}
+.body{flex:1;padding:16px 24px 10px;overflow-y:auto}
 .body::-webkit-scrollbar{width:8px}
 .body::-webkit-scrollbar-thumb{background:${th.border};border-radius:4px}
-h2{font-size:13px;font-weight:600;color:${th.textActive};margin-bottom:8px;display:flex;align-items:center;gap:7px}
-h2 .ui-ico{color:${ac.from};flex:0 0 auto}
-.about-text{font-size:13px;line-height:1.55;color:${th.textActive}}
-.legal-text{font-size:12px;color:${th.text};line-height:1.5}
-.link-list{display:flex;flex-direction:column;gap:6px}
-.link-list a{display:flex;align-items:center;gap:10px;padding:9px 12px;background:${th.bgHover};border:1px solid ${th.border};border-radius:7px;color:${th.textActive};text-decoration:none;font-size:12.5px;cursor:pointer;transition:background .12s,border-color .12s}
-.link-list a:hover{background:${th.bgActive};border-color:${ac.from}}
-.link-list a:focus-visible{outline:2px solid ${ac.from};outline-offset:2px}
-.link-list svg{width:15px;height:15px;flex-shrink:0;color:${ac.from}}
-.footer{padding:14px 28px 18px;display:flex;justify-content:space-between;align-items:center;gap:10px;border-top:1px solid ${th.border}}
-button{background:linear-gradient(135deg,${ac.from},${ac.to});color:#fff;border:none;padding:9px 18px;border-radius:7px;cursor:pointer;font-size:12.5px;font-weight:600;font-family:inherit;transition:filter .15s ease}
+.about{font-size:12.5px;line-height:1.55;color:${th.text};margin-bottom:14px}
+.group{background:${th.bgHover};border:1px solid ${th.border};border-radius:10px;overflow:hidden;margin-bottom:12px}
+.row{display:flex;align-items:center;gap:12px;padding:9px 12px;color:${th.textActive};text-decoration:none;cursor:pointer;transition:background .12s}
+.row + .row{border-top:1px solid ${th.border}}
+.row:hover{background:${th.bgActive}}
+.row:focus-visible{outline:2px solid ${ac.from};outline-offset:-2px}
+.ico{flex:0 0 auto;width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;background:${th.bg};border:1px solid ${th.border};color:${ac.from}}
+.rt{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
+.rt-t{font-weight:500}
+.rt-s{font-size:11.5px;color:${th.text}}
+.ext{color:${th.text};display:flex}
+.legal{font-size:11px;line-height:1.5;color:${th.text}}
+.footer{padding:12px 24px 16px;display:flex;justify-content:space-between;align-items:center;gap:10px;border-top:1px solid ${th.border}}
+button{background:linear-gradient(135deg,${ac.from},${ac.to});color:#fff;border:none;padding:8px 18px;border-radius:7px;cursor:pointer;font-size:12.5px;font-weight:600;font-family:inherit;transition:filter .15s ease}
 button.secondary{background:${th.bgHover};color:${th.textActive};border:1px solid ${th.border}}
 button:hover{filter:brightness(1.08)}
 button:focus-visible{outline:2px solid ${ac.from};outline-offset:2px}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 ${customTitlebarCSS()}
 </style></head><body>
 ${customTitlebarHTML(t('Über Desktop for Claude', 'About Desktop for Claude', 'À propos de Desktop for Claude', 'Informazioni su Desktop for Claude'))}
 <div class="hero">
-  <img class="hero-logo" src="${iconDataUrlForCurrentTheme()}" alt="Desktop for Claude"/>
-  <div class="hero-text">
-    <div class="hero-name">Desktop for Claude</div>
-    <div class="hero-version">v${version}</div>
-    <div class="hero-tagline">${i18n.tagline}</div>
-  </div>
+  <div class="ring" style="width:120px;height:120px;opacity:.28;animation-delay:.08s"></div>
+  <div class="ring" style="width:180px;height:180px;opacity:.14;animation-delay:.16s"></div>
+  <div class="ring" style="width:260px;height:260px;opacity:.06;animation-delay:.24s"></div>
+  <div class="logo">${styledLogoHTML('logo-mark')}</div>
+  <div class="name">Desktop for Claude</div>
+  <div class="ver">${t('Version ', 'Version ', 'Version ', 'Versione ')}${version}</div>
+  <div class="tag">${i18n.tagline}</div>
 </div>
 <div class="body">
-  <div>
-    <h2>${uiIcon('info', 15)}${i18n.secAbout}</h2>
-    <div class="about-text">${i18n.aboutText}</div>
+  <div class="about">${i18n.aboutText}</div>
+  <div class="group">
+    ${row('https://github.com/simonlinuxcraft/claude-ai-desktop-app', uiIcon('github', 16), i18n.repo, 'github.com/simonlinuxcraft/claude-ai-desktop-app')}
+    ${row(SUPPORT_URL, uiIcon('heart', 16), i18n.kofi, i18n.kofiSub)}
+    ${row('https://support.anthropic.com', uiIcon('lifebuoy', 16), i18n.support, i18n.supportSub)}
   </div>
-  <div>
-    <h2>${uiIcon('link', 15)}${i18n.secLinks}</h2>
-    <div class="link-list">
-      <a data-href="https://github.com/simonlinuxcraft/claude-ai-desktop-app">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 00-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0020 4.77 5.07 5.07 0 0019.91 1S18.73.65 16 2.48a13.38 13.38 0 00-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 005 4.77a5.44 5.44 0 00-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 009 18.13V22"/></svg>
-        <span>${i18n.linkRepo}</span>
-      </a>
-      <a data-href="${SUPPORT_URL}">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>
-        <span>${i18n.linkKofi}</span>
-      </a>
-      <a data-href="https://support.anthropic.com">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
-        <span>${i18n.linkSupport}</span>
-      </a>
-    </div>
-  </div>
-  <div>
-    <h2>${uiIcon('file', 15)}${i18n.secLegal}</h2>
-    <div class="legal-text">${i18n.legalText}</div>
-  </div>
+  <div class="legal">${i18n.legal}</div>
 </div>
 <div class="footer">
   <button class="secondary" id="whatsnew-btn">${i18n.btnWhatsNew}</button>
@@ -3285,7 +3282,10 @@ document.getElementById('close').addEventListener('click', () => api.close());
 document.getElementById('cd-titlebar-close')?.addEventListener('click', () => api.close());
 document.getElementById('whatsnew-btn').addEventListener('click', () => api.openWhatsNew());
 document.querySelectorAll('a[data-href]').forEach(a => {
-  a.addEventListener('click', (e) => { e.preventDefault(); api.openExternal(a.dataset.href); });
+  a.tabIndex = 0;
+  const open = (e) => { e.preventDefault(); api.openExternal(a.dataset.href); };
+  a.addEventListener('click', open);
+  a.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') open(e); });
 });
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape') api.close(); });
 </script>
@@ -3297,7 +3297,7 @@ function openAboutWindow() {
     aboutWindow.focus();
     return;
   }
-  const size = fitToWorkArea(600, 620);
+  const size = fitToWorkArea(560, 610);
   const base = {
     width: size.width, height: size.height,
     parent: mainWindow && !mainWindow.isDestroyed() ? mainWindow : undefined,
@@ -3837,7 +3837,12 @@ const UI_ICONS = {
     terminal:'<path d="M4 17l6-5-6-5M12 19h8"/>',
     mail:    '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/>',
     user:    '<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0116 0"/>',
-    chevron: '<path d="M9 6l6 6-6 6"/>'
+    chevron: '<path d="M9 6l6 6-6 6"/>',
+    warn:    '<path d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>',
+    error:   '<circle cx="12" cy="12" r="9"/><path d="M15 9l-6 6M9 9l6 6"/>',
+    external:'<path d="M14 4h6v6M20 4l-9 9"/><path d="M18 14v5a1 1 0 01-1 1H5a1 1 0 01-1-1V7a1 1 0 011-1h5"/>',
+    lifebuoy:'<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/><path d="M15 15l3.4 3.4M9 15l-3.4 3.4M9 9L5.6 5.6M15 9l3.4-3.4"/>',
+    github:  '<path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 00-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0020 4.77 5.07 5.07 0 0019.91 1S18.73.65 16 2.48a13.38 13.38 0 00-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 005 4.77a5.44 5.44 0 00-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 009 18.13V22"/>'
 };
 function uiIcon(name, size = 16) {
   return `<svg class="ui-ico" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${UI_ICONS[name] || ''}</svg>`;
