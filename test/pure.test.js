@@ -366,3 +366,14 @@ test('Dialogmasse: Seitenverhaeltnis zwischen 0.75 und 1.1', () => {
     assert.ok(v >= 0.75 && v <= 1.1, `${name}: Verhaeltnis ${v.toFixed(2)} ausserhalb 0.75..1.1`);
   }
 });
+
+test('filterNotifications: nimmt die Uebersetzung und faellt sonst auf Englisch zurueck', () => {
+  const payload = { notifications: [{ id: 'a', title: 'Hello', body: 'Body', linkLabel: 'More',
+    i18n: { de: { title: 'Hallo', linkLabel: 'Mehr' }, fr: 'kaputt' } }] };
+  const de = filterNotifications(payload, { lang: 'de' })[0];
+  assert.equal(de.title, 'Hallo');
+  assert.equal(de.body, 'Body');
+  assert.equal(de.linkLabel, 'Mehr');
+  assert.equal(filterNotifications(payload, { lang: 'fr' })[0].title, 'Hello');
+  assert.equal(filterNotifications(payload, { lang: 'it' })[0].title, 'Hello');
+});

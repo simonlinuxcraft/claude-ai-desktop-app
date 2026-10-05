@@ -95,7 +95,9 @@ const NOTIFICATION_SEVERITIES = new Set(['info', 'warn', 'critical', 'success'])
 const NOTIFICATION_VERSION_RE = /^\d+(\.\d+)*(-\S+)?$/;
 const MAX_NOTIFICATIONS = 10;
 
-function filterNotifications(payload, { appVersion = '0.0.0', isSnap = false, dismissedIds = [] } = {}) {
+// Uebersetzungen stehen in n.i18n.<lang>.{title,body,linkLabel}. title selbst bleibt ein
+// String, sonst verwerfen aeltere App-Versionen den ganzen Hinweis.
+function filterNotifications(payload, { appVersion = '0.0.0', isSnap = false, dismissedIds = [], lang = 'en' } = {}) {
   if (!payload || !Array.isArray(payload.notifications)) return [];
   const now = Date.now();
   const out = [];
@@ -112,13 +114,15 @@ function filterNotifications(payload, { appVersion = '0.0.0', isSnap = false, di
       const exp = Date.parse(n.expires);
       if (Number.isFinite(exp) && exp < now) continue;
     }
+    const loc = n.i18n && typeof n.i18n === 'object' && n.i18n[lang] && typeof n.i18n[lang] === 'object' ? n.i18n[lang] : {};
+    const pick = (k) => (typeof loc[k] === 'string' && loc[k].length > 0 ? loc[k] : n[k]);
     out.push({
       id: n.id,
       severity: NOTIFICATION_SEVERITIES.has(n.severity) ? n.severity : 'info',
-      title: String(n.title).slice(0, 200),
-      body: typeof n.body === 'string' ? n.body.slice(0, 600) : '',
+      title: String(pick('title')).slice(0, 200),
+      body: typeof pick('body') === 'string' ? pick('body').slice(0, 600) : '',
       link: (typeof n.link === 'string' && /^https:\/\//i.test(n.link)) ? n.link : null,
-      linkLabel: typeof n.linkLabel === 'string' ? n.linkLabel.slice(0, 60) : null,
+      linkLabel: typeof pick('linkLabel') === 'string' ? pick('linkLabel').slice(0, 60) : null,
       dismissible: n.dismissible !== false
     });
   }

@@ -99,7 +99,7 @@ const ICON_THEME_SIZES = ['512x512', '256x256', '128x128', '64x64', '48x48', '32
 const NOTIFICATIONS_URL = 'https://raw.githubusercontent.com/simonlinuxcraft/claude-ai-desktop-app/main/notifications.json';
 const NOTIFICATIONS_FETCH_MS = 6 * 60 * 60 * 1000;        // alle 6h
 const NOTIFICATIONS_FIRST_FETCH_DELAY_MS = 8 * 1000;       // nach App-Start 8s warten
-const NOTIFICATION_BANNER_HEIGHT = 64;
+const NOTIFICATION_BANNER_HEIGHT = 36;
 const MAX_NOTIFICATIONS_VISIBLE = 1;                        // ein Banner gleichzeitig
 
 // Injected Scripts (aus Dateien geladen)
@@ -568,24 +568,27 @@ body{background:var(--bg);font:500 12px/1 -apple-system,BlinkMacSystemFont,'Sego
 ${roundFrameCSS('var(--frame-hi)', 'var(--frame-lo)')}
 #notif-bar{display:flex;flex-direction:column;flex-shrink:0;-webkit-app-region:no-drag}
 #notif-bar:empty{display:none}
-.notif{display:flex;align-items:center;gap:14px;min-height:${NOTIFICATION_BANNER_HEIGHT}px;padding:10px 14px 10px 0;font-family:inherit;line-height:1.35;color:var(--ta);border-bottom:1px solid var(--bd);background:var(--bgh);position:relative}
+.notif{display:flex;align-items:center;gap:10px;height:${NOTIFICATION_BANNER_HEIGHT}px;padding:0 6px 0 0;font-family:inherit;line-height:1.35;color:var(--ta);border-bottom:1px solid var(--bd);background:var(--bgh);position:relative}
 .notif[data-sev="info"]{background:linear-gradient(90deg,color-mix(in srgb,var(--ac-from) 14%,var(--bgh)),var(--bgh))}
 .notif[data-sev="warn"]{background:linear-gradient(90deg,color-mix(in srgb,${warnColor().fg} 22%,var(--bgh)),var(--bgh))}
 .notif[data-sev="critical"]{background:linear-gradient(90deg,color-mix(in srgb,#e05e3e 28%,var(--bgh)),var(--bgh))}
 .notif[data-sev="success"]{background:linear-gradient(90deg,color-mix(in srgb,#3fb96e 22%,var(--bgh)),var(--bgh))}
-.notif-dot{flex:0 0 4px;align-self:stretch;background:var(--ac-from);margin-right:6px}
+.notif-dot{flex:0 0 3px;align-self:stretch;background:var(--ac-from)}
+.notif-ico{flex:0 0 auto;display:flex;color:var(--ac-from)}
+.notif[data-sev="warn"] .notif-ico{color:${warnColor().fg}}
+.notif[data-sev="critical"] .notif-ico{color:#e05e3e}
+.notif[data-sev="success"] .notif-ico{color:#3fb96e}
 .notif[data-sev="warn"] .notif-dot{background:${warnColor().fg}}
 .notif[data-sev="critical"] .notif-dot{background:#e05e3e}
 .notif[data-sev="success"] .notif-dot{background:#3fb96e}
-.notif-text{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px;overflow:hidden}
-.notif-text strong{font-weight:600;color:var(--ta);font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.notif-text span{color:var(--t);font-weight:400;font-size:12.5px;white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-.notif-link{flex:0 0 auto;background:var(--ac-from);color:#fff;border:none;border-radius:8px;padding:7px 14px;font-size:12.5px;font-family:inherit;font-weight:600;cursor:pointer;white-space:nowrap;transition:filter .12s ease}
-.notif[data-sev="warn"] .notif-link{background:${warnColor().fg};color:#1c1208}
-.notif[data-sev="critical"] .notif-link{background:#e05e3e;color:#fff}
-.notif[data-sev="success"] .notif-link{background:#3fb96e;color:#0e1d14}
-.notif-link:hover{filter:brightness(1.08)}
-.notif-x{flex:0 0 auto;width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--t);font-size:18px;line-height:1;border:none;background:transparent;font-family:inherit;transition:background .12s ease}
+.notif-text{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:12.5px;color:var(--t);font-weight:400}
+.notif-text strong{font-weight:600;color:var(--ta);margin-right:6px}
+.notif-link{flex:0 0 auto;background:transparent;color:var(--ac-from);border:none;border-radius:7px;padding:5px 9px;font-size:12.5px;font-family:inherit;font-weight:600;cursor:pointer;white-space:nowrap;transition:background .12s ease}
+.notif[data-sev="warn"] .notif-link{color:${warnColor().fg}}
+.notif[data-sev="critical"] .notif-link{color:#e05e3e}
+.notif[data-sev="success"] .notif-link{color:#3fb96e}
+.notif-link:hover{background:color-mix(in srgb,currentColor 12%,transparent)}
+.notif-x{flex:0 0 auto;width:26px;height:26px;border-radius:7px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--t);font-size:18px;line-height:1;border:none;background:transparent;font-family:inherit;transition:background .12s ease}
 .notif-x:hover{background:var(--bga);color:var(--ta)}
 #tab-row{display:flex;align-items:flex-end;height:${TAB_BAR_HEIGHT}px;flex:0 0 ${TAB_BAR_HEIGHT}px;-webkit-app-region:drag}
 .menu-btn{-webkit-app-region:no-drag;width:30px;height:30px;display:flex;align-items:center;justify-content:center;
@@ -684,6 +687,8 @@ ${roundFrameCSS('var(--frame-hi)', 'var(--frame-lo)')}
 </div>
 <div class="spacer"></div>
 <div class="controls">
+  <div id="upd" hidden><svg class="ring" viewBox="0 0 24 24"><circle class="ring-bg" cx="12" cy="12" r="11" fill="none" stroke-width="2"/><circle class="ring-fg" id="upd-ring" cx="12" cy="12" r="11" fill="none" stroke-width="2" stroke-linecap="round" stroke-dasharray="69.12" stroke-dashoffset="69.12"/></svg>${uiIcon('download', 12)}</div>
+  <button id="upd-ready" hidden title="${t('Update installieren und die App neu starten', 'Install the update and restart the app', 'Installer la mise à jour et redémarrer l’app', 'Installa l’aggiornamento e riavvia l’app')}">${uiIcon('refresh', 13)}${t('Neu starten', 'Restart', 'Redémarrer', 'Riavvia')}</button>
   <div class="design-pill" id="design-toggle" title="${t('Design wechseln', 'Toggle design', 'Changer de design', 'Cambia design')}">${DESIGN_STYLE_LABEL[designStyle]}</div>
   <div class="official${officialAppSeen ? ' seen' : ''}" id="official-app" title="${t('Anthropic bietet eine eigene Claude-App für Linux an. Hier steht, wie sie installiert wird.', 'Anthropic ships its own Claude app for Linux. This explains how to install it.', 'Anthropic propose sa propre application Claude pour Linux. Voici comment l’installer.', 'Anthropic distribuisce una propria app Claude per Linux. Qui come installarla.')}">
     <span class="oi">${uiIcon('package', 16)}</span><span class="lbl">${t('Offizielle App', 'Official app', 'App officielle', 'App ufficiale')}</span>
@@ -809,9 +814,8 @@ window.tabAPI.onNotificationsUpdate(list=>{
     const row=document.createElement('div');
     row.className='notif';row.dataset.sev=n.severity||'info';
     row.innerHTML=
-      '<span class="notif-dot"></span>'+
-      '<div class="notif-text"><strong>'+escTxt(n.title)+'</strong>'+
-        (n.body?'<span>'+escTxt(n.body)+'</span>':'')+'</div>'+
+      '<span class="notif-dot"></span><span class="notif-ico">${uiIcon('info', 16)}</span>'+
+      '<div class="notif-text" title="'+escTxt(n.title+(n.body?' '+n.body:''))+'"><strong>'+escTxt(n.title)+'</strong>'+escTxt(n.body)+'</div>'+
       (n.link?'<button class="notif-link" data-act="link">'+escTxt(n.linkLabel||'${t('Mehr', 'More', 'Plus', 'Altro')}')+'</button>':'')+
       (n.dismissible!==false?'<button class="notif-x" data-act="dismiss" title="${t('Schließen', 'Close', 'Fermer', 'Chiudi')}">×</button>':'');
     row.addEventListener('click',e=>{
@@ -823,6 +827,17 @@ window.tabAPI.onNotificationsUpdate(list=>{
   }
 });
 window.tabAPI.requestNotifications();
+
+const upd=document.getElementById('upd'),updReady=document.getElementById('upd-ready'),updRing=document.getElementById('upd-ring');
+const UPD_TIP=${JSON.stringify(t('Update wird geladen', 'Downloading update', 'Téléchargement de la mise à jour', 'Download dell’aggiornamento'))};
+updReady.addEventListener('click',()=>window.tabAPI.installUpdate());
+window.tabAPI.onUpdateState(u=>{
+  const loading=!!u&&u.state==='downloading',ready=!!u&&u.state==='ready';
+  upd.hidden=!loading;updReady.hidden=!ready;
+  if(loading){const p=Math.max(0,Math.min(100,Number(u.percent)||0));updRing.style.strokeDashoffset=String(69.12*(1-p/100));upd.title=UPD_TIP+', '+Math.round(p)+' %';}
+  if(ready&&u.version)updReady.title=updReady.title.split(' (v')[0]+' (v'+u.version+')';
+});
+window.tabAPI.requestUpdateState();
 </script></body></html>`;
   return _tabBarCache;
 }
@@ -4359,6 +4374,12 @@ function setupDownloadManager() {
 autoUpdater.autoDownload = true;
 autoUpdater.autoInstallOnAppQuit = true;
 let manualUpdateCheck = false;
+// Stand fuer den Ring und den Neustart-Knopf in der Tab-Leiste.
+let updateState = null;
+function setUpdateState(st) {
+  updateState = st;
+  if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('update-state', st);
+}
 
 // Manuelle "Nach Updates suchen"-Aktion. Im Snap laeuft der electron-updater nicht
 // (setupAutoUpdater bricht ab, kein Handler registriert), darum hier eigene Rueckmeldung
@@ -4409,16 +4430,15 @@ function setupAutoUpdater() {
       mainWindow.setTitle(`Desktop for Claude - Update ${Math.round(p.percent)}%`);
       mainWindow.setProgressBar(p.percent / 100);
     }
+    setUpdateState({ state: 'downloading', percent: p.percent });
   });
 
   autoUpdater.on('update-downloaded', (info) => {
     if (isQuitting) return;
     if (mainWindow && !mainWindow.isDestroyed()) { mainWindow.setTitle(`Desktop for Claude v${version}`); mainWindow.setProgressBar(-1); }
-    showCustomMessageBox({
-      type: 'info', title: t('Update bereit', 'Update ready', 'Mise à jour prête', 'Aggiornamento pronto'),
-      message: `v${info.version} ${t('heruntergeladen. Jetzt neu starten?', 'downloaded. Restart now?', 'téléchargée. Redémarrer maintenant ?', 'scaricato. Riavviare ora?')}`,
-      buttons: [t('Neu starten', 'Restart', 'Redémarrer', 'Riavvia'), t('Sp\u00e4ter', 'Later', 'Plus tard', 'Più tardi')], defaultId: 0, cancelId: 1
-    }).then(r => { if (!isQuitting && r.response === 0) autoUpdater.quitAndInstall(); });
+    // Kein Dialog mehr: der Knopf in der Tab-Leiste wartet, bis es passt. Ohne Klick
+    // installiert autoInstallOnAppQuit das Update beim naechsten Beenden.
+    setUpdateState({ state: 'ready', version: info.version });
   });
 
   autoUpdater.on('error', (err) => {
@@ -4829,7 +4849,7 @@ async function refreshNotifications() {
   } else {
     payload = await fetchNotificationsRemote();
   }
-  activeNotifications = filterNotifications(payload, { appVersion: version, isSnap, dismissedIds: dismissedNotificationIds });
+  activeNotifications = filterNotifications(payload, { appVersion: version, isSnap, dismissedIds: dismissedNotificationIds, lang: sysLang });
   pushNotificationsToTabBar();
 }
 
@@ -5308,6 +5328,10 @@ ipcMain.on('win-toggle-maximize', (event) => {
 });
 ipcMain.on('win-close', (event) => { if (fromMainWindow(event)) mainWindow.close(); });
 ipcMain.on('win-state-request', (event) => { if (fromMainWindow(event)) sendWindowState(); });
+ipcMain.on('update-state-request', (event) => { if (fromMainWindow(event) && updateState) event.sender.send('update-state', updateState); });
+ipcMain.on('update-install', (event) => {
+  if (fromMainWindow(event) && updateState && updateState.state === 'ready' && !isQuitting) autoUpdater.quitAndInstall();
+});
 
 ipcMain.on('tab-new', () => createTab());
 ipcMain.on('tab-switch', (_, i) => {

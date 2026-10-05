@@ -47,5 +47,8 @@ contextBridge.exposeInMainWorld('tabAPI', {
   winToggleMaximize: () => ipcRenderer.send('win-toggle-maximize'),
   winClose: () => ipcRenderer.send('win-close'),
   onWindowStateUpdate: (cb) => once('win-state', (_, state) => cb(state)),
-  requestWindowState: () => ipcRenderer.send('win-state-request')
+  requestWindowState: () => ipcRenderer.send('win-state-request'),
+  onUpdateState: (cb) => once('update-state', (_, st) => cb(st)),
+  requestUpdateState: () => ipcRenderer.send('update-state-request'),
+  installUpdate: () => ipcRenderer.send('update-install')
 });
