@@ -3,5 +3,6 @@ const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('whatsNewAPI', {
   close: () => ipcRenderer.send('whatsnew-close'),
-  openSettings: () => ipcRenderer.send('whatsnew-open-settings')
+  openSettings: () => ipcRenderer.send('whatsnew-open-settings'),
+  openSupport: () => ipcRenderer.send('whatsnew-open-support')
 });

@@ -2980,6 +2980,7 @@ function getWhatsNewHTML(force = false) {
       ${slideMedia(n)}
       <div class="slide-title">${localize(n.title)}</div>
       <div class="slide-text">${localize(n.text)}</div>
+      ${n.action === 'support' ? `<button class="slide-btn" data-action="support"><svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="${KOFI_PATH}"/></svg>${t('Auf Ko-fi unterstützen', 'Support on Ko-fi', 'Soutenir sur Ko-fi', 'Sostieni su Ko-fi')}</button>` : ''}
     </div>`).join('');
   const dots = notes.map((_, i) => `<span class="dot${i === 0 ? ' active' : ''}" data-i="${i}"></span>`).join('');
   const obNext = t('Weiter', 'Next', 'Suivant', 'Avanti');
@@ -3036,6 +3037,11 @@ ${customTitlebarCSS()}
 .slide-ic svg{width:30px;height:30px}
 .slide-title{font-weight:700;font-size:20px;letter-spacing:-.3px;color:${th.textActive};margin-bottom:12px;line-height:1.2}
 .slide-text{color:${th.text};font-size:14px;line-height:1.65}
+.slide-btn{margin-top:20px;display:inline-flex;align-items:center;gap:8px;font-family:inherit;font-size:13.5px;font-weight:600;cursor:pointer;
+  border:none;border-radius:8px;padding:10px 22px;color:#fff;background:linear-gradient(135deg,${ac.from},${ac.to});box-shadow:0 4px 14px ${ac.from}33}
+.slide-btn:hover{filter:brightness(1.08)}
+.slide-btn:focus-visible{outline:2px solid ${ac.from};outline-offset:2px}
+.slide.active .slide-btn{animation:obUp .42s ease .26s both}
 /* Nur fuer den Hinweis-Slide zur offiziellen App. Kein anderer Slide nutzt diese Klassen. */
 .wn-box{margin-top:10px;padding:10px 13px;border-radius:11px;text-align:left;font-size:12.5px;
   line-height:1.5;background:${th.bgHover};border:1px solid ${th.border}}
@@ -3069,6 +3075,7 @@ ${customTitlebarHTML(t('Was ist neu', 'What’s new', 'Nouveautés', 'Novità'))
 (function(){
   var idx=0, total=${notes.length};
   var slides=[].slice.call(document.querySelectorAll('.slide'));
+  document.querySelectorAll('.slide-btn[data-action="support"]').forEach(function(b){b.addEventListener('click',function(){window.whatsNewAPI.openSupport();});});
   var dots=[].slice.call(document.querySelectorAll('.dot'));
   var back=document.getElementById('ob-back'), next=document.getElementById('ob-next');
   var nextLbl=${JSON.stringify(obNext)}, doneLbl=${JSON.stringify(i18n.close)};
@@ -3635,6 +3642,7 @@ async function showOfficialAppInfo() {
 // Ko-fi statt PayPal-Knopf: _donations ist in Deutschland gemeinnuetzigen Organisationen vorbehalten,
 // _xclick sieht aus wie ein Shop. Die Widget-Adresse zeigt nur das Bezahlfeld, ohne Profil und Feed.
 const SUPPORT_URL = 'https://ko-fi.com/simonlinuxcraft/?hidefeed=true&widget=true&embed=true';
+const KOFI_PATH = 'M11.351 2.715c-2.7 0-4.986.025-6.83.26C2.078 3.285 0 5.154 0 8.61c0 3.506.182 6.13 1.585 8.493 1.584 2.701 4.233 4.182 7.662 4.182h.83c4.209 0 6.494-2.234 7.637-4a9.5 9.5 0 0 0 1.091-2.338C21.792 14.688 24 12.22 24 9.208v-.415c0-3.247-2.13-5.507-5.792-5.87-1.558-.156-2.65-.208-6.857-.208m0 1.947c4.208 0 5.09.052 6.571.182 2.624.311 4.13 1.584 4.13 4v.39c0 2.156-1.792 3.844-3.87 3.844h-.935l-.156.649c-.208 1.013-.597 1.818-1.039 2.546-.909 1.428-2.545 3.064-5.922 3.064h-.805c-2.571 0-4.831-.883-6.078-3.195-1.09-2-1.298-4.155-1.298-7.506 0-2.181.857-3.402 3.012-3.714 1.533-.233 3.559-.26 6.39-.26m6.547 2.287c-.416 0-.65.234-.65.546v2.935c0 .311.234.545.65.545 1.324 0 2.051-.754 2.051-2s-.727-2.026-2.052-2.026m-10.39.182c-1.818 0-3.013 1.48-3.013 3.142 0 1.533.858 2.857 1.949 3.897.727.701 1.87 1.429 2.649 1.896a1.47 1.47 0 0 0 1.507 0c.78-.467 1.922-1.195 2.623-1.896 1.117-1.039 1.974-2.364 1.974-3.897 0-1.662-1.247-3.142-3.039-3.142-1.065 0-1.792.545-2.338 1.298-.493-.753-1.246-1.298-2.312-1.298';
 
 async function showSupportInfo() {
   const res = await showCustomMessageBox({
@@ -3693,7 +3701,7 @@ function getSupportHTML(channel) {
   ))}</p>
   <div class="pills">${pills}</div>
   <div class="actions">
-    <button class="btn primary" data-idx="0"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M11.351 2.715c-2.7 0-4.986.025-6.83.26C2.078 3.285 0 5.154 0 8.61c0 3.506.182 6.13 1.585 8.493 1.584 2.701 4.233 4.182 7.662 4.182h.83c4.209 0 6.494-2.234 7.637-4a9.5 9.5 0 0 0 1.091-2.338C21.792 14.688 24 12.22 24 9.208v-.415c0-3.247-2.13-5.507-5.792-5.87-1.558-.156-2.65-.208-6.857-.208m0 1.947c4.208 0 5.09.052 6.571.182 2.624.311 4.13 1.584 4.13 4v.39c0 2.156-1.792 3.844-3.87 3.844h-.935l-.156.649c-.208 1.013-.597 1.818-1.039 2.546-.909 1.428-2.545 3.064-5.922 3.064h-.805c-2.571 0-4.831-.883-6.078-3.195-1.09-2-1.298-4.155-1.298-7.506 0-2.181.857-3.402 3.012-3.714 1.533-.233 3.559-.26 6.39-.26m6.547 2.287c-.416 0-.65.234-.65.546v2.935c0 .311.234.545.65.545 1.324 0 2.051-.754 2.051-2s-.727-2.026-2.052-2.026m-10.39.182c-1.818 0-3.013 1.48-3.013 3.142 0 1.533.858 2.857 1.949 3.897.727.701 1.87 1.429 2.649 1.896a1.47 1.47 0 0 0 1.507 0c.78-.467 1.922-1.195 2.623-1.896 1.117-1.039 1.974-2.364 1.974-3.897 0-1.662-1.247-3.142-3.039-3.142-1.065 0-1.792.545-2.338 1.298-.493-.753-1.246-1.298-2.312-1.298"/></svg>${escapeHtml(t('Auf Ko-fi unterstützen', 'Support on Ko-fi', 'Soutenir sur Ko-fi', 'Sostieni su Ko-fi'))}</button>
+    <button class="btn primary" data-idx="0"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="${KOFI_PATH}"/></svg>${escapeHtml(t('Auf Ko-fi unterstützen', 'Support on Ko-fi', 'Soutenir sur Ko-fi', 'Sostieni su Ko-fi'))}</button>
     <button class="btn ghost" data-idx="1">${escapeHtml(t('Vielleicht später', 'Maybe later', 'Plus tard', 'Forse più tardi'))}</button>
   </div>
   <div class="note">${escapeHtml(t('Freiwillig. An der App ändert sich dadurch nichts.', 'Entirely optional. Nothing about the app changes.', 'Entièrement facultatif. Rien ne change dans l’application.', 'Del tutto facoltativo. Nell’app non cambia nulla.'))}</div>
@@ -5197,6 +5205,7 @@ ipcMain.on('quickprompt-cancel', (event) => {
 ipcMain.on('whatsnew-close', () => {
   if (whatsNewWindow && !whatsNewWindow.isDestroyed()) whatsNewWindow.close();
 });
+ipcMain.on('whatsnew-open-support', () => openExternalSafe(SUPPORT_URL));
 ipcMain.on('whatsnew-open-settings', () => {
   if (whatsNewWindow && !whatsNewWindow.isDestroyed()) whatsNewWindow.close();
   openSettingsWindow();

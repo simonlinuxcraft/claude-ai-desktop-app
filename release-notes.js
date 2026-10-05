@@ -2,7 +2,8 @@
 // Release-Notes fuer das "Was ist neu"-Fenster, pro Version eine Liste von Slides.
 // title/text sind entweder ein String (nur Deutsch, Legacy) oder ein {de,en,fr,it}-Objekt;
 // localize() in i18n.js waehlt daraus. Optionales `icon`, optionales `image` (Pfad relativ
-// zum App-Verzeichnis oder data:-URL), optionales `if: 'snap'|'appimage'`.
+// zum App-Verzeichnis oder data:-URL), optionales `if: 'snap'|'appimage'`, optionales
+// `action: 'support'` fuer den Ko-fi-Knopf unter dem Text.
 // Reine Daten, kein Electron-Zugriff.
 
 // Wenn die aktuelle Version in dieser Map steht, werden die hier gelisteten
@@ -17,17 +18,18 @@ const RELEASE_NOTES = {
   '1.4.21': [
     {
       icon: 'heart',
+      action: 'support',
       title: {
-        de: 'Die App bleibt kostenlos',
-        en: 'The app stays free',
-        fr: 'L’application reste gratuite',
-        it: 'L’app resta gratuita'
+        de: 'App unterstützen',
+        en: 'Support the app',
+        fr: 'Soutenir l’app',
+        it: 'Sostieni l’app'
       },
       text: {
-        de: 'Keine Werbung, keine gesperrten Funktionen, und daran ändert sich nichts. Die App entsteht in meiner Freizeit. Wer möchte, kann die Entwicklungskosten mit einer freiwilligen Zahlung über Ko-fi unterstützen: im Menü unter „App unterstützen“ oder im Fenster „Über“. Danke an alle, die die App nutzen und Fehler melden.',
-        en: 'No ads, no locked features, and that is not changing. I build the app in my spare time. If you like, you can support the development costs with a voluntary payment on Ko-fi: in the menu under “Support the app” or in the About window. Thanks to everyone who uses it and reports bugs.',
-        fr: 'Pas de publicité, aucune fonction bloquée, et cela ne changera pas. Je développe l’application sur mon temps libre. Si vous le souhaitez, vous pouvez soutenir les frais de développement par un paiement volontaire sur Ko-fi : dans le menu sous « Soutenir l’app » ou dans la fenêtre « À propos ». Merci à toutes celles et ceux qui l’utilisent et signalent des bugs.',
-        it: 'Niente pubblicità, nessuna funzione bloccata, e non cambierà. Sviluppo l’app nel tempo libero. Se vuoi, puoi sostenere i costi di sviluppo con un pagamento volontario su Ko-fi: nel menu alla voce «Sostieni l’app» o nella finestra «Informazioni». Grazie a chi la usa e segnala i bug.'
+        de: 'Desktop for Claude bleibt kostenlos, ohne Werbung und mit allen Funktionen. Die App entsteht in meiner Freizeit. Wenn sie dir hilft, kannst du die Entwicklungskosten mit einer freiwilligen Zahlung über Ko-fi unterstützen. Den Link findest du auch im Menü unter „App unterstützen“ und im Fenster „Über“. An der App ändert sich dadurch nichts.',
+        en: 'Desktop for Claude stays free, with no ads and every feature. I build the app in my spare time. If it helps you, you can support the development costs with a voluntary payment on Ko-fi. The link is also in the menu under “Support the app” and in the About window. Nothing about the app changes either way.',
+        fr: 'Desktop for Claude reste gratuit, sans publicité et avec toutes les fonctions. Je développe l’application sur mon temps libre. Si elle vous est utile, vous pouvez soutenir les frais de développement par un paiement volontaire sur Ko-fi. Le lien se trouve aussi dans le menu sous « Soutenir l’app » et dans la fenêtre « À propos ». Rien ne change dans l’application.',
+        it: 'Desktop for Claude resta gratuito, senza pubblicità e con tutte le funzioni. Sviluppo l’app nel tempo libero. Se ti è utile, puoi sostenere i costi di sviluppo con un pagamento volontario su Ko-fi. Il link è anche nel menu alla voce «Sostieni l’app» e nella finestra «Informazioni». Nell’app non cambia nulla.'
       }
     },
     {
