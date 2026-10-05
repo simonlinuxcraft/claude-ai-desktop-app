@@ -1357,7 +1357,12 @@ const RELEASE_NOTES = {
   ]
 };
 
-module.exports = { RELEASE_NOTES, RELEASE_NOTES_REVISIT };
+// Optionaler Update-Titel pro Version, gross im Kopf des "Was ist neu"-Fensters.
+const RELEASE_TITLES = {
+  '1.4.21': { de: 'Unterstützung und App-Theme', en: 'Support and App Theme', fr: 'Soutien et thème de l’app', it: 'Supporto e tema dell’app' }
+};
+
+module.exports = { RELEASE_NOTES, RELEASE_NOTES_REVISIT, RELEASE_TITLES };
 
 const { compareVersions } = require('./utils/pure');
 

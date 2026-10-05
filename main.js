@@ -6,7 +6,7 @@ const fs = require('fs');
 const os = require('os');
 const { execFile, spawn } = require('child_process');
 const { version } = require('./package.json');
-const { getFilteredNotes } = require('./release-notes');
+const { getFilteredNotes, RELEASE_TITLES } = require('./release-notes');
 const { bugReportStrings } = require('./bug-report-strings');
 const { compareVersions, safeJson, escapeHtml, filterNotifications, scaleWindow, UI_SCALE_FLOOR, isClaudeAiOrigin, isPaymentFrameDomain, looksLikeOAuthUrl, validateAccelerator, THEME_MODES, resolveThemeMode, DESIGN_STYLES, resolveDesignStyle } = require('./utils/pure');
 
@@ -2950,67 +2950,55 @@ document.addEventListener('keydown', (e) => {
 function getWhatsNewHTML(force = false) {
   const th = subTheme();
   const ac = accent();
+  // Neon und Matrix haben ein helles Deko-Paar, das hier Lichtschein, Ringe und Logo faerbt.
+  const glow = ac.neonFrom || ac.from;
+  const glow2 = ac.neonTo || ac.to;
   // Immer nur die Notes der aktuellen Version zeigen (alles seit dem letzten Release),
   // nie kumuliert ueber uebersprungene Versionen. force=true erzwingt versionsToShow=[version].
   const notes = getFilteredNotes(version, windowState.lastSeenVersion, { isSnap, force: true });
-  const icons = {
-    tray: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="12" cy="12" r="3"/></svg>',
-    // Aus dem App-Menue uebernommen (ICONS weiter unten), damit aeltere Release-Notes nicht
-    // ohne Symbol dastehen: bug steckt in den Notes von 1.3.8 bis 1.4.15, info in 1.4.16,
-    // cog in 1.4.6, plus in 1.4.3. Ein unbekannter Name liefert hier schlicht nichts.
-    bug: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg>',
-    info: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8h.01M11 12h1v5h1"/></svg>',
-    cog: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.6 1.6 0 00.3 1.8l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.6 1.6 0 00-1.8-.3 1.6 1.6 0 00-1 1.5V21a2 2 0 11-4 0v-.1a1.6 1.6 0 00-1-1.5 1.6 1.6 0 00-1.8.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.6 1.6 0 00.3-1.8 1.6 1.6 0 00-1.5-1H3a2 2 0 110-4h.1a1.6 1.6 0 001.5-1 1.6 1.6 0 00-.3-1.8l-.1-.1a2 2 0 112.8-2.8l.1.1a1.6 1.6 0 001.8.3H9a1.6 1.6 0 001-1.5V3a2 2 0 114 0v.1a1.6 1.6 0 001 1.5 1.6 1.6 0 001.8-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.6 1.6 0 00-.3 1.8V9a1.6 1.6 0 001.5 1H21a2 2 0 110 4h-.1a1.6 1.6 0 00-1.5 1z"/></svg>',
-    plus: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>',
-    bolt: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="13 2 4 14 12 14 11 22 20 10 12 10 13 2"/></svg>',
-    check: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="8 12 11 15 16 9"/></svg>',
-    settings: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h0a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h0a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v0a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>',
-    heart: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>',
-    tabs: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M9 4v5"/></svg>',
-    mic: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0M12 17v4"/></svg>',
-    palette: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="8" cy="10" r="1.1"/><circle cx="12" cy="8" r="1.1"/><circle cx="16" cy="10" r="1.1"/></svg>',
-    download: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>',
-    bell: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 0 1-3.4 0"/></svg>',
-    shield: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>',
-    refresh: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>'
+  // Aeltere Notes nennen das Zahnrad 'settings'; unbekannte Namen bekommen den Haken.
+  const iconName = (n) => { const k = n.icon === 'settings' ? 'cog' : n.icon; return UI_ICONS[k] ? k : 'check'; };
+  const relTitle = RELEASE_TITLES[version] ? localize(RELEASE_TITLES[version]) : '';
+  const count = notes.length === 1
+    ? t('1 Neuerung', '1 highlight', '1 nouveauté', '1 novità')
+    : t(`${notes.length} Neuerungen`, `${notes.length} highlights`, `${notes.length} nouveautés`, `${notes.length} novità`);
+  const headline = relTitle || t('Was ist neu in ' + version, 'What’s new in ' + version, 'Nouveautés de la version ' + version, 'Novità della versione ' + version);
+  const sub = relTitle
+    ? t(`Version ${version} mit ${count}`, `Version ${version} with ${count}`, `Version ${version}, ${count}`, `Versione ${version} con ${count}`)
+    : t('Ein kurzer Überblick über die wichtigsten Änderungen', 'A quick look at the highlights', 'Un aperçu rapide des principales nouveautés', 'Una rapida panoramica sulle novità principali');
+  const nextLbl = t('Weiter', 'Next', 'Suivant', 'Avanti');
+  const backLbl = t('Zurück', 'Back', 'Retour', 'Indietro');
+  const doneLbl = t('Los geht’s', 'Let’s go', 'C’est parti', 'Iniziamo');
+  // Modern und Classic zeigen ihr Logo wie in der Taskleiste, die anderen Stile fuellen
+  // die Logoform mit ihrem eigenen Verlauf.
+  const logo = ac.neonFrom
+    ? `<span class="logo-tint" style="-webkit-mask-image:url(${iconDataUrl()})"></span>`
+    : `<img class="logo-img" src="${iconDataUrl()}" alt="">`;
+  // Optionales Bild pro Note: 'image' ist eine data:-URL oder ein Pfad relativ zum
+  // App-Verzeichnis, als String oder {de,en,fr,it}-Objekt (Screenshot pro Sprache).
+  const imageSrc = (n) => {
+    const src = n.image && (typeof n.image === 'string' ? n.image : localize(n.image));
+    if (!src || src.startsWith('data:')) return src || '';
+    // Das Fenster laeuft als data:-URL (opaque origin) und darf keine file://-Bilder laden.
+    try {
+      const buf = fs.readFileSync(path.join(__dirname, src));
+      const ext = path.extname(src).slice(1).toLowerCase();
+      const mime = ext === 'svg' ? 'image/svg+xml' : (ext === 'jpg' || ext === 'jpeg') ? 'image/jpeg' : ext === 'webp' ? 'image/webp' : 'image/png';
+      return `data:${mime};base64,${buf.toString('base64')}`;
+    } catch { return ''; }
   };
-  const i18n = {
-    header: t('Neu in v' + version, 'New in v' + version, 'Nouveautés de la v' + version, 'Novità nella v' + version),
-    sub: t('Ein kurzer \u00dcberblick \u00fcber die wichtigsten \u00c4nderungen', 'A quick look at the highlights', 'Un aperçu rapide des principales nouveautés', 'Una rapida panoramica sulle novità principali'),
-    close: t('Los geht\u2019s', 'Let\u2019s go', 'C’est parti', 'Iniziamo'),
-    openSettings: t('App-Einstellungen \u00f6ffnen', 'Open app settings', 'Ouvrir les paramètres de l’application', 'Apri le impostazioni dell’app')
-  };
-  // Optionales Bild pro Note: 'image' kann eine data:-URL oder ein Pfad relativ zum
-  // App-Verzeichnis sein (z.B. 'whatsnew/1.4.8-feature.png'). Ohne Bild -> Icon.
   const slideMedia = (n) => {
-    const fallback = `<div class="slide-ic">${icons[n.icon] || icons.check}</div>`;
-    if (!n.image) return fallback;
-    // image: String (ein Bild fuer alle Sprachen) ODER {de,en,fr,it}-Objekt (Bild pro
-    // Sprache, analog zu title/text). Der Screenshot ist die einzige sprachabhaengige Stelle.
-    let src = typeof n.image === 'string' ? n.image : localize(n.image);
-    if (!src) return fallback;
-    if (!src.startsWith('data:')) {
-      // Das Fenster laeuft als data:-URL (opaque origin) und darf keine file://-Bilder laden,
-      // darum das Asset zur Laufzeit lesen und als data-URL einbetten.
-      try {
-        const buf = fs.readFileSync(path.join(__dirname, n.image));
-        const ext = path.extname(n.image).slice(1).toLowerCase();
-        const mime = ext === 'svg' ? 'image/svg+xml' : (ext === 'jpg' || ext === 'jpeg') ? 'image/jpeg' : ext === 'webp' ? 'image/webp' : 'image/png';
-        src = `data:${mime};base64,${buf.toString('base64')}`;
-      } catch { return fallback; }
-    }
-    return `<img class="slide-img" src="${src}" alt="">`;
+    const src = imageSrc(n);
+    return src ? `<img class="slide-img" src="${src}" alt="">` : `<div class="slide-ic">${uiIcon(iconName(n), 28)}</div>`;
   };
   const slides = notes.map((n, i) => `
-    <div class="slide${i === 0 ? ' active' : ''}${n.image ? ' has-img' : ''}" data-i="${i}">
+    <div class="slide${n.image ? ' has-img' : ''}" hidden>
       ${slideMedia(n)}
       <div class="slide-title">${localize(n.title)}</div>
       <div class="slide-text">${localize(n.text)}</div>
       ${n.action === 'support' ? `<button class="slide-btn" data-action="support"><svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="${KOFI_PATH}"/></svg>${t('Auf Ko-fi unterstützen', 'Support on Ko-fi', 'Soutenir sur Ko-fi', 'Sostieni su Ko-fi')}</button>` : ''}
     </div>`).join('');
-  const dots = notes.map((_, i) => `<span class="dot${i === 0 ? ' active' : ''}" data-i="${i}"></span>`).join('');
-  const obNext = t('Weiter', 'Next', 'Suivant', 'Avanti');
-  const obBack = t('Zurück', 'Back', 'Retour', 'Indietro');
+  const dots = notes.map((_, i) => `<button class="dot" aria-label="${i + 1}"></button>`).join('');
   return `<!DOCTYPE html><html><head>
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src data:;">
 <style>
@@ -3018,109 +3006,100 @@ function getWhatsNewHTML(force = false) {
 html,body{height:100%;background:${th.bg};color:${th.textActive};font-family:system-ui,-apple-system,sans-serif;font-size:14px;user-select:none}
 body{display:flex;flex-direction:column;overflow:hidden}
 ${customTitlebarCSS()}
-@keyframes wnGradShift{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
-.hero{position:relative;padding:30px 32px 28px;overflow:hidden;color:#fff;flex-shrink:0;
-  background:linear-gradient(135deg,${ac.from},${ac.to},${ac.from},${ac.to});
-  background-size:300% 300%;
-  animation:wnGradShift 9s ease-in-out infinite}
-.hero::before{content:'';position:absolute;right:-90px;top:-90px;width:240px;height:240px;border-radius:50%;background:rgba(255,255,255,.10);pointer-events:none}
-.hero::after{content:'';position:absolute;right:40px;bottom:-70px;width:160px;height:160px;border-radius:50%;background:rgba(255,255,255,.06);pointer-events:none}
-.hero-pill{display:inline-flex;align-items:center;gap:6px;background:rgba(0,0,0,.22);padding:5px 12px;border-radius:999px;font-size:11px;font-weight:600;letter-spacing:.5px;margin-bottom:14px;position:relative;z-index:1;backdrop-filter:blur(4px)}
-.hero-pill::before{content:'';width:6px;height:6px;border-radius:50%;background:#fff;box-shadow:0 0 8px rgba(255,255,255,.65)}
-.hero-title{font-size:28px;font-weight:700;letter-spacing:-.6px;margin-bottom:6px;position:relative;z-index:1;line-height:1.1}
-.hero-sub{font-size:13.5px;line-height:1.5;opacity:.92;position:relative;z-index:1;max-width:80%}
-.body{flex:1;overflow-y:auto;padding:18px}
-.trans-note{margin:0 0 14px;padding:10px 14px;border-radius:10px;font-size:11.5px;line-height:1.5;background:color-mix(in srgb,${ac.from} 10%,${th.bgHover});border:1px solid color-mix(in srgb,${ac.from} 30%,${th.border});color:${th.text}}
+.hero{position:relative;flex-shrink:0;overflow:hidden;padding:30px 32px 22px;text-align:center;border-bottom:1px solid ${th.border};
+  background:radial-gradient(110% 100% at 50% 0%,color-mix(in srgb,${glow} 32%,transparent),color-mix(in srgb,${glow2} 9%,transparent) 55%,transparent 80%)}
+/* Die Ringe wachsen beim Oeffnen einmal auf, danach steht der Kopf still. */
+.ring{position:absolute;left:50%;top:72px;border-radius:50%;border:1px solid ${glow};transform:translate(-50%,-50%);animation:wnRing 1s cubic-bezier(.22,1,.36,1) both}
+@keyframes wnRing{from{opacity:0;transform:translate(-50%,-50%) scale(.55)}}
+.logo{position:relative;width:84px;height:84px;margin:0 auto 16px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  background:${th.bg};border:1px solid color-mix(in srgb,${glow} 50%,transparent);animation:wnLogo .6s cubic-bezier(.34,1.56,.64,1) both}
+@keyframes wnLogo{from{opacity:0;transform:scale(.7)}}
+.logo-img,.logo-tint{width:60px;height:60px}
+.logo-tint{display:block;background:linear-gradient(135deg,${glow},${glow2});-webkit-mask-size:contain;-webkit-mask-repeat:no-repeat;-webkit-mask-position:center}
+.hero-title{position:relative;font-size:25px;font-weight:600;letter-spacing:-.4px;line-height:1.2}
+.hero-sub{position:relative;font-size:13px;color:${th.text};margin-top:6px}
+.body{flex:1;overflow-y:auto;display:flex;padding:8px 24px}
 .body::-webkit-scrollbar{width:8px}
 .body::-webkit-scrollbar-thumb{background:${th.border};border-radius:4px}
-.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-.tile{padding:18px 18px 16px;border-radius:14px;background:${th.bgHover};border:1px solid ${th.border};
-  display:flex;flex-direction:column;gap:8px;transition:border-color .15s,transform .15s,background .15s}
-.tile:hover{border-color:color-mix(in srgb,${ac.from} 50%,${th.border});background:${th.bgActive}}
-.tile-ic{width:38px;height:38px;border-radius:10px;background:linear-gradient(135deg,color-mix(in srgb,${ac.from} 18%,transparent),color-mix(in srgb,${ac.to} 14%,transparent));
-  border:1px solid color-mix(in srgb,${ac.from} 35%,transparent);
-  display:flex;align-items:center;justify-content:center;color:${ac.from};margin-bottom:2px}
-.tile-ic svg{width:18px;height:18px}
-.tile-title{font-weight:600;font-size:13.5px;color:${th.textActive};letter-spacing:-.1px;line-height:1.3}
-.tile-text{color:${th.text};font-size:12px;line-height:1.55}
-.tile-text code{display:inline-block;margin:2px 0;padding:2px 6px;background:${th.bgActive};border:1px solid ${th.border};border-radius:4px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11px;color:${th.textActive};user-select:text}
-.slides{position:relative;flex:1;display:flex;align-items:center;justify-content:center;padding:8px 24px;overflow-y:auto}
-.slides::-webkit-scrollbar{width:8px}
-.slides::-webkit-scrollbar-thumb{background:${th.border};border-radius:4px}
-.slide{display:none;flex-direction:column;align-items:center;text-align:center;max-width:460px}
-.slide.active{display:flex}
-.slide.active .slide-ic{animation:obPop .5s cubic-bezier(.34,1.56,.64,1) both}
-.slide.active .slide-title{animation:obUp .42s ease .1s both}
-.slide.active .slide-text{animation:obUp .42s ease .18s both}
-@keyframes obPop{0%{opacity:0;transform:scale(.6) translateY(8px)}100%{opacity:1;transform:none}}
-@keyframes obUp{0%{opacity:0;transform:translateY(12px)}100%{opacity:1;transform:none}}
+.slide{margin:auto;display:flex;flex-direction:column;align-items:center;text-align:center;max-width:460px;padding:18px 0}
+.slide[hidden]{display:none}
 .slide.has-img{max-width:500px}
+.slide > *{animation:wnIn .35s ease both}
+.slide > :nth-child(2){animation-delay:.05s}
+.slide > :nth-child(n+3){animation-delay:.1s}
+@keyframes wnIn{from{opacity:0;transform:translateX(var(--dx,16px))}}
+.slide-ic{width:60px;height:60px;border-radius:17px;display:flex;align-items:center;justify-content:center;margin-bottom:18px;color:#fff;
+  background:linear-gradient(135deg,${glow},${ac.to});box-shadow:0 8px 24px color-mix(in srgb,${glow} 30%,transparent),inset 0 1px 0 rgba(255,255,255,.25)}
 .slide-img{width:100%;max-width:460px;max-height:250px;object-fit:cover;border-radius:14px;border:1px solid ${th.border};margin-bottom:20px;box-shadow:0 10px 28px rgba(0,0,0,.28)}
-.slide.active .slide-img{animation:obImg .55s cubic-bezier(.22,1,.36,1) both}
-@keyframes obImg{0%{opacity:0;transform:scale(.96) translateY(12px)}100%{opacity:1;transform:none}}
-.slide-ic{width:66px;height:66px;border-radius:18px;background:linear-gradient(135deg,color-mix(in srgb,${ac.from} 20%,transparent),color-mix(in srgb,${ac.to} 15%,transparent));
-  border:1px solid color-mix(in srgb,${ac.from} 38%,transparent);display:flex;align-items:center;justify-content:center;color:${ac.from};margin-bottom:20px}
-.slide-ic svg{width:30px;height:30px}
-.slide-title{font-weight:700;font-size:20px;letter-spacing:-.3px;color:${th.textActive};margin-bottom:12px;line-height:1.2}
-.slide-text{color:${th.text};font-size:14px;line-height:1.65}
+.slide-title{font-weight:600;font-size:20px;letter-spacing:-.3px;line-height:1.25;margin-bottom:10px}
+.slide-text{color:${th.text};line-height:1.65}
+.slide-text b{color:${th.textActive};font-weight:600}
 .slide-btn{margin-top:20px;display:inline-flex;align-items:center;gap:8px;font-family:inherit;font-size:13.5px;font-weight:600;cursor:pointer;
-  border:none;border-radius:8px;padding:10px 22px;color:#fff;background:linear-gradient(135deg,${ac.from},${ac.to});box-shadow:0 4px 14px ${ac.from}33}
+  border:none;border-radius:8px;padding:10px 22px;color:#fff;background:linear-gradient(135deg,${ac.from},${ac.to})}
 .slide-btn:hover{filter:brightness(1.08)}
-.slide-btn:focus-visible{outline:2px solid ${ac.from};outline-offset:2px}
-.slide.active .slide-btn{animation:obUp .42s ease .26s both}
-/* Nur fuer den Hinweis-Slide zur offiziellen App. Kein anderer Slide nutzt diese Klassen. */
-.wn-box{margin-top:10px;padding:10px 13px;border-radius:11px;text-align:left;font-size:12.5px;
-  line-height:1.5;background:${th.bgHover};border:1px solid ${th.border}}
+/* Nur fuer den Hinweis-Slide zur offiziellen App. */
+.wn-box{margin-top:10px;padding:10px 13px;border-radius:11px;text-align:left;font-size:12.5px;line-height:1.5;background:${th.bgHover};border:1px solid ${th.border}}
 .wn-box b{color:${th.textActive};font-weight:600}
-.wn-thanks{margin-top:13px;padding-top:11px;border-top:1px solid ${th.border};
-  color:${th.textActive};font-size:13.5px;line-height:1.5}
-.dots{display:flex;gap:7px;justify-content:center;padding:4px 0 2px;flex-shrink:0}
-.dot{width:7px;height:7px;border-radius:50%;background:${th.border};cursor:pointer;transition:background .2s,width .2s,border-radius .2s}
-.dot.active{background:${ac.from};width:20px;border-radius:4px}
-.footer{padding:14px 24px 20px;display:flex;justify-content:space-between;align-items:center;gap:10px;border-top:1px solid ${th.border};flex-shrink:0}
-.footer button{font-family:inherit;cursor:pointer;border:none;border-radius:8px;font-size:12.5px;font-weight:600;transition:filter .15s,color .15s,background .15s}
-.footer button.secondary{background:transparent;color:${th.text};padding:6px 0}
-.footer button.secondary:hover{color:${th.textActive}}
-.footer button.primary{background:linear-gradient(135deg,${ac.from},${ac.to});color:#fff;padding:11px 26px;box-shadow:0 4px 14px ${ac.from}33}
-.footer button.primary:hover{filter:brightness(1.08)}
-.footer button:focus-visible{outline:2px solid ${ac.from};outline-offset:2px}
+.wn-thanks{margin-top:13px;padding-top:11px;border-top:1px solid ${th.border};color:${th.textActive};font-size:13.5px;line-height:1.5}
+.footer{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;padding:12px 24px 16px;border-top:1px solid ${th.border};flex-shrink:0}
+.dots{display:flex;gap:6px}
+.dot{width:7px;height:7px;padding:0;border:0;border-radius:4px;background:${th.border};cursor:pointer;transition:width .2s,background .2s}
+.dot[aria-current]{width:20px;background:${glow}}
+.footer > button{font-family:inherit;cursor:pointer;border:none;border-radius:8px;font-size:12.5px;font-weight:600;transition:filter .15s,color .15s}
+.secondary{justify-self:start;background:transparent;color:${th.text};padding:9px 2px}
+.secondary:hover{color:${th.textActive}}
+.primary{justify-self:end;background:linear-gradient(135deg,${ac.from},${ac.to});color:#fff;padding:10px 24px}
+.primary:hover{filter:brightness(1.08)}
+button:focus-visible{outline:2px solid ${glow};outline-offset:2px}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style></head><body>
 ${customTitlebarHTML(t('Was ist neu', 'What’s new', 'Nouveautés', 'Novità'))}
 <div class="hero">
-  <div class="hero-pill">v${version}</div>
-  <div class="hero-title">${t('Was ist neu', 'What’s new', 'Nouveautés', 'Novità')}</div>
-  <div class="hero-sub">${i18n.sub}</div>
+  <div class="ring" style="width:130px;height:130px;opacity:.28;animation-delay:.08s"></div>
+  <div class="ring" style="width:196px;height:196px;opacity:.15;animation-delay:.16s"></div>
+  <div class="ring" style="width:280px;height:280px;opacity:.07;animation-delay:.24s"></div>
+  <div class="logo">${logo}</div>
+  <div class="hero-title">${headline}</div>
+  <div class="hero-sub">${sub}</div>
 </div>
-<div class="body"><div class="slides">${slides}</div></div>
-<div class="dots">${dots}</div>
+<div class="body" id="body">${slides}</div>
 <div class="footer">
-  <button class="secondary" id="ob-back" style="visibility:hidden">${obBack}</button>
-  <button class="primary" id="ob-next">${obNext}</button>
+  <button class="secondary" id="back">${backLbl}</button>
+  <div class="dots">${dots}</div>
+  <button class="primary" id="next">${nextLbl}</button>
 </div>
 <script>
 (function(){
-  var idx=0, total=${notes.length};
   var slides=[].slice.call(document.querySelectorAll('.slide'));
-  document.querySelectorAll('.slide-btn[data-action="support"]').forEach(function(b){b.addEventListener('click',function(){window.whatsNewAPI.openSupport();});});
   var dots=[].slice.call(document.querySelectorAll('.dot'));
-  var back=document.getElementById('ob-back'), next=document.getElementById('ob-next');
-  var nextLbl=${JSON.stringify(obNext)}, doneLbl=${JSON.stringify(i18n.close)};
+  var body=document.getElementById('body'), back=document.getElementById('back'), next=document.getElementById('next');
+  var total=slides.length, idx=-1;
   function show(i){
-    idx=Math.max(0,Math.min(total-1,i));
-    for(var j=0;j<slides.length;j++){slides[j].classList.toggle('active',j===idx);dots[j].classList.toggle('active',j===idx);}
+    i=Math.max(0,Math.min(total-1,i));
+    if(i===idx) return;
+    body.style.setProperty('--dx',(i<idx?-16:16)+'px');
+    idx=i;
+    slides.forEach(function(s,j){s.hidden=j!==idx;});
+    dots.forEach(function(d,j){ if(j===idx) d.setAttribute('aria-current','true'); else d.removeAttribute('aria-current'); });
+    body.scrollTop=0;
     back.style.visibility=idx===0?'hidden':'visible';
-    next.textContent=idx>=total-1?doneLbl:nextLbl;
+    next.textContent=idx>=total-1?${JSON.stringify(doneLbl)}:${JSON.stringify(nextLbl)};
   }
+  function advance(){ if(idx>=total-1) window.whatsNewAPI.close(); else show(idx+1); }
+  dots.forEach(function(d,j){d.addEventListener('click',function(){show(j);});});
   back.addEventListener('click',function(){show(idx-1);});
-  next.addEventListener('click',function(){ if(idx>=total-1){window.whatsNewAPI.close();} else {show(idx+1);} });
-  for(var j=0;j<dots.length;j++){(function(k){dots[k].addEventListener('click',function(){show(k);});})(j);}
+  next.addEventListener('click',advance);
+  document.querySelectorAll('.slide-btn[data-action="support"]').forEach(function(b){b.addEventListener('click',function(){window.whatsNewAPI.openSupport();});});
   document.addEventListener('keydown',function(e){
-    if(e.key==='ArrowRight'){show(idx+1);} else if(e.key==='ArrowLeft'){show(idx-1);}
+    var a=document.activeElement;
+    if(e.key==='ArrowRight'){show(idx+1);}
+    else if(e.key==='ArrowLeft'){show(idx-1);}
     else if(e.key==='Escape'){window.whatsNewAPI.close();}
-    else if(e.key==='Enter'){ if(idx>=total-1){window.whatsNewAPI.close();} else {show(idx+1);} }
+    // Auf einem fokussierten Knopf loest Enter schon selbst einen Klick aus.
+    else if(e.key==='Enter'&&!(a&&a.tagName==='BUTTON')){advance();}
   });
-  var tc=document.getElementById('cd-titlebar-close'); if(tc){tc.addEventListener('click',function(){window.whatsNewAPI.close();});}
-  if(total<=1){ next.textContent=doneLbl; }
+  var tc=document.getElementById('cd-titlebar-close'); if(tc) tc.addEventListener('click',function(){window.whatsNewAPI.close();});
+  if(total<=1) document.querySelector('.dots').style.visibility='hidden';
   show(0);
 })();
 </script>
