@@ -322,6 +322,7 @@ function loadWindowState() {
   try {
     if (fs.existsSync(stateFile)) windowState = JSON.parse(fs.readFileSync(stateFile, 'utf8'));
   } catch {}
+  if (!windowState || typeof windowState !== 'object' || Array.isArray(windowState)) windowState = {};
   for (const f of STATE_SCHEMA) {
     if (f.optional && windowState[f.key] === undefined) continue;
     f.set(windowState[f.key]);
@@ -383,7 +384,8 @@ function buildState() {
   for (const f of STATE_SCHEMA) base[f.key] = f.get();
   if (mainWindow && !mainWindow.isDestroyed()) {
     try {
-      const bounds = mainWindow.getBounds();
+      // Maximiert liefert getBounds die Arbeitsflaeche, nach "Wiederherstellen" bliebe das Fenster so gross.
+      const bounds = mainWindow.getNormalBounds();
       return { ...bounds, isMaximized: mainWindow.isMaximized(), ...base };
     } catch {}
   }
@@ -1131,14 +1133,22 @@ function setupView(view) {
   // den echten Chat kennen. data: ausschliessen, sonst frisst die Offline-Seite die URL.
   const syncTabUrl = (url) => {
     const tab = tabs.find(tb => tb.view === view);
-    if (tab && url && !url.startsWith('data:')) tab.url = url;
+    if (tab && url && !url.startsWith('data:') && tab.url !== url) { tab.url = url; saveWindowState(); }
   };
   wc.on('did-navigate', (_e, url) => syncTabUrl(url));
   wc.on('did-navigate-in-page', (_e, url, isMainFrame) => { if (isMainFrame) syncTabUrl(url); });
 
+  // Neue Seite oder abgestuerzter Renderer: ein alter "antwortet"-Punkt wuerde sonst haengen.
+  const clearBusy = () => {
+    const tab = tabs.find(tb => tb.view === view);
+    if (tab && tab.busy) { tab.busy = false; sendTabsUpdate(); }
+  };
+  wc.on('did-start-navigation', (details) => { if (details.isMainFrame && !details.isSameDocument) clearBusy(); });
+
   // Crash-Recovery
   wc.on('render-process-gone', (_, details) => {
     if (details.reason === 'clean-exit' || wc.isDestroyed()) return;
+    clearBusy();
     const tab = tabs.find(tb => tb.view === view);
     if (!tab) return;
     // Gemeint ist ein Schutz gegen Crash-Schleifen. Ohne Zeitfenster summierte der Zaehler
@@ -1188,16 +1198,20 @@ function fillPool() {
   while (viewPool.length < POOL_SIZE) {
     const view = createContentView();
     setupView(view);
+    view.webContents.on('did-fail-load', (_e, code, _d, _u, isMainFrame) => { if (isMainFrame && code !== -3) view._cdFailed = true; });
     view.webContents.loadURL('https://claude.ai');
     viewPool.push(view);
   }
 }
 
 function getPooledView() {
-  if (viewPool.length > 0) {
+  while (viewPool.length > 0) {
     const view = viewPool.shift();
     setTimeout(fillPool, POOL_REFILL_MS);
-    return view;
+    // Vorgeladen kann eine View abgestuerzt sein, offline auf der Fehlerseite stehen oder noch die
+    // Anmeldeseite von vor dem Login zeigen. Dann lieber frisch laden.
+    if (alive(view) && !view.webContents.isCrashed() && !view._cdFailed && !/^https:\/\/claude\.ai\/login/.test(view.webContents.getURL())) return view;
+    if (alive(view)) view.webContents.close();
   }
   return null;
 }
@@ -1419,6 +1433,7 @@ function closeTab(index) {
   });
   updateMenu();
   sendTabsUpdate();
+  saveWindowState();
 }
 
 function updateTitle() {
@@ -5398,7 +5413,9 @@ ipcMain.on('claude-response-done', (event, payload) => {
     const n = new Notification({ title, body, silent: false });
     n.on('click', () => {
       showMainWindow();
-      if (idx >= 0 && idx < tabs.length) switchToTab(idx);
+      // Den Tab selbst suchen: wurde inzwischen ein anderer geschlossen, zeigt idx daneben.
+      const now = tabs.indexOf(tab);
+      if (now >= 0) switchToTab(now);
     });
     n.show();
   } catch {}
@@ -5607,7 +5624,11 @@ function createWindow() {
     if (!isQuitting && minimizeOnClose && tray) {
       e.preventDefault();
       mainWindow.hide();
+      return;
     }
+    // Jetzt sind die Tabs noch da. 'closed' leert die Liste, danach speicherte before-quit nur noch
+    // den Stand vom letzten Groessenwechsel, und beim Neustart kamen alte Tabs zurueck.
+    saveWindowStateSync();
   });
 
   mainWindow.on('closed', () => {

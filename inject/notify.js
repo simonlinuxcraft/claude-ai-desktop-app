@@ -39,7 +39,9 @@
   // und die Heuristik meldete dauerhaft "generiert". Ohne Composer bleibt das ganze Dokument.
   function scope() {
     var ed = document.querySelector('div[contenteditable="true"]');
-    if (!ed) return document;
+    // Ohne Eingabefeld antwortet Claude auch nicht. Die Suche im ganzen Dokument traf auf
+    // Seiten wie Einstellungen oder Projekte Eintraege wie "Inhalt" und hielt den Tab fuer busy.
+    if (!ed) return null;
     var form = ed.closest('form');
     if (form) return form;
     // Bis zum ersten Vorfahren hoch, der ueberhaupt Buttons enthaelt: das ist die
@@ -56,9 +58,12 @@
 
   function findStopButton() {
     var root = scope();
-    // 1. aria-label (DE+EN)
-    var byAria = root.querySelector('button[aria-label*="stop" i], button[aria-label*="abbrechen" i], button[aria-label*="halt" i]');
-    if (byAria && isVisible(byAria)) { logStrategy(1, 'aria-label'); return byAria; }
+    if (!root) return null;
+    // 1. aria-label (DE+EN), mit Wortgrenzen nachgeprueft wie Strategie 4
+    var arias = root.querySelectorAll('button[aria-label*="stop" i], button[aria-label*="abbrechen" i], button[aria-label*="halt" i]');
+    for (var a = 0; a < arias.length; a++) {
+      if (STOP_RE.test(arias[a].getAttribute('aria-label') || '') && isVisible(arias[a])) { logStrategy(1, 'aria-label'); return arias[a]; }
+    }
     // 2. data-testid
     var byTest = root.querySelector('button[data-testid*="stop" i]');
     if (byTest && isVisible(byTest)) { logStrategy(2, 'data-testid'); return byTest; }
