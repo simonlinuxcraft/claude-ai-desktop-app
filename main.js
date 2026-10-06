@@ -4618,8 +4618,8 @@ async function requestMicrophoneConsent() {
     };
 
     const win = createDialogWindow({
-      width: 520,
-      height: showSnapPanel ? 480 : 240,
+      width: 420,
+      height: showSnapPanel ? 560 : 330,
       title: t('Mikrofon-Zugriff', 'Microphone access', 'Accès au microphone', 'Accesso al microfono')
     });
 
@@ -4662,65 +4662,65 @@ function getMicConsentHTML({ respondChannel, snapOpenChannel, statusChannel, cop
   const ac = accent();
   const i18n = {
     title: t('Mikrofon-Zugriff', 'Microphone access', 'Accès au microphone', 'Accesso al microfono'),
+    heading: t('Mikrofon für Spracheingabe erlauben?', 'Allow the microphone for voice input?', 'Autoriser le microphone pour la saisie vocale ?', 'Consentire il microfono per l’input vocale?'),
     message: t(
-      'Desktop for Claude möchte auf dein Mikrofon zugreifen, um Spracheingaben zu ermöglichen.',
-      'Desktop for Claude wants to access your microphone to enable voice input.',
-      'Desktop for Claude souhaite accéder à votre microphone pour permettre la saisie vocale.',
-      'Desktop for Claude vuole accedere al microfono per consentire l\'input vocale.'
+      'Desktop for Claude braucht dafür Zugriff auf dein Mikrofon.',
+      'Desktop for Claude needs access to your microphone for this.',
+      'Desktop for Claude a besoin d’accéder à votre microphone pour cela.',
+      'Desktop for Claude ha bisogno di accedere al microfono per questo.'
     ),
     hint: t(
-      'Du kannst diese Erlaubnis jederzeit in den App-Einstellungen unter „Mikrofon" widerrufen.',
-      'You can revoke this permission anytime in the app settings under “Microphone”.',
-      'Vous pouvez révoquer cette autorisation à tout moment dans les paramètres de l\'application, sous « Microphone ».',
-      'È possibile revocare questa autorizzazione in qualsiasi momento nelle impostazioni dell\'app, alla voce "Microfono".'
+      'Du kannst das jederzeit in den App-Einstellungen unter „Mikrofon“ ändern.',
+      'You can change this anytime in the app settings under “Microphone”.',
+      'Vous pouvez le modifier à tout moment dans les paramètres de l’application, sous « Microphone ».',
+      'Puoi cambiarlo in qualsiasi momento nelle impostazioni dell’app, alla voce «Microfono».'
     ),
     snapTitle: t('Snap-Berechtigung', 'Snap permission', 'Autorisation Snap', 'Autorizzazione Snap'),
     snapConnected: t('Verbunden', 'Connected', 'Connecté', 'Connesso'),
     snapDisconnected: t('Nicht verbunden', 'Not connected', 'Non connecté', 'Non connesso'),
     snapUnknown: t('Status wird geprüft…', 'Checking status…', 'Vérification du statut…', 'Verifica dello stato…'),
-    snapButton: t('Im Snap-Store öffnen', 'Open in Snap Store', 'Ouvrir dans le Snap Store', 'Apri nello Snap Store'),
+    snapButton: t('Im Snap Store öffnen', 'Open in Snap Store', 'Ouvrir dans le Snap Store', 'Apri nello Snap Store'),
     snapButtonHint: t(
-      'Öffnet die Snap-Detailseite. Dort auf „Permissions" → „Audio Record" aktivieren – dieser Dialog erkennt es automatisch.',
-      'Opens the Snap detail page. Go to “Permissions” → enable “Audio Record” – this dialog detects it automatically.',
-      'Ouvre la page de détails du Snap. Activez-y « Permissions » → « Audio Record », cette fenêtre le détecte automatiquement.',
-      'Apre la pagina dei dettagli dello Snap. Attiva "Permissions" → "Audio Record", questa finestra lo rileva automaticamente.'
+      'Dort unter „Permissions“ den Schalter „Audio Record“ einschalten. Dieser Dialog erkennt das von selbst.',
+      'Turn on “Audio Record” under “Permissions” there. This dialog notices it by itself.',
+      'Activez-y « Audio Record » sous « Permissions ». Cette fenêtre le détecte d’elle-même.',
+      'Lì attiva «Audio Record» sotto «Permissions». Questa finestra se ne accorge da sola.'
     ),
-    snapOrCmd: t('Oder im Terminal ausführen:', 'Or run in a terminal:', 'Ou exécuter dans un terminal :', 'Oppure esegui in un terminale:'),
-    snapCmdCopy: t('Befehl kopieren', 'Copy command', 'Copier la commande', 'Copia comando'),
-    snapCmdCopied: t('Kopiert ✓', 'Copied ✓', 'Copié ✓', 'Copiato ✓'),
-    snapNeedConnect: t('Aktiviere zuerst die Snap-Berechtigung, um „Erlauben" auszuwählen.', 'Enable the Snap permission first to choose “Allow”.', 'Activez d’abord l’autorisation Snap pour choisir « Autoriser ».', 'Attiva prima l’autorizzazione Snap per scegliere "Consenti".'),
+    snapOrCmd: t('Oder im Terminal:', 'Or in a terminal:', 'Ou dans un terminal :', 'Oppure in un terminale:'),
+    snapCmdCopy: t('Kopieren', 'Copy', 'Copier', 'Copia'),
+    snapCmdCopied: t('Kopiert', 'Copied', 'Copié', 'Copiato'),
+    snapNeedConnect: t('Schalte zuerst die Snap-Berechtigung ein, dann lässt sich der Zugriff erlauben.', 'Turn on the Snap permission first, then you can allow access.', 'Activez d’abord l’autorisation Snap, vous pourrez ensuite autoriser l’accès.', 'Attiva prima l’autorizzazione Snap, poi potrai consentire l’accesso.'),
     allow: t('Erlauben', 'Allow', 'Autoriser', 'Consenti'),
     deny: t('Ablehnen', 'Deny', 'Refuser', 'Rifiuta')
   };
   const snapPanel = showSnapPanel ? `
-    <div class="snap" id="snap-panel" data-status="${escapeHtml(initialStatus)}">
-      <div class="snap-head">
-        <span class="dot"></span>
-        <span class="snap-title">${i18n.snapTitle}</span>
-        <span class="snap-status" id="snap-status-text"></span>
+  <div class="snap" id="snap-panel" data-status="${escapeHtml(initialStatus)}">
+    <div class="snap-head"><span class="dot"></span><span class="snap-title">${i18n.snapTitle}</span><span class="snap-status" id="snap-status-text"></span></div>
+    <div class="snap-body">
+      <button class="btn-snap" id="open-snap">${uiIcon('external', 14)}${i18n.snapButton}</button>
+      <div class="snap-hint">${i18n.snapButtonHint}</div>
+      <div class="snap-or">${i18n.snapOrCmd}</div>
+      <div class="snap-cmd-row">
+        <code class="snap-cmd">${escapeHtml(SNAP_CONNECT_CMD)}</code>
+        <button class="btn-snap snap-cmd-copy" id="snap-cmd-copy">${i18n.snapCmdCopy}</button>
       </div>
-      <div class="snap-body">
-        <button class="btn-snap" id="open-snap">${i18n.snapButton}</button>
-        <div class="snap-hint">${i18n.snapButtonHint}</div>
-        <div class="snap-or">${i18n.snapOrCmd}</div>
-        <div class="snap-cmd-row">
-          <code class="snap-cmd" id="snap-cmd">${escapeHtml(SNAP_CONNECT_CMD)}</code>
-          <button class="btn-snap snap-cmd-copy" id="snap-cmd-copy">${i18n.snapCmdCopy}</button>
-        </div>
-      </div>
-    </div>` : '';
+    </div>
+  </div>
+  <div class="allow-blocker">${i18n.snapNeedConnect}</div>` : '';
 
   return `<!DOCTYPE html>
 <html><head><meta charset="utf-8"><title>${escapeHtml(i18n.title)}</title>
 <style>
 ${sharedDialogCSS()}
-body{font-size:13.5px;display:flex;flex-direction:column}
-.container{padding:22px;flex:1;display:flex;flex-direction:column;gap:14px;overflow:hidden}
-.head{display:flex;gap:14px;align-items:flex-start}
-.icon{color:${ac.from};flex:0 0 auto;line-height:0}
-.text .msg{font-weight:500;margin:0 0 6px;line-height:1.4}
-.text .hint{color:${th.text};font-size:12.5px;line-height:1.5}
-.snap{background:${th.bgHover};border:1px solid ${th.border};border-radius:8px;padding:12px 14px;display:flex;flex-direction:column;gap:8px}
+body{overflow:hidden}
+/* Aufbau wie die anderen Dialoge: farbiges Rund, Ueberschrift, Knoepfe untereinander. */
+.wrap{display:flex;flex-direction:column;align-items:center;text-align:center;padding:28px 28px 22px}
+.badge{width:58px;height:58px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;margin-bottom:16px;
+  background:linear-gradient(135deg,${ac.from},${ac.to});box-shadow:0 6px 20px color-mix(in srgb,${ac.from} 35%,transparent)}
+h1{font-size:17px;font-weight:600;letter-spacing:-.2px;line-height:1.3;margin:0 0 8px}
+.msg{color:${th.text};font-size:13.5px;line-height:1.55;margin:0}
+.hint{color:${th.text};font-size:12px;line-height:1.5;margin:6px 0 0;opacity:.85}
+.snap{width:100%;margin-top:16px;text-align:left;background:${th.bgHover};border:1px solid ${th.border};border-radius:10px;padding:11px 13px;display:flex;flex-direction:column;gap:8px}
 .snap-head{display:flex;align-items:center;gap:8px}
 .snap-body{display:flex;flex-direction:column;gap:7px}
 .snap[data-status="connected"] .snap-body{display:none}
@@ -4729,38 +4729,36 @@ body{font-size:13.5px;display:flex;flex-direction:column}
 .snap[data-status="disconnected"] .dot{background:#e05e3e}
 .snap[data-status="unknown"] .dot{background:${warnColor().fg}}
 .snap-title{font-weight:600;font-size:12.5px}
-.snap-status{color:${th.text};font-size:12px;flex:1}
-.btn-snap{background:${th.bg};color:${th.textActive};border:1px solid ${th.border};border-radius:6px;padding:7px 12px;font-size:12.5px;font-family:inherit;cursor:pointer;font-weight:500;align-self:flex-start}
+.snap-status{color:${th.text};font-size:12px;flex:1;text-align:right}
+.btn-snap{display:inline-flex;align-items:center;gap:6px;background:${th.bg};color:${th.textActive};border:1px solid ${th.border};border-radius:7px;padding:7px 12px;font-size:12.5px;font-family:inherit;cursor:pointer;font-weight:500;align-self:flex-start}
 .btn-snap:hover{background:${th.bgActive}}
-.snap-hint{color:${th.text};font-size:11.5px;line-height:1.4}
-.snap-or{color:${th.text};font-size:11.5px;margin-top:2px;font-weight:500}
+.btn-snap .ui-ico{color:${ac.from}}
+.snap-hint,.snap-or{color:${th.text};font-size:11.5px;line-height:1.45}
+.snap-or{margin-top:2px;font-weight:500}
 .snap-cmd-row{display:flex;gap:6px;align-items:center}
-.snap-cmd{flex:1;background:${th.bg};border:1px solid ${th.border};border-radius:6px;padding:6px 9px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11.5px;color:${th.textActive};user-select:text;-webkit-user-select:text;overflow-x:auto;white-space:nowrap}
+.snap-cmd{flex:1;min-width:0;background:${th.bg};border:1px solid ${th.border};border-radius:7px;padding:6px 9px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11.5px;line-height:1.45;color:${th.textActive};user-select:text;-webkit-user-select:text;word-break:break-all}
 .snap-cmd-copy{padding:6px 10px;font-size:11.5px;flex:0 0 auto}
-.allow-blocker{color:${warnColor().fg};font-size:11.5px;line-height:1.4;margin-top:2px;display:none}
-.snap[data-status="disconnected"] ~ .allow-blocker{display:block}
-.snap[data-status="unknown"] ~ .allow-blocker{display:block}
-.buttons{padding:14px 22px;border-top:1px solid ${th.border};display:flex;gap:8px;justify-content:flex-end}
-.btn{min-width:90px}
-.btn.pulse{animation:btnpulse 1.6s ease-in-out 3;outline:0}
-@keyframes btnpulse{0%{box-shadow:0 0 0 0 rgba(232,82,79,.55)}50%{box-shadow:0 0 0 10px rgba(232,82,79,0)}100%{box-shadow:0 0 0 0 rgba(232,82,79,0)}}
+.allow-blocker{width:100%;color:${warnColor().fg};font-size:12px;line-height:1.45;margin-top:10px;display:none}
+.snap[data-status="disconnected"] ~ .allow-blocker,.snap[data-status="unknown"] ~ .allow-blocker{display:block}
+.actions{width:100%;display:flex;flex-direction:column;gap:8px;margin-top:20px}
+.btn{width:100%;padding:10px 16px;font-size:13.5px;border-radius:8px}
+.btn.ghost{background:transparent;border-color:transparent;color:${th.text}}
+.btn.ghost:hover{background:${th.bgHover};color:${th.textActive}}
+.btn:focus{outline:none}
+.btn:focus-visible{outline:2px solid ${ac.from};outline-offset:2px}
+.btn.pulse{animation:btnpulse 1.6s ease-in-out 3}
+@keyframes btnpulse{0%{box-shadow:0 0 0 0 color-mix(in srgb,${ac.from} 55%,transparent)}50%{box-shadow:0 0 0 10px transparent}100%{box-shadow:0 0 0 0 transparent}}
 </style></head><body>
-<div class="container">
-  <div class="head">
-    <div class="icon">
-      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
-    </div>
-    <div class="text">
-      <div class="msg">${i18n.message}</div>
-      <div class="hint">${i18n.hint}</div>
-    </div>
-  </div>
+<div class="wrap" id="wrap">
+  <div class="badge">${uiIcon('mic', 27)}</div>
+  <h1>${i18n.heading}</h1>
+  <p class="msg">${i18n.message}</p>
+  <p class="hint">${i18n.hint}</p>
   ${snapPanel}
-  ${showSnapPanel ? `<div class="allow-blocker" id="allow-blocker">${i18n.snapNeedConnect}</div>` : ''}
-</div>
-<div class="buttons">
-  <button class="btn" id="deny">${i18n.deny}</button>
-  <button class="btn primary" id="allow">${i18n.allow}</button>
+  <div class="actions">
+    <button class="btn primary" id="allow">${i18n.allow}</button>
+    <button class="btn ghost" id="deny">${i18n.deny}</button>
+  </div>
 </div>
 <script>
 (function(){
@@ -4769,23 +4767,25 @@ body{font-size:13.5px;display:flex;flex-direction:column}
   const statusChannel = ${safeJson(statusChannel)};
   const copyCmdChannel = ${safeJson(copyCmdChannel || '')};
   const respond = (i) => { try { window.msgboxAPI.respond(respondChannel, i); } catch {} };
+  let lastFit = 0;
+  const fit = () => requestAnimationFrame(() => {
+    const h = Math.ceil(document.getElementById('wrap').offsetHeight);
+    if (h === lastFit) return;
+    lastFit = h;
+    try { window.msgboxAPI.fit(h); } catch {}
+  });
+  addEventListener('resize', fit);
   const allowBtn = document.getElementById('allow');
-  const denyBtn = document.getElementById('deny');
   let allowEnabled = ${showSnapPanel ? 'false' : 'true'};
-
-  const setAllowEnabled = (v) => {
-    allowEnabled = !!v;
-    allowBtn.disabled = !allowEnabled;
-  };
+  const setAllowEnabled = (v) => { allowEnabled = !!v; allowBtn.disabled = !allowEnabled; };
   setAllowEnabled(allowEnabled);
 
   allowBtn.addEventListener('click', () => { if (allowEnabled) respond(0); });
-  denyBtn.addEventListener('click', () => respond(1));
+  document.getElementById('deny').addEventListener('click', () => respond(1));
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') { e.preventDefault(); window.close(); }
-    else if (e.key === 'Enter' && allowEnabled) { e.preventDefault(); respond(0); }
+    else if (e.key === 'Enter' && allowEnabled && !(document.activeElement && document.activeElement.tagName === 'BUTTON')) { e.preventDefault(); respond(0); }
   });
-  setTimeout(() => (allowEnabled ? allowBtn : denyBtn).focus(), 50);
 
   const snapPanel = document.getElementById('snap-panel');
   if (snapPanel) {
@@ -4799,10 +4799,10 @@ body{font-size:13.5px;display:flex;flex-direction:column}
       setAllowEnabled(s === 'connected');
       if (s === 'connected' && lastStatus !== 'connected') {
         allowBtn.classList.add('pulse');
-        try { allowBtn.focus(); } catch {}
         clearTimeout(pulseTimer);
         pulseTimer = setTimeout(() => allowBtn.classList.remove('pulse'), 5000);
       }
+      if (s !== lastStatus) fit();
       lastStatus = s;
     };
     apply(lastStatus);
@@ -4820,10 +4820,9 @@ body{font-size:13.5px;display:flex;flex-direction:column}
         copyResetTimer = setTimeout(() => { copyBtn.textContent = copyLabels.idle; }, 1800);
       });
     }
-    if (window.msgboxAPI.onStatusUpdate) {
-      window.msgboxAPI.onStatusUpdate(statusChannel, (s) => apply(s));
-    }
+    if (window.msgboxAPI.onStatusUpdate) window.msgboxAPI.onStatusUpdate(statusChannel, (s) => apply(s));
   }
+  fit();
 })();
 </script>
 </body></html>`;
