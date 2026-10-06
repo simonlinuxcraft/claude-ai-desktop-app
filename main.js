@@ -2440,20 +2440,26 @@ function updateTrayMenu() {
   } catch {}
 }
 
+// Erst den neuen Hotkey registrieren, dann den alten freigeben: schlaegt der neue fehl, bleibt der
+// alte aktiv, statt bis zum Neustart (und nach dem naechsten Speichern dauerhaft) zu fehlen.
+function swapShortcut(prev, accel, handler) {
+  if (!accel) {
+    if (prev) { try { globalShortcut.unregister(prev); } catch {} }
+    return { res: 'ok', current: null };
+  }
+  if (accel === prev) return { res: 'ok', current: prev };
+  let ok = false;
+  try { ok = globalShortcut.register(accel, handler); } catch {}
+  if (!ok) return { res: isWayland ? 'failed-wayland' : 'failed', current: prev };
+  if (prev) { try { globalShortcut.unregister(prev); } catch {} }
+  return { res: 'ok', current: accel };
+}
+
 function registerHotkey(accel) {
   if (typeof accel === 'string' && accel.length > 0 && accel === currentClipboardHotkey) return 'conflict';
-  if (currentHotkey) {
-    try { globalShortcut.unregister(currentHotkey); } catch {}
-  }
-  currentHotkey = null;
-  if (!accel || typeof accel !== 'string') return 'ok';
-  try {
-    if (globalShortcut.register(accel, openQuickPrompt)) {
-      currentHotkey = accel;
-      return 'ok';
-    }
-  } catch {}
-  return isWayland ? 'failed-wayland' : 'failed';
+  const r = swapShortcut(currentHotkey, typeof accel === 'string' ? accel : null, openQuickPrompt);
+  currentHotkey = r.current;
+  return r.res;
 }
 
 // Feature 6: Clipboard → Chat
@@ -2489,18 +2495,9 @@ async function openClipboardChat() {
 
 function registerClipboardHotkey(accel) {
   if (typeof accel === 'string' && accel.length > 0 && accel === currentHotkey) return 'conflict';
-  if (currentClipboardHotkey) {
-    try { globalShortcut.unregister(currentClipboardHotkey); } catch {}
-  }
-  currentClipboardHotkey = null;
-  if (!accel || typeof accel !== 'string') return 'ok';
-  try {
-    if (globalShortcut.register(accel, openClipboardChat)) {
-      currentClipboardHotkey = accel;
-      return 'ok';
-    }
-  } catch {}
-  return isWayland ? 'failed-wayland' : 'failed';
+  const r = swapShortcut(currentClipboardHotkey, typeof accel === 'string' ? accel : null, openClipboardChat);
+  currentClipboardHotkey = r.current;
+  return r.res;
 }
 
 // Feature 4: Markdown-Export
@@ -2671,6 +2668,7 @@ function getSettingsHTML() {
     conflictQp: t('Diese Kombination ist bereits dem Quick-Prompt-Hotkey zugewiesen.', 'This combination is already assigned to the Quick-Prompt hotkey.', 'Cette combinaison est déjà attribuée au raccourci Quick-Prompt.', 'Questa combinazione è già assegnata alla scorciatoia Quick-Prompt.'),
     conflictClip: t('Diese Kombination ist bereits dem Clipboard-Hotkey zugewiesen.', 'This combination is already assigned to the Clipboard hotkey.', 'Cette combinaison est déjà attribuée au raccourci du presse-papiers.', 'Questa combinazione è già assegnata alla scorciatoia degli appunti.'),
     removed: t('Hotkey entfernt.', 'Hotkey removed.', 'Raccourci supprimé.', 'Scorciatoia rimossa.'),
+    invalidKey: t('Diese Taste geht nicht als Hotkey. Nimm einen Buchstaben, eine Ziffer oder eine F-Taste.', 'This key can’t be used for a hotkey. Use a letter, a digit or a function key.', 'Cette touche ne peut pas servir de raccourci. Utilisez une lettre, un chiffre ou une touche de fonction.', 'Questo tasto non può essere usato come scorciatoia. Usa una lettera, una cifra o un tasto funzione.'),
     needMod: t('Bitte mindestens eine Modifikator-Taste (Strg/Alt/Shift) verwenden.', 'Please use at least one modifier key (Ctrl/Alt/Shift).', 'Veuillez utiliser au moins une touche de modification (Ctrl/Alt/Maj).', 'Usa almeno un tasto modificatore (Ctrl/Alt/Maiusc).'),
     waylandPortalHint: t('Hinweis: Unter Wayland vergibt das System globale Hotkeys. GNOME ab Version 48 und KDE fragen beim ersten Mal nach, ob die App die Tastenkombination nutzen darf, danach lässt sie sich in den Systemeinstellungen ändern. Ältere Desktops kennen das nicht, dort greift der Hotkey nicht.', 'Note: On Wayland the system hands out global hotkeys. GNOME 48 or newer and KDE ask once whether the app may use the shortcut, after that you can change it in the system settings. Older desktops lack this, the hotkey does not work there.', 'Remarque : sous Wayland, c\'est le système qui attribue les raccourcis globaux. GNOME 48 ou plus récent et KDE demandent une fois si l\'application peut utiliser le raccourci, ensuite il se modifie dans les paramètres du système. Les bureaux plus anciens ne le permettent pas, le raccourci n\'y fonctionne pas.', 'Nota: su Wayland è il sistema ad assegnare le scorciatoie globali. GNOME 48 o successivo e KDE chiedono una volta se l\'app può usare la scorciatoia, poi si può modificare nelle impostazioni di sistema. I desktop più vecchi non lo supportano, lì la scorciatoia non funziona.'),
     waylandHint: t('Hinweis: Auf Wayland werden globale Hotkeys vom Compositor begrenzt und können je nach Desktop (GNOME/KDE) nicht systemweit greifen. Wenn die Registrierung fehlschlägt, weicht die App still aus. Du kannst den Quick-Prompt dann nur bei aktivem Fenster auslösen.', 'Note: On Wayland, global hotkeys are gated by the compositor and may not work system-wide depending on the desktop (GNOME/KDE). If registration fails, the app silently skips it. The Quick-Prompt is then only reachable while the window is focused.', 'Remarque : sous Wayland, les raccourcis globaux sont limités par le compositeur et peuvent ne pas fonctionner au niveau du système selon le bureau (GNOME/KDE). Si l\'enregistrement échoue, l\'application l\'ignore silencieusement, le Quick-Prompt n\'est alors accessible que lorsque la fenêtre est active.', 'Nota: su Wayland le scorciatoie globali sono limitate dal compositor e potrebbero non funzionare a livello di sistema a seconda del desktop (GNOME/KDE). Se la registrazione fallisce, l\'app la ignora silenziosamente, il Quick-Prompt è quindi accessibile solo quando la finestra è attiva.'),
@@ -2887,6 +2885,16 @@ function resetCapture(key) {
   renderCapture(key);
 }
 
+const CODE_KEYS = { Space: 'Space', Enter: 'Enter', Tab: 'Tab', Backspace: 'Backspace', Delete: 'Delete', Insert: 'Insert', Home: 'Home', End: 'End', PageUp: 'PageUp', PageDown: 'PageDown', ArrowUp: 'Up', ArrowDown: 'Down', ArrowLeft: 'Left', ArrowRight: 'Right' };
+function codeToKey(code) {
+  let m;
+  if ((m = /^Key([A-Z])$/.exec(code))) return m[1];
+  if ((m = /^Digit([0-9])$/.exec(code))) return m[1];
+  if ((m = /^Numpad([0-9])$/.exec(code))) return 'num' + m[1];
+  if ((m = /^F([1-9]|1[0-9]|20)$/.exec(code))) return 'F' + m[1];
+  return CODE_KEYS[code] || null;
+}
+
 function onKeydown(e, key) {
   if (listeningKey !== key) return;
   e.preventDefault();
@@ -2894,19 +2902,23 @@ function onKeydown(e, key) {
   if (k === 'Escape') { resetCapture(key); return; }
   if (['Control','Shift','Alt','Meta','Dead','Unidentified'].includes(k)) return;
   const parts = [];
-  if (e.ctrlKey || e.metaKey) parts.push('CommandOrControl');
+  if (e.ctrlKey) parts.push('CommandOrControl');
+  if (e.metaKey) parts.push('Super');
   if (e.altKey) parts.push('Alt');
   if (e.shiftKey) parts.push('Shift');
   if (parts.length === 0) { statusHk.textContent = I.needMod; return; }
-  let kk = k;
-  if (kk === ' ') kk = 'Space';
-  else if (kk.length === 1) kk = kk.toUpperCase();
+  // Buchstaben und Ziffern wie beschriftet (QWERTZ), alles andere ueber die physische Taste:
+  // Shift+1 liefert in e.key "!", Electron braucht "1". Unbekanntes wie ö oder ß abweisen statt
+  // einen ungueltigen Namen zu senden, den main als "Hotkey loeschen" verstand.
+  const kk = /^[a-z0-9]$/i.test(k) ? k.toUpperCase() : codeToKey(e.code);
+  if (!kk) { statusHk.textContent = I.invalidKey; return; }
   parts.push(kk);
   const accel = parts.join('+');
   applyHotkey(key, accel).then(res => {
     if (res === 'ok') statusHk.textContent = I.registered;
     else if (res === 'conflict') statusHk.textContent = key === 'qp' ? I.conflictClip : I.conflictQp;
     else if (res === 'failed-wayland') statusHk.textContent = I.failedWayland;
+    else if (res === 'invalid') statusHk.textContent = I.invalidKey;
     else statusHk.textContent = I.failed;
     resetCapture(key);
   });
@@ -5217,12 +5229,14 @@ ipcMain.handle('settings-autostart', (_, v) => setAutostart(v === true));
 
 ipcMain.handle('settings-hotkey', (_, accel) => {
   const value = validateAccelerator(accel);
+  if (accel && !value) return 'invalid';
   const res = registerHotkey(value);
   if (res === 'ok') saveWindowState();
   return res;
 });
 ipcMain.handle('settings-clipboard-hotkey', (_, accel) => {
   const value = validateAccelerator(accel);
+  if (accel && !value) return 'invalid';
   const res = registerClipboardHotkey(value);
   if (res === 'ok') saveWindowState();
   return res;
@@ -5697,6 +5711,8 @@ app.whenReady().then(() => {
   // Scheitert die Anmeldung (Taste belegt, Wayland ohne Portal), bleibt die Einstellung gespeichert,
   // statt beim naechsten saveWindowState still als leer zu landen.
   const hk = currentHotkey, clip = currentClipboardHotkey;
+  // Noch nichts registriert: ohne das hielte registerHotkey die gespeicherte Taste fuer schon aktiv.
+  currentHotkey = null; currentClipboardHotkey = null;
   if (hk && registerHotkey(hk) !== 'ok') currentHotkey = hk;
   if (clip && registerClipboardHotkey(clip) !== 'ok') currentClipboardHotkey = clip;
   handleOnlineChange(net.isOnline());
