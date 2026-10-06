@@ -366,7 +366,7 @@
   // Style-Recalc. Setzt data-cd-modal am <html>, worauf das statische Sheet reagiert.
   function updateModalFlag() {
     var de = document.documentElement;
-    if (st.mode !== 'oled') { if (de.hasAttribute('data-cd-modal')) de.removeAttribute('data-cd-modal'); return; }
+    if (st.mode !== 'oled' && st.mode !== 'midnight' && st.mode !== 'matrix') { if (de.hasAttribute('data-cd-modal')) de.removeAttribute('data-cd-modal'); return; }
     var open = !!document.querySelector('[role="dialog"],[aria-modal="true"]');
     if (open === de.hasAttribute('data-cd-modal')) return;
     if (open) de.setAttribute('data-cd-modal', ''); else de.removeAttribute('data-cd-modal');
@@ -464,7 +464,7 @@
     deferHeavy();
   }
 
-  window._cdSetTheme = function (next) {
+  function setTheme(next) {
     var changed = !next || !window._cdTheme || JSON.stringify(next) !== JSON.stringify(window._cdTheme);
     if (next && typeof next === 'object') {
       st = next;
@@ -477,7 +477,7 @@
     tagComposer();
     updateModalFlag();
     deferHeavy();
-  };
+  }
 
   function startObserver() {
     if (window._cdThemeObs) return;
@@ -542,8 +542,12 @@
   }
 
   function init() {
-    if (window._cdThemeCtl) { window._cdSetTheme(st); return; }
+    // Nur die erste Instanz haelt den Zustand. Eine spaetere Injektion reicht ihn an deren Setter
+    // weiter. Mit eigenem Setter aenderte sie nur ihr eigenes st, waehrend der Observer der ersten
+    // Instanz Sheets und Variablen weiter mit dem alten Theme neu schrieb.
+    if (window._cdThemeCtl && window._cdSetTheme) { window._cdSetTheme(st); return; }
     window._cdThemeCtl = true;
+    window._cdSetTheme = setTheme;
     applyAll();
     startObserver();
   }

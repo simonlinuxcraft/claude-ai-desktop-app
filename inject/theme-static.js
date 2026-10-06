@@ -345,7 +345,10 @@
     })).concat([
       // data-cd-idle setzt main, solange das Fenster keinen Fokus hat. Ring und Regen stehen dann
       // still, sonst laufen sie auf einem zweiten Monitor oder hinter anderen Fenstern weiter.
-      'html[data-cd-idle] .cd-composer::before,html[data-cd-idle] fieldset .rounded-composer::before,html[data-cd-idle] #cd-rain{animation-play-state:paused !important}'
+      'html[data-cd-idle] .cd-composer::before,html[data-cd-idle] fieldset .rounded-composer::before,html[data-cd-idle] #cd-rain{animation-play-state:paused !important}',
+      // Classic hat keinen Ring, dann braucht die Eingabekarte ihren eigenen Rand zurueck. Die dunklen
+      // Themes setzen ihn fuer den Ring auf transparent, ohne ihn hob sich die Karte kaum ab.
+      'html[data-cd-design="classic"][data-cd-theme][data-cd-surface] .cd-composer{border-color:revert-layer !important}'
     ]).join('');
   }
 
