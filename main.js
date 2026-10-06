@@ -528,10 +528,9 @@ const _iconDataUrlCache = {};
 function iconDataUrl() {
   const p = icon();
   if (_iconDataUrlCache[p]) return _iconDataUrlCache[p];
-  try {
-    const b64 = fs.readFileSync(p).toString('base64');
-    _iconDataUrlCache[p] = `data:image/png;base64,${b64}`;
-  } catch { _iconDataUrlCache[p] = ''; }
+  // Angezeigt wird es hoechstens 60px gross, 160px reicht auch fuer doppelte Pixeldichte.
+  // Das Original (512px, rund 86 KB) landete sonst in jedem Fenster als Base64.
+  try { _iconDataUrlCache[p] = nativeImage.createFromPath(p).resize({ width: 160 }).toDataURL(); } catch { _iconDataUrlCache[p] = ''; }
   return _iconDataUrlCache[p];
 }
 
@@ -915,6 +914,21 @@ ipcMain.on('cd-theme-mode', (e) => {
   e.returnValue = Object.assign({}, st, { staticCSS, ctl: themeScript() });
 });
 
+// Ring und Regen stehen still, solange das Fenster keinen Fokus hat (data-cd-idle in theme-static.js).
+function setViewIdle(view, idle) {
+  if (!alive(view) || !isAllowedDomain(view.webContents.getURL())) return;
+  view.webContents.executeJavaScript(`document.documentElement.toggleAttribute('data-cd-idle',${idle === true})`).catch(() => {});
+}
+// Massgeblich ist, ob irgendein Fenster der App den Fokus hat: wer im App-Theme-Fenster Stile
+// ausprobiert, soll den Ring im Hauptfenster weiter laufen sehen.
+function mainWindowIdle() {
+  return !BrowserWindow.getFocusedWindow();
+}
+app.on('browser-window-focus', () => setViewIdle(tabs[activeTabIndex]?.view, false));
+app.on('browser-window-blur', () => setTimeout(() => {
+  if (mainWindowIdle()) setViewIdle(tabs[activeTabIndex]?.view, true);
+}, 150));
+
 function injectScripts(wc) {
   if (!alive(wc)) return;
   // Nur in claude.ai-Seiten injizieren, nie in OAuth-Provider-/Login-Seiten
@@ -925,6 +939,7 @@ function injectScripts(wc) {
   wc.executeJavaScript(NOTIFY_SCRIPT).catch(() => {});
   wc.executeJavaScript(verifyScript()).catch(() => {});
   wc.executeJavaScript(themeScript()).catch(() => {});
+  if (mainWindowIdle()) wc.executeJavaScript("document.documentElement.setAttribute('data-cd-idle','')").catch(() => {});
 }
 
 function reinjectScripts(wc) {
@@ -943,11 +958,15 @@ function reinjectScripts(wc) {
 
 // Theme live auf alle offenen Views anwenden (kein Reload, kein Re-Inject):
 // nur Attribute am <html> umschalten via window._cdSetTheme.
+// Auch die vorgeladenen Views: frueher wurden sie bei jedem Theme- oder Stilwechsel verworfen
+// und kurz darauf zwei claude.ai-Seiten neu geladen.
 function applyThemeToAllViews() {
   const s = JSON.stringify(themeState());
-  for (const tab of tabs) {
-    if (!tab || !alive(tab.view)) continue;
-    const wc = tab.view.webContents;
+  const bg = theme().bg;
+  for (const view of [...tabs.map(tab => tab && tab.view), ...viewPool]) {
+    if (!alive(view)) continue;
+    if (viewPool.includes(view)) view.setBackgroundColor(bg);
+    const wc = view.webContents;
     if (!isAllowedDomain(wc.getURL())) continue;
     wc.executeJavaScript('window._cdSetTheme&&window._cdSetTheme(' + s + ')').catch(() => {});
   }
@@ -1363,6 +1382,7 @@ function switchToTab(index) {
 
   activeTabIndex = index;
   target.unread = false;
+  setViewIdle(target.view, mainWindowIdle());
 
   target.view.setVisible(true);
   if (target.pendingUrl) { const u = target.pendingUrl; target.pendingUrl = null; target.view.webContents.loadURL(u); }
@@ -1414,7 +1434,6 @@ function updateTitle() {
 function setThemeMode(mode) {
   if (!THEME_MODES.includes(mode) || mode === currentThemeMode()) return;
   themeMode = mode;
-  drainPool();
   applyThemeToAllViews();
 
   const bg = theme().bg;
@@ -1472,7 +1491,6 @@ function setDesignStyle(style) {
 
   // Live wie beim Farbmodus. Frueher lud das Tab-Leiste und aktiven Tab neu, im Hell-Modus
   // stand dabei kurz die dunkle Seite da, bis der Invert wieder griff.
-  drainPool();
   applyThemeToAllViews();
   sendThemeUpdate();
   sendDesignUpdate();

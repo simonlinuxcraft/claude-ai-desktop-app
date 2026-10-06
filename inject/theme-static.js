@@ -342,7 +342,11 @@
     ].concat(matrixRegeln).concat(brandVorab).concat(surfVorab).concat([O, M, X].map(function (S) {
       // Die Zeile um "Neu" traegt Auswahl und Hover selbst, ein gefaerbter Link darin wirkt zweifarbig.
       return S + ' [class*="df-row-h"]>a,' + S + ' [class*="df-row-h"]>a:hover{background-color:transparent !important}';
-    })).join('');
+    })).concat([
+      // data-cd-idle setzt main, solange das Fenster keinen Fokus hat. Ring und Regen stehen dann
+      // still, sonst laufen sie auf einem zweiten Monitor oder hinter anderen Fenstern weiter.
+      'html[data-cd-idle] .cd-composer::before,html[data-cd-idle] fieldset .rounded-composer::before,html[data-cd-idle] #cd-rain{animation-play-state:paused !important}'
+    ]).join('');
   }
 
   return { buildStaticCSS: buildStaticCSS, sparkleBg: sparkleBg };
