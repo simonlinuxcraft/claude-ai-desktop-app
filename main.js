@@ -989,6 +989,13 @@ function setupView(view) {
     // OLED-Mode weiss auf. Nur die Hintergrundfarbe setzen, sonst nichts anfassen.
     if (isAllowedDomain(initialUrl) && !isOAuthDomain(initialUrl)) {
       try { childWindow.setBackgroundColor(theme().bg); } catch {}
+      // Externe Links gehoeren in den Browser, nicht in ein weiteres Fenster mit claude.ai-Session.
+      childWindow.webContents.on('will-navigate', (e, url) => {
+        if (isAllowedDomain(url) || isOAuthDomain(url)) return;
+        e.preventDefault();
+        if (/^https?:/i.test(url)) openExternalSafe(url);
+      });
+      childWindow.webContents.setWindowOpenHandler(oauthWindowOpenHandler(() => childWindow.webContents.getURL()));
       return;
     }
     if (!isOAuthDomain(initialUrl) && !looksLikeOAuthUrl(initialUrl)) return;
@@ -1060,6 +1067,13 @@ function setupView(view) {
     // die Seite darueber wirklich claude.ai ist, und bewusst nicht ueber isAllowedDomain:
     // Skript-Injection, Theme und window.open sollen dort weiterhin nicht greifen.
     if (topAllowed && isPaymentFrameDomain(navUrl)) return;
+    // 3-D-Secure: Stripe laedt die Bestaetigungsseite der Bank in einen Unterframe seines eigenen
+    // Frames. Alles, was innerhalb eines Stripe-Frames navigiert, gehoert zum Bezahlvorgang.
+    if (topAllowed) {
+      for (let f = event.frame && event.frame.parent; f; f = f.parent) {
+        if (isPaymentFrameDomain(f.url)) return;
+      }
+    }
     // Electron cancelt hier ohne did-fail-load und ohne Konsolenmeldung. Ein fehlender
     // Host in der Allowlist sieht fuer den Nutzer deshalb aus wie "haengt einfach", zuletzt
     // beim Turnstile-iframe (1.3.11) und bei den Stripe-Frames. Diese Zeile macht den
@@ -1583,7 +1597,11 @@ async function copyDiagnosticsInfo() {
   });
 }
 
+// Immer nur ein Bestaetigungsdialog, auch wenn die Seite den Reset mehrfach anstoesst.
+let resetDialogOpen = false;
 async function resetClaudeVerification(targetTab) {
+  if (resetDialogOpen) return;
+  resetDialogOpen = true;
   const confirm = await showCustomMessageBox({
     type: 'warning',
     title: 'Desktop for Claude',
@@ -1604,6 +1622,7 @@ async function resetClaudeVerification(targetTab) {
     defaultId: 1,
     cancelId: 0
   });
+  resetDialogOpen = false;
   if (!confirm || confirm.response !== 1) return;
 
   try {
@@ -4942,6 +4961,7 @@ function dismissNotification(id) {
 function setupSession() {
   const ses = session.fromPartition('persist:claude');
   const allowed = new Set(['clipboard-read', 'clipboard-sanitized-write', 'notifications', 'fullscreen']);
+  const CLAUDE_ONLY_PERMS = new Set(['clipboard-read', 'notifications']);
 
   ses.setPermissionRequestHandler((_, perm, cb, details) => {
     if (perm === 'media') {
@@ -4967,6 +4987,9 @@ function setupSession() {
       }).catch(() => cb(false));
       return;
     }
+    // Zwischenablage lesen und Benachrichtigungen nur fuer claude.ai selbst. Artefakt-Code,
+    // OAuth- und MCP-Anmeldeseiten laufen in derselben Session und bekaemen sie sonst still.
+    if (CLAUDE_ONLY_PERMS.has(perm)) return cb(isClaudeAiOrigin(details && details.requestingUrl));
     cb(allowed.has(perm));
   });
   ses.setPermissionCheckHandler((_, perm, requestingOrigin) => {
@@ -4974,6 +4997,7 @@ function setupSession() {
       if (!isClaudeAiOrigin(requestingOrigin)) return false;
       return microphoneEnabled;
     }
+    if (CLAUDE_ONLY_PERMS.has(perm)) return isClaudeAiOrigin(requestingOrigin);
     return allowed.has(perm);
   });
 
@@ -5232,10 +5256,9 @@ ipcMain.on('settings-copy-snap-cmd', () => { clipboard.writeText(SNAP_CONNECT_CM
 // Live-Notifications (Tab-Bar-Banner)
 ipcMain.on('notification-dismiss', (_, id) => dismissNotification(id));
 ipcMain.on('notification-link', (_, payload) => {
-  if (!payload || typeof payload !== 'object') return;
-  const url = typeof payload.url === 'string' ? payload.url : '';
-  if (!/^https:\/\//i.test(url)) return;
-  openExternalSafe(url);
+  // Den Link aus dem eigenen Hinweis nehmen, nicht die URL, die der Renderer mitschickt.
+  const n = payload && typeof payload === 'object' && activeNotifications.find(x => x.id === payload.id);
+  if (n && n.link) openExternalSafe(n.link);
 });
 ipcMain.on('notifications-request', () => pushNotificationsToTabBar());
 
@@ -5293,7 +5316,13 @@ ipcMain.on('settings-close', () => {
 });
 
 // Status-Punkt im Tab: notify.js meldet jeden Wechsel zwischen "antwortet" und "fertig".
+// window.claudeDesktop ist auch auf fremden Seiten im Tab erreichbar (OAuth, MCP-Anmeldung).
+function fromClaudePage(event) {
+  return !!(event.senderFrame && isClaudeAiOrigin(event.senderFrame.url));
+}
+
 ipcMain.on('claude-generating', (event, on) => {
+  if (!fromClaudePage(event)) return;
   const tab = tabs.find(tb => tb.view && tb.view.webContents === event.sender);
   if (!tab || !!tab.busy === (on === true)) return;
   tab.busy = on === true;
@@ -5302,6 +5331,7 @@ ipcMain.on('claude-generating', (event, on) => {
 
 // Background-Notification von der claude.ai-Seite (via preload-content.js)
 ipcMain.on('claude-response-done', (event, payload) => {
+  if (!fromClaudePage(event)) return;
   // Senderview ermitteln
   const senderWc = event.sender;
   const idx = tabs.findIndex(tb => tb.view && tb.view.webContents === senderWc);
@@ -5335,6 +5365,7 @@ ipcMain.on('cd-offline-retry', (event) => {
 });
 
 ipcMain.on('claude-reset-verification', (event) => {
+  if (!fromClaudePage(event)) return;
   // Nur aus einer echten Tab-View akzeptieren; den Reset auf genau diesen Tab anwenden,
   // nicht auf den aktiven (der Nutzer kann waehrend des Bestaetigungsdialogs wechseln).
   const fromTab = tabs.find(tb => tb.view && tb.view.webContents === event.sender);
@@ -5373,8 +5404,9 @@ ipcMain.on('about-open-whatsnew', () => {
   if (aboutWindow && !aboutWindow.isDestroyed()) aboutWindow.close();
   openWhatsNewWindow(true);
 });
+const ABOUT_LINKS = new Set(['https://github.com/simonlinuxcraft/claude-ai-desktop-app', SUPPORT_URL, 'https://support.anthropic.com']);
 ipcMain.on('about-open-external', (_event, url) => {
-  if (typeof url === 'string' && /^https:\/\//i.test(url)) openExternalSafe(url);
+  if (ABOUT_LINKS.has(url)) openExternalSafe(url);
 });
 
 function sendWindowState() {
@@ -5570,6 +5602,10 @@ app.on('second-instance', () => {
 // Webview-Tags blockieren (Security)
 app.on('web-contents-created', (_, wc) => {
   wc.on('will-attach-webview', (event) => event.preventDefault());
+  // Interne Fenster (data:-URLs) bleiben, wo sie sind. Ein hineingezogener Link haette sonst eine
+  // fremde Seite geladen, die die Preload-API des Fensters erbt (Einstellungen, Mikrofon, Vorlagen).
+  wc.on('will-navigate', (event) => { if (wc.getURL().startsWith('data:')) event.preventDefault(); });
+  wc.setWindowOpenHandler(() => (wc.getURL().startsWith('data:') ? { action: 'deny' } : { action: 'allow' }));
 });
 
 ipcMain.on('bug-report-open-support', () => {
