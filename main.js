@@ -67,7 +67,8 @@ const isWayland = process.platform === 'linux'
 const APP_ID = 'io.github.simonlinuxcraft.DesktopForClaude';
 if (!process.env.SNAP) app.setDesktopName(`${APP_ID}.desktop`);
 // Nativ, ausser jemand startet ausdruecklich mit --ozone-platform=x11.
-const nativeWayland = isWayland && app.commandLine.getSwitchValue('ozone-platform') !== 'x11';
+const nativeWayland = isWayland && app.commandLine.getSwitchValue('ozone-platform') !== 'x11'
+  && app.commandLine.getSwitchValue('ozone-platform-hint') !== 'x11' && process.env.ELECTRON_OZONE_PLATFORM_HINT !== 'x11';
 // Globale Hotkeys gibt es nativ unter Wayland nur ueber das Portal, in Electron 44.5 noch
 // nicht standardmaessig an.
 if (nativeWayland) app.commandLine.appendSwitch('enable-features', 'GlobalShortcutsPortal,GlobalShortcutsPortalPreferredTrigger');
@@ -2044,7 +2045,11 @@ ${customTitlebarHTML(s.title)}
 
 function showMainWindow() {
   if (!mainWindow || mainWindow.isDestroyed()) return;
-  if (mainWindow.isMinimized()) mainWindow.restore();
+  if (mainWindow.isMinimized()) {
+    // Unter nativem Wayland kann sich eine App nicht selbst wiederherstellen, restore() bleibt
+    // dort wirkungslos. Aus- und wieder einblenden legt ein neues Fenster an, das der Compositor zeigt.
+    if (nativeWayland) mainWindow.hide(); else mainWindow.restore();
+  }
   if (!mainWindow.isVisible()) mainWindow.show();
   mainWindow.focus();
 }
@@ -2176,8 +2181,11 @@ function openQuickPrompt() {
     return;
   }
   const qpSize = fitToWorkArea(612, 168);
+  // Unter Wayland ignoriert der Compositor x/y. Am sichtbaren Hauptfenster haengend setzt er den
+  // Prompt mittig darueber, ohne Elternfenster landete er irgendwo.
+  const qpParent = nativeWayland && mainWindow && !mainWindow.isDestroyed() && mainWindow.isVisible() && !mainWindow.isMinimized() ? mainWindow : undefined;
   const qpBase = {
-    width: qpSize.width, height: qpSize.height,
+    width: qpSize.width, height: qpSize.height, parent: qpParent,
     frame: false, roundedCorners: windowsRounded, resizable: false, movable: true,
     alwaysOnTop: true, skipTaskbar: true, show: false,
     transparent: true, hasShadow: false,
@@ -2450,6 +2458,14 @@ function registerHotkey(accel) {
 
 // Feature 6: Clipboard → Chat
 async function openClipboardChat() {
+  // Unter Wayland bekommt nur eine App mit Fokus die Zwischenablage. Erst das Fenster holen.
+  if (nativeWayland && mainWindow && !mainWindow.isDestroyed() && !mainWindow.isFocused()) {
+    showMainWindow();
+    await new Promise((resolve) => {
+      const fallback = setTimeout(resolve, 700);
+      mainWindow.once('focus', () => { clearTimeout(fallback); setTimeout(resolve, 50); });
+    });
+  }
   let text = '';
   try { text = (await clipboard.readText()) || ''; } catch {}
   text = text.trim();
@@ -5397,9 +5413,10 @@ ipcMain.on('tabbar-reset-verification', () => resetClaudeVerification());
 
 ipcMain.on('quickprompt-submit', (event, text) => {
   if (!quickPromptWindow || quickPromptWindow.isDestroyed() || event.sender !== quickPromptWindow.webContents) return;
-  quickPromptWindow.close();
-  if (typeof text !== 'string' || text.length > MAX_PROMPT_CHARS) return;
-  submitQuickPrompt(text);
+  // Erst das Hauptfenster holen, solange der Prompt noch den Fokus hat: unter Wayland darf eine
+  // App nur nach vorne, wenn die Anfrage von einer eigenen Oberflaeche mit Fokus kommt.
+  if (typeof text === 'string' && text.length <= MAX_PROMPT_CHARS) submitQuickPrompt(text);
+  if (quickPromptWindow && !quickPromptWindow.isDestroyed()) quickPromptWindow.close();
 });
 ipcMain.on('quickprompt-cancel', (event) => {
   if (!quickPromptWindow || quickPromptWindow.isDestroyed() || event.sender !== quickPromptWindow.webContents) return;
@@ -5611,11 +5628,7 @@ function createWindow() {
 
 // App Lifecycle
 
-app.on('second-instance', () => {
-  if (!mainWindow || mainWindow.isDestroyed()) return;
-  if (!mainWindow.isVisible()) showMainWindow();
-  else { if (mainWindow.isMinimized()) mainWindow.restore(); mainWindow.focus(); }
-});
+app.on('second-instance', () => showMainWindow());
 
 // Webview-Tags blockieren (Security)
 app.on('web-contents-created', (_, wc) => {
