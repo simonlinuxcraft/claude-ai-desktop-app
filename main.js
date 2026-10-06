@@ -145,6 +145,13 @@ function throttle(fn, ms) {
 
 // shell.openExternal liefert ein Promise, das unter Snap rejecten kann (Portal/
 // xdg-open nicht erreichbar). Ohne .catch wuerde daraus eine unhandled rejection.
+// Wartet hoechstens ms, damit ein haengender Renderer oder GPU-Prozess keinen Ablauf blockiert.
+function withTimeout(promise, ms) {
+  let timer;
+  return Promise.race([promise, new Promise((_, reject) => { timer = setTimeout(() => reject(new Error('timeout')), ms); })])
+    .finally(() => clearTimeout(timer));
+}
+
 function openExternalSafe(url) {
   try { const p = shell.openExternal(url); if (p && p.catch) p.catch(() => {}); } catch {}
 }
@@ -1145,6 +1152,36 @@ function setupView(view) {
   };
   wc.on('did-start-navigation', (details) => { if (details.isMainFrame && !details.isSameDocument) clearBusy(); });
 
+  // net.isOnline() sieht nur die Netzwerkschnittstellen. DNS-Fehler, ein weggebrochenes VPN oder ein
+  // Captive Portal liessen den Tab sonst leer stehen. Hier gibt es die Offline-Seite mit Neu-laden-Knopf.
+  wc.on('did-fail-load', (_e, code, _desc, _url, isMainFrame) => {
+    if (!isMainFrame || !NET_ERROR_CODES.has(code)) return;
+    const tab = tabs.find(tb => tb.view === view);
+    if (tab) showOfflinePage(tab);
+  });
+
+  // Ohne eigenes Menue tat ein Rechtsklick in claude.ai gar nichts. Seiten mit eigenem Kontextmenue
+  // unterdruecken das Ereignis selbst.
+  wc.on('context-menu', (_e, p) => {
+    const items = [];
+    if (p.linkURL && /^https?:/i.test(p.linkURL)) {
+      items.push({ label: t('Link im Browser öffnen', 'Open link in browser', 'Ouvrir le lien dans le navigateur', 'Apri il link nel browser'), click: () => openExternalSafe(p.linkURL) });
+      items.push({ label: t('Link kopieren', 'Copy link', 'Copier le lien', 'Copia link'), click: () => { clipboard.writeText(p.linkURL).catch(() => {}); } });
+    }
+    if (p.isEditable) {
+      if (items.length) items.push({ type: 'separator' });
+      items.push({ role: 'cut', label: t('Ausschneiden', 'Cut', 'Couper', 'Taglia'), enabled: p.editFlags.canCut });
+      items.push({ role: 'copy', label: t('Kopieren', 'Copy', 'Copier', 'Copia'), enabled: p.editFlags.canCopy });
+      items.push({ role: 'paste', label: t('Einfügen', 'Paste', 'Coller', 'Incolla'), enabled: p.editFlags.canPaste });
+      items.push({ type: 'separator' });
+      items.push({ role: 'selectAll', label: t('Alles auswählen', 'Select all', 'Tout sélectionner', 'Seleziona tutto') });
+    } else if (p.selectionText && p.selectionText.trim()) {
+      if (items.length) items.push({ type: 'separator' });
+      items.push({ role: 'copy', label: t('Kopieren', 'Copy', 'Copier', 'Copia') });
+    }
+    if (items.length && mainWindow && !mainWindow.isDestroyed()) Menu.buildFromTemplate(items).popup({ window: mainWindow });
+  });
+
   // Crash-Recovery
   wc.on('render-process-gone', (_, details) => {
     if (details.reason === 'clean-exit' || wc.isDestroyed()) return;
@@ -1583,7 +1620,7 @@ async function copyDiagnosticsInfo() {
   }
 
   try {
-    const gpuInfo = await app.getGPUInfo('complete');
+    const gpuInfo = await withTimeout(app.getGPUInfo('complete'), 4000);
     if (gpuInfo && Array.isArray(gpuInfo.gpuDevice)) {
       gpuInfo.gpuDevice.forEach((d, i) => {
         lines.push(`GPU[${i}]: vendor=0x${(d.vendorId || 0).toString(16)} device=0x${(d.deviceId || 0).toString(16)} active=${d.active} driverVendor=${d.driverVendor || ''} driverVersion=${d.driverVersion || ''}`);
@@ -1605,7 +1642,7 @@ async function copyDiagnosticsInfo() {
   const active = tabs[activeTabIndex];
   if (active && alive(active.view)) {
     try {
-      const wgl = await active.view.webContents.executeJavaScript(`(()=>{try{const c=document.createElement('canvas');const gl=c.getContext('webgl2')||c.getContext('webgl');if(!gl)return{ok:false};const e=gl.getExtension('WEBGL_debug_renderer_info');return{ok:true,vendor:e?gl.getParameter(e.UNMASKED_VENDOR_WEBGL):'',renderer:e?gl.getParameter(e.UNMASKED_RENDERER_WEBGL):'',version:gl.getParameter(gl.VERSION),ua:navigator.userAgent};}catch(err){return{ok:false,err:String(err)};}})()`, true);
+      const wgl = await withTimeout(active.view.webContents.executeJavaScript(`(()=>{try{const c=document.createElement('canvas');const gl=c.getContext('webgl2')||c.getContext('webgl');if(!gl)return{ok:false};const e=gl.getExtension('WEBGL_debug_renderer_info');return{ok:true,vendor:e?gl.getParameter(e.UNMASKED_VENDOR_WEBGL):'',renderer:e?gl.getParameter(e.UNMASKED_RENDERER_WEBGL):'',version:gl.getParameter(gl.VERSION),ua:navigator.userAgent};}catch(err){return{ok:false,err:String(err)};}})()`, true), 3000);
       if (wgl && wgl.ok) {
         lines.push(`WebGL-Vendor: ${wgl.vendor}`);
         lines.push(`WebGL-Renderer: ${wgl.renderer}`);
@@ -1741,7 +1778,7 @@ function showBugReportDialog() {
   win.setMenuBarVisibility(false);
   win.on('closed', () => { bugReportWindow = null; });
 
-  const cfg = JSON.stringify({
+  const cfg = safeJson({
     bugEmail: BUG_EMAIL,
     submitUrl: BUG_SUBMIT_URL,
     // Ueber den Proxy braucht der Client keinen Key, der liegt dort als Worker-Secret.
@@ -1885,7 +1922,7 @@ ${customTitlebarHTML(s.title)}
   <p>${s.errorHint}</p>
   <div class="email" id="err-email"></div>
   <div class="error-row">
-    <button class="secondary" onclick="window.close()">${s.closeBtn}</button>
+    <button class="secondary" id="err-back">${s.backBtn}</button>
     <button class="primary" id="copy-btn"></button>
   </div>
 </div>
@@ -1949,6 +1986,8 @@ ${customTitlebarHTML(s.title)}
     fit();
   });
 
+  // Zurueck zum Formular: der getippte Bericht steht dort noch und kann erneut gesendet werden.
+  $('err-back').addEventListener('click', () => showView('form'));
   errEmail.textContent = cfg.bugEmail;
   copyBtn.textContent = cfg.strings.copyBtn;
   copyBtn.addEventListener('click', () => {
@@ -2027,11 +2066,15 @@ ${customTitlebarHTML(s.title)}
     if (cfg.accessKey) payload.access_key = cfg.accessKey;
     if (userEmail) payload.email = userEmail;
 
+    // Ohne Zeitlimit stuende "Wird gesendet" bei haengender Verbindung fuer immer da.
+    const ctrl = new AbortController();
+    const abortTimer = setTimeout(() => ctrl.abort(), 20000);
     try {
       const res = await fetch(cfg.submitUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-        body: JSON.stringify(payload)
+        body: JSON.stringify(payload),
+        signal: ctrl.signal
       });
       const data = await res.json().catch(() => ({}));
       if (res.ok && data.success) {
@@ -2043,6 +2086,7 @@ ${customTitlebarHTML(s.title)}
       console.error('Bug-report submit failed:', err);
       showView('error');
     } finally {
+      clearTimeout(abortTimer);
       sendBtn.textContent = cfg.strings.sendBtn;
       syncSend();
     }
@@ -2240,13 +2284,12 @@ function submitQuickPrompt(text) {
   if (!tab || !alive(tab.view)) return;
   const wc = tab.view.webContents;
   const escaped = JSON.stringify(trimmed);
-  const inject = () => {
-    wc.executeJavaScript(`(function(){
+  const inject = () => wc.executeJavaScript(`new Promise(function(done){
       const prompt = ${escaped};
       let attempts = 0;
       const tryFill = () => {
         attempts++;
-        if (attempts > 40) return; // ~6s max
+        if (attempts > 40) return done(false); // ~6s max
         const el = document.querySelector('div[contenteditable="true"].ProseMirror')
                 || document.querySelector('div[contenteditable="true"]')
                 || document.querySelector('.ProseMirror');
@@ -2265,12 +2308,26 @@ function submitQuickPrompt(text) {
           end.collapse(false);
           sel.removeAllRanges();
           sel.addRange(end);
-        } catch(e) {}
+          done(true);
+        } catch(e) { done(false); }
       };
       tryFill();
-    })();`).catch(() => {});
-  };
-  wc.once('did-finish-load', inject);
+    })`).then(ok => ok === true).catch(() => false);
+  // Eine Pruef- oder Anmeldeseite verbraucht das erste did-finish-load, darum bei jedem weiteren
+  // Laden neu versuchen. Klappt es gar nicht, liegt der Text wenigstens in der Zwischenablage.
+  let filled = false;
+  const onLoad = () => inject().then(ok => {
+    if (!ok || filled) return;
+    filled = true;
+    if (alive(wc)) wc.off('did-finish-load', onLoad);
+  });
+  wc.on('did-finish-load', onLoad);
+  setTimeout(() => {
+    if (filled || !alive(wc)) return;
+    wc.off('did-finish-load', onLoad);
+    clipboard.writeText(trimmed).catch(() => {});
+    notify({ title: 'Desktop for Claude', body: t('claude.ai war noch nicht bereit. Dein Text liegt in der Zwischenablage.', 'claude.ai wasn’t ready yet. Your text is on the clipboard.', 'claude.ai n’était pas encore prêt. Votre texte est dans le presse-papiers.', 'claude.ai non era ancora pronto. Il tuo testo è negli appunti.') });
+  }, 30000);
 }
 
 // Runde Ecken: border-image kann keine Rundung, deshalb ein maskierter Ring ueber dem Fenster,
@@ -2532,7 +2589,7 @@ async function exportActiveConversation() {
   let payload = null;
   try {
     payload = await wc.executeJavaScript(`(function(){
-      function clean(s){ return (s||'').replace(/\\u00a0/g,' ').replace(/\\s+\\n/g,'\\n').trim(); }
+      function clean(s){ return (s||'').replace(/\\u00a0/g,' ').replace(/[ \\t]+\\n/g,'\\n').replace(/\\n{3,}/g,'\\n\\n').trim(); }
       function nodeToMarkdown(root){
         if(!root) return '';
         const walk = (node) => {
@@ -4347,6 +4404,7 @@ function handleOnlineChange(online) {
     showOfflinePage();
     notify({ title: 'Desktop for Claude', body: t('Keine Internetverbindung.', 'No internet connection.', 'Pas de connexion Internet.', 'Nessuna connessione a Internet.') });
   } else {
+    if (notificationsFetchFailed) refreshNotifications().catch(() => {});
     // Jeder Tab, der auf der Offline-Seite haengt, muss per loadURL zurueck auf seinen
     // echten Chat. reload() wuerde nur die data:-Seite neu laden. Inaktive Tabs bleiben
     // sonst dauerhaft dort haengen, weil showOfflinePage nur den aktiven Tab trifft.
@@ -4361,8 +4419,10 @@ function handleOnlineChange(online) {
   }
 }
 
-function showOfflinePage() {
-  const tab = tabs[activeTabIndex];
+// Chromium-Netzfehler: Verbindung, DNS, Zeitueberschreitung, Proxy, Netzwechsel.
+const NET_ERROR_CODES = new Set([-21, -100, -101, -102, -104, -105, -106, -109, -118, -130, -137]);
+
+function showOfflinePage(tab = tabs[activeTabIndex]) {
   if (!tab || !alive(tab.view)) return;
   const th = theme();
   tab.view.webContents.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(
@@ -5011,9 +5071,13 @@ async function refreshNotifications() {
   } else {
     payload = await fetchNotificationsRemote();
   }
+  // Ein Netzfehler loescht keine sichtbaren Hinweise, sie bleiben bis zum naechsten erfolgreichen Abruf.
+  notificationsFetchFailed = !payload;
+  if (!payload) return;
   activeNotifications = filterNotifications(payload, { appVersion: version, isSnap, dismissedIds: dismissedNotificationIds, lang: sysLang });
   pushNotificationsToTabBar();
 }
+let notificationsFetchFailed = false;
 
 function setupNotifications() {
   // Override (Dev / lokale Datei): kürzer warten, Banner soll beim Testen schnell erscheinen.
@@ -5081,12 +5145,14 @@ function setupSession() {
   // Unter Wayland zeigt getSources den Auswahldialog des Portals. X11 hat keinen Picker,
   // dort nehmen wir den Bildschirm, auf dem das App-Fenster liegt.
   ses.setDisplayMediaRequestHandler((req, cb) => {
-    if (!isClaudeAiOrigin(req.securityOrigin)) return cb({});
+    // Ablehnen heisst cb(null). Ein leeres Objekt wirft "Video was requested, but no video stream
+    // was provided", dann bekommt die Seite nie eine Antwort und getDisplayMedia haengt.
+    if (!isClaudeAiOrigin(req.securityOrigin)) return cb(null);
     desktopCapturer.getSources({ types: ['screen'] }).then(sources => {
       const disp = mainWindow && !mainWindow.isDestroyed() ? screen.getDisplayMatching(mainWindow.getBounds()) : null;
       const src = sources.find(x => disp && x.display_id === String(disp.id)) || sources[0];
-      cb(src ? { video: src } : {});
-    }).catch(() => cb({}));
+      cb(src ? { video: src } : null);
+    }).catch(() => cb(null));
   });
 
   ses.setUserAgent(chromeUA);
@@ -5766,7 +5832,8 @@ app.whenReady().then(() => {
   // naechsten Stilwechsel.
   if (windowState.lastSeenVersion !== version) syncDesktopIcons();
 
-  if (mainWindow && windowState.lastSeenVersion !== version && getFilteredNotes(version, windowState.lastSeenVersion, { isSnap }).length > 0) {
+  // Das Fenster zeigt nur die Notes der aktuellen Version, also auch nur danach entscheiden.
+  if (mainWindow && windowState.lastSeenVersion !== version && getFilteredNotes(version, windowState.lastSeenVersion, { isSnap, force: true }).length > 0) {
     const showWhatsNew = () => {
       if (!mainWindow || mainWindow.isDestroyed()) return;
       openWhatsNewWindow();
