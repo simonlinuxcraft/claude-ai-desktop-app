@@ -4526,7 +4526,8 @@ function triggerManualUpdateCheck() {
     return;
   }
   manualUpdateCheck = true;
-  autoUpdater.checkForUpdates().catch(() => {});
+  // Ist der Updater inaktiv (kein AppImage-Pfad), kommt null ohne Ereignis zurueck.
+  Promise.resolve(autoUpdater.checkForUpdates()).then(r => { if (!r) manualUpdateCheck = false; }).catch(() => { manualUpdateCheck = false; });
 }
 
 function setupAutoUpdater() {
@@ -4539,6 +4540,11 @@ function setupAutoUpdater() {
   autoUpdater.on('update-available', (info) => {
     failures = 0;
     if (isQuitting) return;
+    // Der stuendliche Check meldet ein schon geladenes Update erneut. Dann keine "wird geladen"-Meldung.
+    if (updateState && updateState.state === 'ready' && updateState.version === info.version) {
+      if (manualUpdateCheck) { manualUpdateCheck = false; setUpdateState(updateState); }
+      return;
+    }
     if (manualUpdateCheck) {
       manualUpdateCheck = false;
       showCustomMessageBox({
@@ -4564,6 +4570,12 @@ function setupAutoUpdater() {
     }
   });
 
+  // Beim Update auf einen neuen Dateinamen zeigten Menue-Starter, Autostart und Portal-Datei sonst
+  // auf die geloeschte alte Datei. Nach "beim Beenden installieren" startet die App nicht selbst neu.
+  autoUpdater.on('appimage-filename-updated', (newPath) => {
+    if (typeof newPath === 'string' && newPath) selfHealDesktopFiles(newPath);
+  });
+
   autoUpdater.on('download-progress', (p) => {
     if (isQuitting) return;
     if (mainWindow && !mainWindow.isDestroyed()) {
@@ -4584,6 +4596,10 @@ function setupAutoUpdater() {
   autoUpdater.on('error', (err) => {
     failures++;
     if (isDev) console.error(`Update-Fehler (${failures}x):`, err.message);
+    if (updateState && updateState.state === 'downloading') {
+      setUpdateState(null);
+      if (mainWindow && !mainWindow.isDestroyed()) { mainWindow.setProgressBar(-1); updateTitle(); }
+    }
     if (isQuitting) return;
     if (manualUpdateCheck) {
       manualUpdateCheck = false;
@@ -5092,7 +5108,8 @@ function setupSession() {
 // Snap: $SNAP_USER_DATA/.config/autostart/claude-ai-desktop.desktop. snapd-userd
 // liest die Datei beim Login und startet die App über den command-wrapper aus
 // snapcraft.yaml (autostart-Direktive). Kein personal-files-Plug nötig.
-const isSnap = !!(process.env.SNAP_NAME || process.env.SNAP);
+// Ein AppImage, das aus einem Snap-Terminal startet, erbt SNAP und SNAP_NAME. APPIMAGE setzt nur die AppImage-Laufzeit.
+const isSnap = !process.env.APPIMAGE && !!(process.env.SNAP_NAME || process.env.SNAP);
 // SNAP_USER_DATA fehlt in exotischen Confinement-Setups; ohne Fallback wirft path.join
 // schon beim Modul-Load und die App startet gar nicht erst.
 const AUTOSTART_BASE = isSnap
@@ -5102,7 +5119,7 @@ const AUTOSTART_DIR = path.join(AUTOSTART_BASE, '.config', 'autostart');
 const AUTOSTART_FILE = path.join(AUTOSTART_DIR, 'claude-ai-desktop.desktop');
 
 function getAutostartExec() {
-  if (process.env.APPIMAGE) return `"${process.env.APPIMAGE}" --no-sandbox`;
+  if (process.env.APPIMAGE) return `${execQuote(process.env.APPIMAGE)} --no-sandbox`;
   if (isSnap) return '/snap/bin/claude-ai-desktop';
   return null;
 }
@@ -5157,10 +5174,15 @@ X-GNOME-Autostart-enabled=true
 // Lösung: bei jedem Start prüfen, ob der Exec= im .desktop-File mit dem aktuellen
 // process.env.APPIMAGE übereinstimmt; wenn nicht, beide Files (Menü + Autostart,
 // falls aktiv) rewriten und update-desktop-database triggern.
-function selfHealDesktopFiles() {
+// Exec-Argument nach der Desktop-Entry-Spec: in Anfuehrungszeichen " ` $ \ escapen, % verdoppeln,
+// danach gilt fuer den Wert noch das String-Escaping (\ wird \\).
+function execQuote(p) {
+  return ('"' + p.replace(/[\\"`$]/g, (m) => '\\' + m).replace(/%/g, '%%') + '"').replace(/\\/g, '\\\\');
+}
+
+function selfHealDesktopFiles(appImagePath = process.env.APPIMAGE) {
   if (process.platform !== 'linux') return;
   if (isSnap) return;
-  const appImagePath = process.env.APPIMAGE;
   if (!appImagePath) return;
 
   // Zwei Kandidaten: der aktuelle Dateiname und der aus Builds vor der Umbenennung.
@@ -5176,7 +5198,7 @@ function selfHealDesktopFiles() {
       if (!fs.existsSync(file)) continue;
       const content = fs.readFileSync(file, 'utf8');
       const updated = content
-        .replace(/^Exec=.*$/m, () => `Exec="${appImagePath}" --no-sandbox %U`)
+        .replace(/^Exec=.*$/m, () => `Exec=${execQuote(appImagePath)} --no-sandbox %U`)
         .replace(/^X-AppImage-Version=.*$/m, () => `X-AppImage-Version=${version}`)
         .replace(/^StartupWMClass=.*$/m, () => `StartupWMClass=${APP_ID}`);
       if (updated !== content) {
@@ -5203,7 +5225,7 @@ function selfHealDesktopFiles() {
   // ohne StartupWMClass, damit ein angehefteter Starter von oben die Fensterzuordnung behaelt.
   const idFile = path.join(appsDir, `${APP_ID}.desktop`);
   const idEntry = ['[Desktop Entry]', 'Type=Application', 'Name=Desktop for Claude',
-    `Exec="${appImagePath}" --no-sandbox %U`, `Icon=${isBeta ? 'desktop-for-claude-beta' : 'desktop-for-claude'}`,
+    `Exec=${execQuote(appImagePath)} --no-sandbox %U`, `Icon=${isBeta ? 'desktop-for-claude-beta' : 'desktop-for-claude'}`,
     'NoDisplay=true', ''].join('\n');
   try {
     if (!fs.existsSync(idFile) || fs.readFileSync(idFile, 'utf8') !== idEntry) {
@@ -5216,7 +5238,7 @@ function selfHealDesktopFiles() {
   try {
     if (fs.existsSync(AUTOSTART_FILE)) {
       const content = fs.readFileSync(AUTOSTART_FILE, 'utf8');
-      const updated = content.replace(/^Exec=.*$/m, () => `Exec="${appImagePath}" --no-sandbox`);
+      const updated = content.replace(/^Exec=.*$/m, () => `Exec=${execQuote(appImagePath)} --no-sandbox`);
       if (updated !== content) fs.writeFileSync(AUTOSTART_FILE, updated, { mode: 0o644 });
     }
   } catch (_) {}

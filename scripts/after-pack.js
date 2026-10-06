@@ -21,7 +21,8 @@ DIR="$(dirname "$(readlink -f "$0")")"
 # Snap-Terminals (z.B. alacritty als Snap) vererben GIO_MODULE_DIR auf einen
 # Pfad, der hier nicht existiert. Unset, damit glib-basierte Nebenpfade nicht
 # auf GDummyTlsBackend zurueckfallen. Chromium selbst ist davon unabhaengig.
-unset GIO_MODULE_DIR
+# Liegt der Wrapper selbst im Snap, hat der Snap-Starter den Wert richtig gesetzt.
+if [ -z "$SNAP" ] || [ "\${DIR#"$SNAP"/}" = "$DIR" ]; then unset GIO_MODULE_DIR; fi
 
 # Unter Wayland laeuft die App nativ, mit --ozone-platform=x11 ueber XWayland.
 case " $* " in
