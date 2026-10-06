@@ -1866,6 +1866,8 @@ ${customTitlebarHTML(s.title)}
       try { window.bugAPI.resize(Math.ceil(need)); } catch {}
     });
   }
+  // Der UI-Zoom greift erst nach dem Laden und aendert die Hoehe des Inhalts.
+  addEventListener('resize', () => fit());
 
   function showView(which) {
     chooseView.hidden = which !== 'choose';
@@ -4075,11 +4077,12 @@ function showCustomMessageBox(opts) {
       title
     });
 
-    ipcHandler = (_, index) => {
+    ipcHandler = (event, index) => {
+      if (win.isDestroyed() || event.sender !== win.webContents) return;
       finish(index);
-      if (!win.isDestroyed()) win.close();
+      win.close();
     };
-    ipcMain.once(channel, ipcHandler);
+    ipcMain.on(channel, ipcHandler);
 
     win.on('closed', () => finish(cancelId));
 
@@ -4156,10 +4159,21 @@ function getMessageBoxHTML({ type, heading, message, detail, buttons, defaultId,
   });
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') { e.preventDefault(); respond(cancelIdx); }
-    else if (e.key === 'Enter') { e.preventDefault(); respond(defaultIdx); }
+    // Auf einem Knopf loest Enter dessen eigenen Klick aus, sonst traefe Tab auf Abbrechen + Enter
+    // im Zuruecksetzen-Dialog trotzdem die destruktive Standardaktion.
+    else if (e.key === 'Enter' && !(document.activeElement && document.activeElement.tagName === 'BUTTON')) { e.preventDefault(); respond(defaultIdx); }
   });
-  // Fensterhoehe an den Inhalt anpassen, dann ist nichts abgeschnitten und nichts leer.
-  requestAnimationFrame(() => { try { window.msgboxAPI.fit(Math.ceil(document.getElementById('wrap').offsetHeight)); } catch (e) {} });
+  // Fensterhoehe an den Inhalt anpassen. resize kommt auch, wenn der UI-Zoom erst nach dem
+  // ersten Messen greift; gesendet wird nur bei geaenderter Hoehe.
+  let lastFit = 0;
+  const fit = () => requestAnimationFrame(() => {
+    const h = Math.ceil(document.getElementById('wrap').offsetHeight);
+    if (h === lastFit) return;
+    lastFit = h;
+    try { window.msgboxAPI.fit(h); } catch (e) {}
+  });
+  addEventListener('resize', fit);
+  fit();
 })();
 </script>
 </body>
@@ -4623,13 +4637,15 @@ async function requestMicrophoneConsent() {
       title: t('Mikrofon-Zugriff', 'Microphone access', 'Accès au microphone', 'Accesso al microfono')
     });
 
-    respondHandler = (_, idx) => {
+    const own = (event) => !win.isDestroyed() && event.sender === win.webContents;
+    respondHandler = (event, idx) => {
+      if (!own(event)) return;
       finish(idx === 0 ? 'granted' : 'denied');
-      if (!win.isDestroyed()) win.close();
+      win.close();
     };
-    snapOpenHandler = () => openSnapStorePage();
-    copyCmdHandler = () => { clipboard.writeText(SNAP_CONNECT_CMD).catch(() => {}); };
-    ipcMain.once(respondChannel, respondHandler);
+    snapOpenHandler = (event) => { if (own(event)) openSnapStorePage(); };
+    copyCmdHandler = (event) => { if (own(event)) clipboard.writeText(SNAP_CONNECT_CMD).catch(() => {}); };
+    ipcMain.on(respondChannel, respondHandler);
     ipcMain.on(snapOpenChannel, snapOpenHandler);
     ipcMain.on(copyCmdChannel, copyCmdHandler);
 
