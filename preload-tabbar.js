@@ -28,6 +28,7 @@ contextBridge.exposeInMainWorld('tabAPI', {
   toggleTheme: () => ipcRenderer.send('theme-toggle'),
   toggleDesign: () => ipcRenderer.send('design-toggle'),
   officialApp: () => ipcRenderer.send('official-app-info'),
+  support: () => ipcRenderer.send('tabbar-support'),
   bugReport: () => ipcRenderer.send('bug-report'),
   resetVerification: () => ipcRenderer.send('tabbar-reset-verification'),
   exportConversation: () => ipcRenderer.send('export-conversation'),

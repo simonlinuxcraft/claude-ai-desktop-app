@@ -725,6 +725,7 @@ ${REDUCED_MOTION_CSS}
   <div class="official${officialAppSeen ? ' seen' : ''}" id="official-app" title="${t('Anthropic bietet eine eigene Claude-App für Linux an. Hier steht, wie sie installiert wird.', 'Anthropic ships its own Claude app for Linux. This explains how to install it.', 'Anthropic propose sa propre application Claude pour Linux. Voici comment l’installer.', 'Anthropic distribuisce una propria app Claude per Linux. Qui come installarla.')}">
     <span class="oi">${uiIcon('package', 16)}</span><span class="lbl">${t('Offizielle App', 'Official app', 'App officielle', 'App ufficiale')}</span>
   </div>
+  <div class="ctrl-btn" id="support-btn" title="${t('App unterstützen', 'Support the app', 'Soutenir l’app', 'Sostieni l’app')}">${uiIcon('heart', 16)}</div>
   <span class="tool-sep"></span>
   <div class="ctrl-btn" id="export-btn" title="${t('Konversation als Markdown exportieren', 'Export conversation as Markdown', 'Exporter la conversation en Markdown', 'Esporta la conversazione in Markdown')}">${uiIcon('export', 16)}</div>
   <div class="ctrl-btn" id="bug-report" title="${(bugReportStrings[sysLang] || bugReportStrings.en).title}">${uiIcon('bug', 16)}</div>
@@ -759,6 +760,7 @@ document.getElementById('official-app').addEventListener('click',()=>window.tabA
 document.getElementById('bug-report').addEventListener('click',()=>window.tabAPI.bugReport());
 document.getElementById('reset-verify').addEventListener('click',()=>window.tabAPI.resetVerification());
 document.getElementById('export-btn').addEventListener('click',()=>window.tabAPI.exportConversation());
+document.getElementById('support-btn').addEventListener('click',()=>window.tabAPI.support());
 document.getElementById('app-menu').addEventListener('click',(e)=>{
   const r=e.currentTarget.getBoundingClientRect();
   window.tabAPI.openAppMenu(Math.round(r.left),Math.round(r.bottom));
@@ -3977,7 +3979,7 @@ ${customTitlebarHTML(escapeHtml(t('Offizielle Claude-App', 'Official Claude app'
 
 // Ko-fi statt PayPal-Knopf: _donations ist in Deutschland gemeinnuetzigen Organisationen vorbehalten,
 // _xclick sieht aus wie ein Shop. Die Widget-Adresse zeigt nur das Bezahlfeld, ohne Profil und Feed.
-const SUPPORT_URL = 'https://ko-fi.com/simonlinuxcraft/?hidefeed=true&widget=true&embed=true';
+const SUPPORT_URL = 'https://ko-fi.com/simonlinuxcraft';
 const KOFI_PATH = 'M11.351 2.715c-2.7 0-4.986.025-6.83.26C2.078 3.285 0 5.154 0 8.61c0 3.506.182 6.13 1.585 8.493 1.584 2.701 4.233 4.182 7.662 4.182h.83c4.209 0 6.494-2.234 7.637-4a9.5 9.5 0 0 0 1.091-2.338C21.792 14.688 24 12.22 24 9.208v-.415c0-3.247-2.13-5.507-5.792-5.87-1.558-.156-2.65-.208-6.857-.208m0 1.947c4.208 0 5.09.052 6.571.182 2.624.311 4.13 1.584 4.13 4v.39c0 2.156-1.792 3.844-3.87 3.844h-.935l-.156.649c-.208 1.013-.597 1.818-1.039 2.546-.909 1.428-2.545 3.064-5.922 3.064h-.805c-2.571 0-4.831-.883-6.078-3.195-1.09-2-1.298-4.155-1.298-7.506 0-2.181.857-3.402 3.012-3.714 1.533-.233 3.559-.26 6.39-.26m6.547 2.287c-.416 0-.65.234-.65.546v2.935c0 .311.234.545.65.545 1.324 0 2.051-.754 2.051-2s-.727-2.026-2.052-2.026m-10.39.182c-1.818 0-3.013 1.48-3.013 3.142 0 1.533.858 2.857 1.949 3.897.727.701 1.87 1.429 2.649 1.896a1.47 1.47 0 0 0 1.507 0c.78-.467 1.922-1.195 2.623-1.896 1.117-1.039 1.974-2.364 1.974-3.897 0-1.662-1.247-3.142-3.039-3.142-1.065 0-1.792.545-2.338 1.298-.493-.753-1.246-1.298-2.312-1.298';
 
 async function showSupportInfo() {
@@ -5757,6 +5759,7 @@ ipcMain.on('design-toggle', () => {
   setDesignStyle(DESIGN_STYLES[(i + 1) % DESIGN_STYLES.length]);
 });
 ipcMain.on('official-app-info', () => showOfficialAppInfo());
+ipcMain.on('tabbar-support', () => showSupportInfo());
 ipcMain.on('bug-report', showBugReportDialog);
 ipcMain.on('export-conversation', () => exportActiveConversation());
 ipcMain.on('app-menu-popup', (_event, x, y) => openAppMenu(x, y));
