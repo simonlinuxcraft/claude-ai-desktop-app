@@ -72,6 +72,9 @@ const nativeWayland = isWayland && app.commandLine.getSwitchValue('ozone-platfor
 // Globale Hotkeys gibt es nativ unter Wayland nur ueber das Portal, in Electron 44.5 noch
 // nicht standardmaessig an.
 if (nativeWayland) app.commandLine.appendSwitch('enable-features', 'GlobalShortcutsPortal,GlobalShortcutsPortalPreferredTrigger');
+// Mit dem Wayland-Farbmanagement rechnet Chromium sRGB auf Gamma 2.2 um und hebt dunkle Toene an
+// (gemessen: #050306 -> rgb 13,11,14), OLED wirkte grau. Ohne bleibt es wie unter X11.
+if (nativeWayland) app.commandLine.appendSwitch('disable-features', 'WaylandWpColorManagerV1');
 
 const TAB_BAR_HEIGHT = 40;
 const WINDOW_BORDER = 1; // dezenter Fensterrahmen: 1px der Tab-Bar-Border scheint im View-Inset durch
