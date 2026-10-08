@@ -43,7 +43,14 @@ test('compareVersions: fehlende Patch-Stelle wird als 0 gewertet', () => {
 test('safeJson: escaped </script', () => {
   const out = safeJson({ html: '<script>alert(1)</script>' });
   assert.ok(!out.includes('</script>'));
-  assert.ok(out.includes('<\\/script>'));
+  assert.ok(!out.includes('<'));
+  assert.deepEqual(JSON.parse(out), { html: '<script>alert(1)</script>' });
+});
+
+test('safeJson: <!-- kann den Script-Block nicht offen halten', () => {
+  const out = safeJson({ prefix: '<!-- <script>' });
+  assert.ok(!out.includes('<'));
+  assert.equal(JSON.parse(out).prefix, '<!-- <script>');
 });
 
 test('safeJson: case-insensitive </SCRIPT', () => {

@@ -650,7 +650,7 @@ ${roundFrameCSS('var(--frame-hi)', 'var(--frame-lo)')}
 .tab.busy .tab-dot{animation:tabPulse 1.1s ease-in-out infinite}
 .tab.unread .tab-title{color:var(--ac-from)}
 @keyframes tabPulse{50%{opacity:.25;transform:scale(.75)}}
-@media (prefers-reduced-motion:reduce){.tab.busy .tab-dot{animation:none}}
+${REDUCED_MOTION_CSS}
 .tab-close{width:18px;height:18px;border-radius:8px;display:flex;align-items:center;justify-content:center;
   font-size:15px;line-height:1;opacity:0;flex-shrink:0;transition:opacity .1s,background .1s}
 .tab:hover .tab-close{opacity:.5}
@@ -1835,7 +1835,7 @@ function showBugReportDialog() {
   const brSize = fitToWorkArea(600, 380);
   const brPos = centerOnMainWindow(brSize.width, brSize.height);
   const win = new BrowserWindow({
-    width: brSize.width, height: brSize.height, ...brPos, resizable: false,
+    width: brSize.width, height: brSize.height, ...brPos, resizable: false, show: false,
     parent: mainWindow, modal: true,
     title: s.title, icon: icon(),
     backgroundColor: bg,
@@ -1848,6 +1848,7 @@ function showBugReportDialog() {
   });
   bugReportWindow = win;
   applyUiScale(win, brSize.scale);
+  revealWhenReady(win, true);
   win.setMenuBarVisibility(false);
   win.on('closed', () => { bugReportWindow = null; });
 
@@ -1938,7 +1939,7 @@ button:focus-visible{outline:2px solid ${ac.from};outline-offset:2px}
 .status .email{font-size:14px;font-weight:600;color:${fg};margin-bottom:14px;word-break:break-all;
   background:${inputBg};padding:8px 14px;border-radius:6px;border:1px solid ${inputBorder}}
 .error-row{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
-@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+${REDUCED_MOTION_CSS}
 </style></head><body>
 ${customTitlebarHTML(s.title)}
 <div class="main">
@@ -2524,14 +2525,24 @@ function centerOnMainWindow(width, height) {
 // Gemeinsamer BrowserWindow-Setup fuer Modal-Dialoge (showCustomMessageBox,
 // requestMicrophoneConsent). Zentriert auf das Main-Window, parent+modal wenn
 // mainWindow sichtbar ist, preload-messagebox.js + sandbox an.
+// Erst zeigen, wenn der Inhalt gezeichnet ist: sofort sichtbar erzeugt stand jedes Fenster
+// rund 90 ms als graue Flaeche da, Meldungen zusaetzlich in der Startgroesse. waitFit: das
+// Fenster misst sich selbst (msgbox-fit, bug-report-resize) und erscheint erst danach. Der
+// Fallback ist Pflicht, ein unsichtbares modales Fenster sperrt sonst das Hauptfenster.
+function revealWhenReady(win, waitFit = false) {
+  let shown = false;
+  win._cdReveal = () => { if (shown || win.isDestroyed()) return; shown = true; win.show(); };
+  if (!waitFit) win.once('ready-to-show', win._cdReveal);
+  setTimeout(win._cdReveal, waitFit ? 800 : 1500);
+}
+
 function createDialogWindow(opts) {
   const { width, height, scale } = fitToWorkArea(opts.width, opts.height);
   const pos = centerOnMainWindow(width, height);
   const parentWin = (mainWindow && !mainWindow.isDestroyed() && mainWindow.isVisible()) ? mainWindow : undefined;
   const win = new BrowserWindow({
-    // Unter Wayland zeichnet Electron die Titelleiste innerhalb der Fenstergroesse, ohne das hier
-    // fehlten dem Inhalt rund 37px. Unter X11 liegt sie ohnehin aussen.
-    width, height, ...pos, useContentSize: true,
+    width, height, ...pos, useContentSize: true, show: false,
+    frame: false, roundedCorners: windowsRounded,
     parent: parentWin,
     modal: !!parentWin,
     resizable: false, minimizable: false, maximizable: false,
@@ -2547,6 +2558,7 @@ function createDialogWindow(opts) {
   });
   win.setMenu(null);
   applyUiScale(win, scale);
+  revealWhenReady(win, opts.waitFit === true);
   return win;
 }
 
@@ -2901,7 +2913,7 @@ input[type=text]:focus,textarea:focus{border-color:${ac.from}}
 .tpl-prefix{color:${th.text};font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .tpl-empty{color:${th.text};font-size:12px;line-height:1.45;padding:0 2px}
 .actions{padding:12px 22px;border-top:1px solid ${th.border};display:flex;justify-content:flex-end}
-@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+${REDUCED_MOTION_CSS}
 ${customTitlebarCSS()}
 </style></head><body>
 ${customTitlebarHTML(t('Desktop for Claude - Einstellungen', 'Desktop for Claude - Settings', 'Desktop for Claude - Paramètres', 'Desktop for Claude - Impostazioni'))}
@@ -3152,7 +3164,9 @@ micSnapCopy.addEventListener('click', () => {
   micSnapCopyTimer = setTimeout(() => { micSnapCopy.textContent = I.micSnapCmdCopy; }, 1800);
 });
 
-api.get().then(s => {
+// Zustand steckt schon im HTML: per IPC kam er erst nach dem ersten Bild, die Schalter
+// rutschten sichtbar von aus nach an und im Snap sprang die Mikrofonkarte.
+Promise.resolve(${safeJson(settingsState())}).then(s => {
   mc.checked = !!s.minimizeOnClose;
   as.checked = !!s.autostart;
   bn.checked = !!s.bgNotifications;
@@ -3327,7 +3341,7 @@ ${customTitlebarCSS()}
 .primary{justify-self:end;background:linear-gradient(135deg,${ac.from},${ac.to});color:#fff;padding:10px 24px}
 .primary:hover{filter:brightness(1.08)}
 button:focus-visible{outline:2px solid ${glow};outline-offset:2px}
-@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+${REDUCED_MOTION_CSS}
 </style></head><body>
 ${customTitlebarHTML(t('Was ist neu', 'What’s new', 'Nouveautés', 'Novità'))}
 <div class="hero">
@@ -3404,8 +3418,9 @@ function openWhatsNewWindow(force = false) {
     }
   };
   whatsNewWindow = new BrowserWindow({
-    ...wnBase, ...centerOnMainWindow(size.width, size.height)
+    ...wnBase, ...centerOnMainWindow(size.width, size.height), show: false
   });
+  revealWhenReady(whatsNewWindow);
   whatsNewWindow.setMenu(null);
   applyUiScale(whatsNewWindow, size.scale);
   whatsNewWindow.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(getWhatsNewHTML(force)));
@@ -3481,7 +3496,7 @@ button{background:linear-gradient(135deg,${ac.from},${ac.to});color:#fff;border:
 button.secondary{background:${th.bgHover};color:${th.textActive};border:1px solid ${th.border}}
 button:hover{filter:brightness(1.08)}
 button:focus-visible{outline:2px solid ${ac.from};outline-offset:2px}
-@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+${REDUCED_MOTION_CSS}
 ${customTitlebarCSS()}
 </style></head><body>
 ${customTitlebarHTML(t('Über Desktop for Claude', 'About Desktop for Claude', 'À propos de Desktop for Claude', 'Informazioni su Desktop for Claude'))}
@@ -3544,7 +3559,8 @@ function openAboutWindow() {
       spellcheck: false
     }
   };
-  aboutWindow = new BrowserWindow({ ...base, ...centerOnMainWindow(size.width, size.height) });
+  aboutWindow = new BrowserWindow({ ...base, ...centerOnMainWindow(size.width, size.height), show: false });
+  revealWhenReady(aboutWindow);
   applyUiScale(aboutWindow, size.scale);
   aboutWindow.setMenu(null);
   aboutWindow.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(getAboutHTML()));
@@ -3575,8 +3591,9 @@ function openSettingsWindow() {
     }
   };
   settingsWindow = new BrowserWindow({
-    ...swBase, ...centerOnMainWindow(swSize.width, swSize.height)
+    ...swBase, ...centerOnMainWindow(swSize.width, swSize.height), show: false
   });
+  revealWhenReady(settingsWindow);
   settingsWindow.setMenu(null);
   applyUiScale(settingsWindow, swSize.scale);
   settingsWindow.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(getSettingsHTML()));
@@ -3754,7 +3771,7 @@ body{background:var(--bg);color:var(--ta);font-family:system-ui,-apple-system,sa
 button.done{background:linear-gradient(135deg,var(--ac-from),var(--ac-to));color:#fff;border:none;
   padding:7px 14px;border-radius:6px;cursor:pointer;font-size:12.5px;font-weight:500;font-family:inherit}
 button.done:hover{filter:brightness(1.08)}
-@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+${REDUCED_MOTION_CSS}
 ${customTitlebarCSS()}
 /* customTitlebarCSS backt die Farben beim Oeffnen ein. Hier auf die Variablen umbiegen,
    sonst bleibt die Titelleiste beim Wechsel im alten Theme stehen. */
@@ -3843,7 +3860,7 @@ function openDesignWindow() {
     parent: mainWindow && !mainWindow.isDestroyed() ? mainWindow : undefined,
     modal: false, resizable: false, minimizable: false, maximizable: false,
     title: 'Desktop for Claude - ' + t('App-Theme', 'App Theme', 'Thème de l’app', 'Tema dell’app'),
-    backgroundColor: subTheme().bg,
+    backgroundColor: subTheme().bg, show: false,
     icon: icon(),
     autoHideMenuBar: true,
     frame: false, roundedCorners: windowsRounded,
@@ -3853,6 +3870,7 @@ function openDesignWindow() {
       spellcheck: false
     }
   });
+  revealWhenReady(designWindow);
   designWindow.setMenu(null);
   applyUiScale(designWindow, size.scale);
   designWindow.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(getDesignHTML()));
@@ -3873,7 +3891,7 @@ async function showOfficialAppInfo() {
   const res = await showCustomMessageBox({
     title: t('Offizielle Claude-App', 'Official Claude app', 'Application Claude officielle', 'App Claude ufficiale'),
     width: 440,
-    height: 520,
+    height: 558,
     cancelId: 1,
     html: getOfficialAppHTML
   });
@@ -3894,7 +3912,7 @@ function getOfficialAppHTML(channel) {
 <style>
   ${sharedDialogCSS()}
   body { overflow: hidden; }
-  .wrap { height: 100%; display: flex; flex-direction: column; align-items: center; text-align: center; padding: 28px 32px 22px; }
+  .wrap { flex: 1; min-height: 0; display: flex; flex-direction: column; align-items: center; text-align: center; padding: 28px 32px 22px; }
   .badge { width: 60px; height: 60px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
     background: linear-gradient(135deg, ${ac.from}, ${ac.to}); color: #fff; box-shadow: 0 6px 20px ${ac.from}55; margin-bottom: 18px; }
   h1 { font-size: 19px; font-weight: 600; margin: 0 0 10px; letter-spacing: -.2px; }
@@ -3915,6 +3933,7 @@ function getOfficialAppHTML(channel) {
 </style>
 </head>
 <body>
+${customTitlebarHTML(escapeHtml(t('Offizielle Claude-App', 'Official Claude app', 'Application Claude officielle', 'App Claude ufficiale')))}
 <div class="wrap">
   <div class="badge"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg></div>
   <h1>${escapeHtml(t('Die offizielle Claude-App für Linux', 'The official Claude app for Linux', 'L’application Claude officielle pour Linux', 'L’app Claude ufficiale per Linux'))}</h1>
@@ -3948,6 +3967,7 @@ function getOfficialAppHTML(channel) {
   const respond = (i) => { try { window.msgboxAPI.respond(channel, i); } catch (e) {} };
   document.querySelectorAll('.btn').forEach(b => b.addEventListener('click', () => respond(parseInt(b.dataset.idx, 10))));
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { e.preventDefault(); respond(1); } });
+  document.getElementById('cd-titlebar-close').addEventListener('click', () => respond(1));
   setTimeout(() => document.querySelector('.btn.primary').focus(), 50);
 })();
 </script>
@@ -3964,7 +3984,7 @@ async function showSupportInfo() {
   const res = await showCustomMessageBox({
     title: t('App unterstützen', 'Support the app', 'Soutenir l’app', 'Sostieni l’app'),
     width: 420,
-    height: 430,
+    height: 468,
     cancelId: 1,
     html: getSupportHTML
   });
@@ -3988,7 +4008,7 @@ function getSupportHTML(channel) {
 <style>
   ${sharedDialogCSS()}
   body { overflow: hidden; }
-  .wrap { height: 100%; display: flex; flex-direction: column; align-items: center; text-align: center; padding: 30px 32px 24px; }
+  .wrap { flex: 1; min-height: 0; display: flex; flex-direction: column; align-items: center; text-align: center; padding: 30px 32px 24px; }
   .heart { width: 60px; height: 60px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
     background: linear-gradient(135deg, ${ac.from}, ${ac.to}); color: #fff; box-shadow: 0 6px 20px ${ac.from}55; margin-bottom: 18px; }
   h1 { font-size: 19px; font-weight: 600; margin: 0 0 10px; letter-spacing: -.2px; }
@@ -4006,6 +4026,7 @@ function getSupportHTML(channel) {
 </style>
 </head>
 <body>
+${customTitlebarHTML(escapeHtml(t('App unterstützen', 'Support the app', 'Soutenir l’app', 'Sostieni l’app')))}
 <div class="wrap">
   <div class="heart"><svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg></div>
   <h1>${escapeHtml(t('Desktop for Claude bleibt kostenlos', 'Desktop for Claude stays free', 'Desktop for Claude reste gratuit', 'Desktop for Claude resta gratuito'))}</h1>
@@ -4028,6 +4049,7 @@ function getSupportHTML(channel) {
   const respond = (i) => { try { window.msgboxAPI.respond(channel, i); } catch (e) {} };
   document.querySelectorAll('.btn').forEach(b => b.addEventListener('click', () => respond(parseInt(b.dataset.idx, 10))));
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { e.preventDefault(); respond(1); } });
+  document.getElementById('cd-titlebar-close').addEventListener('click', () => respond(1));
   setTimeout(() => document.querySelector('.btn.primary').focus(), 50);
 })();
 </script>
@@ -4152,6 +4174,7 @@ html,body{height:100%;background:transparent;color:${th.textActive};
   font-family:ui-monospace,Menlo,Consolas,monospace}
 .item:hover .accel,.item.focused .accel{color:${th.textActive}}
 .sep{height:1px;background:${th.border};margin:5px 4px}
+${REDUCED_MOTION_CSS}
 </style></head><body>
 <div class="card" id="card">
   <div class="head">
@@ -4286,7 +4309,8 @@ function showCustomMessageBox(opts) {
     const win = createDialogWindow({
       width: opts.width || 400,
       height: opts.height || 300,
-      title
+      title,
+      waitFit: !opts.html
     });
 
     ipcHandler = (event, index) => {
@@ -4353,6 +4377,7 @@ function getMessageBoxHTML({ type, heading, message, detail, buttons, defaultId,
 </style>
 </head>
 <body>
+${customTitlebarHTML(escapeHtml(title))}
 <div class="wrap" id="wrap">
   <div class="badge">${uiIcon(look.icon, 27)}</div>
   <h1>${escapeHtml(head)}</h1>
@@ -4369,6 +4394,7 @@ function getMessageBoxHTML({ type, heading, message, detail, buttons, defaultId,
   document.querySelectorAll('.btn').forEach(b => {
     b.addEventListener('click', () => respond(parseInt(b.dataset.idx, 10)));
   });
+  document.getElementById('cd-titlebar-close').addEventListener('click', () => respond(cancelIdx));
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') { e.preventDefault(); respond(cancelIdx); }
     // Auf einem Knopf loest Enter dessen eigenen Klick aus, sonst traefe Tab auf Abbrechen + Enter
@@ -4379,7 +4405,7 @@ function getMessageBoxHTML({ type, heading, message, detail, buttons, defaultId,
   // ersten Messen greift; gesendet wird nur bei geaenderter Hoehe.
   let lastFit = 0;
   const fit = () => requestAnimationFrame(() => {
-    const h = Math.ceil(document.getElementById('wrap').offsetHeight);
+    const h = Math.ceil(document.getElementById('wrap').getBoundingClientRect().bottom) + 1;
     if (h === lastFit) return;
     lastFit = h;
     try { window.msgboxAPI.fit(h); } catch (e) {}
@@ -4521,7 +4547,7 @@ function showOfflinePage(tab = tabs[activeTabIndex]) {
     p{color:${th.text};font-size:14px;max-width:360px;text-align:center;line-height:1.6}
     button{margin-top:20px;background:#E8524F;color:#fff;border:none;padding:10px 28px;border-radius:10px;font-size:14px;cursor:pointer;font-weight:500}
     button:hover{background:#F0635C}
-    .pulse{animation:p 2s ease-in-out infinite}@keyframes p{0%,100%{opacity:.3}50%{opacity:1}}
+    .pulse{animation:p 2s ease-in-out infinite}@keyframes p{0%,100%{opacity:.3}50%{opacity:1}}${REDUCED_MOTION_CSS}
     </style></head><body>
     <h1>${t('Keine Verbindung', 'No Connection', 'Pas de connexion', 'Nessuna connessione')}</h1>
     <p>${t('Prüfe deine Netzwerkverbindung.', 'Check your network connection.', 'Vérifiez votre connexion réseau.', 'Controlla la connessione di rete.')}</p>
@@ -4829,6 +4855,10 @@ function checkSnapAudioRecordStatus(cb) {
 // Defensives JSON-Embedding für Inline-<script>-Blöcke: </script>-Sequenzen
 // in JSON-Strings escapen, damit der HTML-Parser sie nicht als Tag-Ende erkennt.
 // Gemeinsames CSS für Dialog-Fenster (showCustomMessageBox + requestMicrophoneConsent).
+// Ein gemeinsamer Satz fuer alle eigenen Oberflaechen. Vorher schalteten manche nur
+// Transitions ab, andere nur Animationen, manche gar nichts.
+const REDUCED_MOTION_CSS = '@media (prefers-reduced-motion:reduce){*,::before,::after{animation:none!important;transition:none!important}}';
+
 function sharedDialogCSS() {
   const th = subTheme();
   const ac = accent();
@@ -4842,6 +4872,9 @@ function sharedDialogCSS() {
     .btn.primary:hover:not(:disabled){filter:brightness(1.08)}
     .btn:focus{outline:2px solid ${ac.from};outline-offset:2px}
     .btn:disabled{opacity:.5;cursor:not-allowed}
+    ${REDUCED_MOTION_CSS}
+    ${customTitlebarCSS()}
+    body{display:flex;flex-direction:column}
   `;
 }
 
@@ -4886,7 +4919,8 @@ async function requestMicrophoneConsent() {
     const win = createDialogWindow({
       width: 420,
       height: showSnapPanel ? 560 : 330,
-      title: t('Mikrofon-Zugriff', 'Microphone access', 'Accès au microphone', 'Accesso al microfono')
+      title: t('Mikrofon-Zugriff', 'Microphone access', 'Accès au microphone', 'Accesso al microfono'),
+      waitFit: true
     });
 
     const own = (event) => !win.isDestroyed() && event.sender === win.webContents;
@@ -5017,6 +5051,7 @@ h1{font-size:17px;font-weight:600;letter-spacing:-.2px;line-height:1.3;margin:0 
 .btn.pulse{animation:btnpulse 1.6s ease-in-out 3}
 @keyframes btnpulse{0%{box-shadow:0 0 0 0 color-mix(in srgb,${ac.from} 55%,transparent)}50%{box-shadow:0 0 0 10px transparent}100%{box-shadow:0 0 0 0 transparent}}
 </style></head><body>
+${customTitlebarHTML(escapeHtml(i18n.title))}
 <div class="wrap" id="wrap">
   <div class="badge">${uiIcon('mic', 27)}</div>
   <h1>${i18n.heading}</h1>
@@ -5035,9 +5070,10 @@ h1{font-size:17px;font-weight:600;letter-spacing:-.2px;line-height:1.3;margin:0 
   const statusChannel = ${safeJson(statusChannel)};
   const copyCmdChannel = ${safeJson(copyCmdChannel || '')};
   const respond = (i) => { try { window.msgboxAPI.respond(respondChannel, i); } catch {} };
+  document.getElementById('cd-titlebar-close').addEventListener('click', () => respond(1));
   let lastFit = 0;
   const fit = () => requestAnimationFrame(() => {
-    const h = Math.ceil(document.getElementById('wrap').offsetHeight);
+    const h = Math.ceil(document.getElementById('wrap').getBoundingClientRect().bottom) + 1;
     if (h === lastFit) return;
     lastFit = h;
     try { window.msgboxAPI.fit(h); } catch {}
@@ -5410,16 +5446,19 @@ function selfHealDesktopFiles(appImagePath = process.env.APPIMAGE) {
   }
 }
 
-ipcMain.handle('settings-get', () => ({
-  minimizeOnClose,
-  hotkey: currentHotkey,
-  clipboardHotkey: currentClipboardHotkey,
-  bgNotifications: bgNotificationsEnabled,
-  microphoneEnabled,
-  isSnap,
-  templates: promptTemplates.map(t => ({ id: t.id, name: t.name, prefix: t.prefix })),
-  autostart: getAutostart()
-}));
+function settingsState() {
+  return {
+    minimizeOnClose,
+    hotkey: currentHotkey,
+    clipboardHotkey: currentClipboardHotkey,
+    bgNotifications: bgNotificationsEnabled,
+    microphoneEnabled,
+    isSnap,
+    templates: promptTemplates.map(t => ({ id: t.id, name: t.name, prefix: t.prefix })),
+    autostart: getAutostart()
+  };
+}
+ipcMain.handle('settings-get', () => settingsState());
 ipcMain.on('settings-minimize', (_, v) => {
   minimizeOnClose = v === true;
   saveWindowState();
@@ -5645,17 +5684,29 @@ const WHATSNEW_LINKS = { support: SUPPORT_URL, mixpilot: 'https://snapcraft.io/m
 ipcMain.on('whatsnew-open-link', (event, key) => {
   if (Object.hasOwn(WHATSNEW_LINKS, key)) openExternalSafe(WHATSNEW_LINKS[key]);
 });
+// Erst das neue Fenster, das alte schliesst, sobald das neue steht. Andersherum lag
+// dazwischen 60-90 ms eine leere Flaeche.
+function handOverWindow(oldWin, newWin) {
+  if (!oldWin || oldWin.isDestroyed()) return;
+  const close = () => { if (!oldWin.isDestroyed()) oldWin.close(); };
+  if (!newWin || newWin.isDestroyed() || newWin.isVisible()) return close();
+  newWin.once('show', close);
+  setTimeout(close, 2000);
+}
+
 ipcMain.on('whatsnew-open-settings', () => {
-  if (whatsNewWindow && !whatsNewWindow.isDestroyed()) whatsNewWindow.close();
+  const old = whatsNewWindow;
   openSettingsWindow();
+  handOverWindow(old, settingsWindow);
 });
 
 ipcMain.on('about-close', () => {
   if (aboutWindow && !aboutWindow.isDestroyed()) aboutWindow.close();
 });
 ipcMain.on('about-open-whatsnew', () => {
-  if (aboutWindow && !aboutWindow.isDestroyed()) aboutWindow.close();
+  const old = aboutWindow;
   openWhatsNewWindow(true);
+  handOverWindow(old, whatsNewWindow);
 });
 const ABOUT_LINKS = new Set(['https://github.com/simonlinuxcraft/claude-ai-desktop-app', SUPPORT_URL, 'https://support.anthropic.com']);
 ipcMain.on('about-open-external', (_event, url) => {
@@ -5685,6 +5736,7 @@ ipcMain.on('msgbox-fit', (event, cssHeight) => {
   const work = screen.getDisplayMatching(win.getBounds()).workArea;
   const [w] = win.getContentSize();
   win.setContentSize(w, Math.min(Math.round(h * event.sender.getZoomFactor()), work.height - 60));
+  if (win._cdReveal) win._cdReveal();
 });
 ipcMain.on('win-state-request', (event) => { if (fromMainWindow(event)) sendWindowState(); });
 ipcMain.on('update-state-request', (event) => { if (fromMainWindow(event) && updateState) event.sender.send('update-state', updateState); });
@@ -5874,9 +5926,13 @@ ipcMain.on('bug-report-resize', (event, cssHeight) => {
   const work = screen.getDisplayMatching(win.getBounds()).workArea;
   const b = win.getBounds();
   const height = Math.min(Math.round(h * event.sender.getZoomFactor()), work.height);
-  if (height === b.height) return;
-  const y = Math.max(work.y, Math.min(b.y + Math.round((b.height - height) / 2), work.y + work.height - height));
-  win.setBounds({ x: b.x, y, width: b.width, height });
+  // Obere Kante halten statt neu zu zentrieren: beim Schrittwechsel rutschte der Dialog sonst
+  // um die halbe Hoehendifferenz nach oben. Nur wenn er unten aus dem Schirm ragt, hoch.
+  if (height !== b.height) {
+    const y = Math.max(work.y, Math.min(b.y, work.y + work.height - height));
+    win.setBounds({ x: b.x, y, width: b.width, height });
+  }
+  if (win._cdReveal) win._cdReveal();
 });
 
 // Web3Forms erkennt Origin: null (unser data:-URL-Renderer) als "server-side"

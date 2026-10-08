@@ -20,10 +20,11 @@ function compareVersions(a, b) {
   return 0;
 }
 
-// JSON.stringify mit Escape von </script-Sequenzen, damit der Output sicher
-// inline in <script>...</script> einbettbar ist.
+// JSON.stringify fuer inline <script>...</script>. Jedes < wird zu \u003c: nur </script
+// zu entschaerfen reichte nicht, ein <!-- gefolgt von <script in Nutzertext (Vorlagen in den
+// Einstellungen) schaltet den HTML-Parser sonst um und das schliessende </script> greift nicht.
 function safeJson(v) {
-  return JSON.stringify(v).replace(/<\/(script)/gi, '<\\/$1');
+  return JSON.stringify(v).replace(/</g, '\\u003c');
 }
 
 // HTML-Escape fuer die inline gebauten Dialog-Seiten. Escaped auch Quotes, damit derselbe
