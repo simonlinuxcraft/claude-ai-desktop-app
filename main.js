@@ -3198,7 +3198,8 @@ function getWhatsNewHTML(force = false) {
       ${slideMedia(n)}
       <div class="slide-title">${localize(n.title)}</div>
       <div class="slide-text">${localize(n.text)}</div>
-      ${n.action === 'support' ? `<button class="slide-btn" data-action="support"><svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="${KOFI_PATH}"/></svg>${t('Auf Ko-fi unterstützen', 'Support on Ko-fi', 'Soutenir sur Ko-fi', 'Sostieni su Ko-fi')}</button>` : ''}
+      ${n.action === 'support' ? `<button class="slide-btn" data-action="support"><svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="${KOFI_PATH}"/></svg>${t('Auf Ko-fi unterstützen', 'Support on Ko-fi', 'Soutenir sur Ko-fi', 'Sostieni su Ko-fi')}</button>`
+        : n.action === 'mixpilot' ? `<button class="slide-btn" data-action="mixpilot">${uiIcon('external', 17)}${t('Im Snap Store ansehen', 'View on the Snap Store', 'Voir sur le Snap Store', 'Vedi nello Snap Store')}</button>` : ''}
     </div>`).join('');
   const dots = notes.map((_, i) => `<button class="dot" aria-label="${i + 1}"></button>`).join('');
   return `<!DOCTYPE html><html><head>
@@ -3290,7 +3291,7 @@ ${customTitlebarHTML(t('Was ist neu', 'What’s new', 'Nouveautés', 'Novità'))
   dots.forEach(function(d,j){d.addEventListener('click',function(){show(j);});});
   back.addEventListener('click',function(){show(idx-1);});
   next.addEventListener('click',advance);
-  document.querySelectorAll('.slide-btn[data-action="support"]').forEach(function(b){b.addEventListener('click',function(){window.whatsNewAPI.openSupport();});});
+  document.querySelectorAll('.slide-btn').forEach(function(b){b.addEventListener('click',function(){window.whatsNewAPI.openLink(b.dataset.action);});});
   document.addEventListener('keydown',function(e){
     var a=document.activeElement;
     if(e.key==='ArrowRight'){show(idx+1);}
@@ -5545,7 +5546,10 @@ ipcMain.on('quickprompt-cancel', (event) => {
 ipcMain.on('whatsnew-close', () => {
   if (whatsNewWindow && !whatsNewWindow.isDestroyed()) whatsNewWindow.close();
 });
-ipcMain.on('whatsnew-open-support', () => openExternalSafe(SUPPORT_URL));
+const WHATSNEW_LINKS = { support: SUPPORT_URL, mixpilot: 'https://snapcraft.io/mixpilot' };
+ipcMain.on('whatsnew-open-link', (event, key) => {
+  if (Object.hasOwn(WHATSNEW_LINKS, key)) openExternalSafe(WHATSNEW_LINKS[key]);
+});
 ipcMain.on('whatsnew-open-settings', () => {
   if (whatsNewWindow && !whatsNewWindow.isDestroyed()) whatsNewWindow.close();
   openSettingsWindow();

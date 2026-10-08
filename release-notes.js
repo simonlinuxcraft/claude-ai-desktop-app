@@ -3,7 +3,7 @@
 // title/text sind entweder ein String (nur Deutsch, Legacy) oder ein {de,en,fr,it}-Objekt;
 // localize() in i18n.js waehlt daraus. Optionales `icon`, optionales `image` (Pfad relativ
 // zum App-Verzeichnis oder data:-URL), optionales `if: 'snap'|'appimage'`, optionales
-// `action: 'support'` fuer den Ko-fi-Knopf unter dem Text.
+// `action: 'support'|'mixpilot'` fuer einen Link-Knopf unter dem Text (URLs in main.js).
 // Reine Daten, kein Electron-Zugriff.
 
 // Wenn die aktuelle Version in dieser Map steht, werden die hier gelisteten
@@ -15,6 +15,145 @@ const RELEASE_NOTES_REVISIT = {
 };
 
 const RELEASE_NOTES = {
+  '1.5.0': [
+    {
+      icon: 'bolt',
+      title: {
+        de: 'Läuft jetzt nativ unter Wayland',
+        en: 'Runs natively on Wayland',
+        fr: 'Fonctionne nativement sous Wayland',
+        it: 'Funziona in modo nativo su Wayland'
+      },
+      text: {
+        de: 'Unter Wayland startet die App jetzt ohne den Umweg über XWayland. Schrift und Symbole bleiben auch bei krummer Skalierung wie 125 % scharf. Wer den alten Weg braucht, startet die App mit --ozone-platform=x11.',
+        en: 'On Wayland the app now starts without going through XWayland. Text and icons stay sharp even at fractional scaling such as 125%. If you need the old way, start the app with --ozone-platform=x11.',
+        fr: 'Sous Wayland, l’application démarre désormais sans passer par XWayland. Le texte et les icônes restent nets, même avec une mise à l’échelle fractionnaire comme 125 %. Si vous avez besoin de l’ancien mode, lancez l’application avec --ozone-platform=x11.',
+        it: 'Su Wayland l’app ora si avvia senza passare da XWayland. Testo e icone restano nitidi anche con un ridimensionamento frazionario come 125%. Se ti serve la modalità precedente, avvia l’app con --ozone-platform=x11.'
+      }
+    },
+    {
+      icon: 'chat',
+      title: {
+        de: 'Quick-Prompt und Hotkey unter Wayland',
+        en: 'Quick prompt and hotkey on Wayland',
+        fr: 'Quick-Prompt et raccourci sous Wayland',
+        it: 'Quick-Prompt e scorciatoia su Wayland'
+      },
+      text: {
+        de: 'Der Quick-Prompt hat einen neuen Look mit Vorlagen als Reitern, Tab blättert durch. Unter Wayland vergibt jetzt das System den globalen Hotkey: GNOME ab Version 48 und KDE fragen beim ersten Mal nach.',
+        en: 'The quick prompt has a new look with templates as tabs, Tab switches between them. On Wayland the system now hands out the global hotkey: GNOME 48 or newer and KDE ask once.',
+        fr: 'Le Quick-Prompt a un nouvel aspect avec les modèles en onglets, Tab passe de l’un à l’autre. Sous Wayland, c’est désormais le système qui attribue le raccourci global : GNOME 48 ou plus récent et KDE le demandent une fois.',
+        it: 'Il Quick-Prompt ha un nuovo aspetto con i modelli come schede, Tab passa dall’uno all’altro. Su Wayland ora è il sistema ad assegnare la scorciatoia globale: GNOME 48 o successivo e KDE lo chiedono una volta.'
+      }
+    },
+    {
+      icon: 'check',
+      title: {
+        de: 'Tabs zeigen, wann Claude antwortet',
+        en: 'Tabs show when Claude is answering',
+        fr: 'Les onglets montrent quand Claude répond',
+        it: 'Le schede mostrano quando Claude risponde'
+      },
+      text: {
+        de: 'Ein Punkt im Tab pulsiert, solange Claude schreibt, und bleibt stehen, wenn eine Antwort im Hintergrund fertig ist. Das Plus für neue Tabs sitzt jetzt direkt hinter dem letzten Tab, und ein Rechtsklick bietet Kopieren, Einfügen und Links.',
+        en: 'A dot in the tab pulses while Claude is writing and stays once an answer in the background is done. The plus for new tabs now sits right after the last tab, and a right click offers copy, paste and links.',
+        fr: 'Un point dans l’onglet clignote pendant que Claude écrit et reste affiché quand une réponse en arrière-plan est prête. Le plus pour un nouvel onglet se trouve maintenant juste après le dernier onglet, et un clic droit propose copier, coller et les liens.',
+        it: 'Un punto nella scheda pulsa mentre Claude scrive e resta visibile quando una risposta in background è pronta. Il più per le nuove schede ora si trova subito dopo l’ultima scheda, e il clic destro offre copia, incolla e i link.'
+      }
+    },
+    {
+      icon: 'palette',
+      title: {
+        de: 'Alle Fenster neu gestaltet',
+        en: 'Every window redesigned',
+        fr: 'Toutes les fenêtres repensées',
+        it: 'Tutte le finestre ridisegnate'
+      },
+      text: {
+        de: 'Einstellungen, App-Theme, Über, Fehlerbericht und die Hinweisfenster haben einen einheitlichen, aufgeräumten Aufbau. Das App-Menü öffnet sich jetzt direkt im Fenster.',
+        en: 'Settings, App Theme, About, the bug report and the message dialogs share one tidy layout. The app menu now opens right inside the window.',
+        fr: 'Les paramètres, le thème de l’app, À propos, le rapport de bug et les boîtes de dialogue partagent une mise en page claire et commune. Le menu de l’application s’ouvre désormais directement dans la fenêtre.',
+        it: 'Impostazioni, tema dell’app, Informazioni, la segnalazione di bug e le finestre di dialogo hanno un aspetto unico e ordinato. Il menu dell’app ora si apre direttamente nella finestra.'
+      }
+    },
+    {
+      icon: 'corner',
+      title: {
+        de: 'Runde Fensterecken',
+        en: 'Rounded window corners',
+        fr: 'Coins de fenêtre arrondis',
+        it: 'Angoli delle finestre arrotondati'
+      },
+      text: {
+        de: 'Die Fenster haben jetzt runde Ecken. Die Funktion ist noch experimentell und lässt sich im App-Theme ausschalten.',
+        en: 'Windows now have rounded corners. The feature is still experimental and can be turned off in App Theme.',
+        fr: 'Les fenêtres ont désormais des coins arrondis. La fonction est encore expérimentale et peut être désactivée dans le thème de l’app.',
+        it: 'Le finestre ora hanno angoli arrotondati. La funzione è ancora sperimentale e si può disattivare nel tema dell’app.'
+      }
+    },
+    {
+      icon: 'download',
+      if: 'appimage',
+      title: {
+        de: 'Updates ohne Unterbrechung',
+        en: 'Updates without interruptions',
+        fr: 'Mises à jour sans interruption',
+        it: 'Aggiornamenti senza interruzioni'
+      },
+      text: {
+        de: 'Ein Update lädt im Hintergrund, ein kleiner Ring oben rechts zeigt den Fortschritt. Danach erscheint ein Knopf zum Neustarten, statt dich mit einem Dialog zu unterbrechen. Ohne Klick wird das Update beim nächsten Beenden installiert.',
+        en: 'Updates download in the background and a small ring at the top right shows the progress. A restart button then appears instead of a dialog. Without a click, the update installs the next time you quit.',
+        fr: 'Les mises à jour se téléchargent en arrière-plan, un petit anneau en haut à droite indique la progression. Un bouton de redémarrage apparaît ensuite au lieu d’une boîte de dialogue. Sans clic, la mise à jour s’installe à la prochaine fermeture.',
+        it: 'Gli aggiornamenti si scaricano in background e un piccolo anello in alto a destra mostra l’avanzamento. Poi compare un pulsante per riavviare invece di una finestra di dialogo. Senza clic, l’aggiornamento si installa alla prossima chiusura.'
+      }
+    },
+    {
+      icon: 'bug',
+      title: {
+        de: 'Fehler melden mit Weiche',
+        en: 'Bug reports start with a question',
+        fr: 'Le rapport de bug commence par une question',
+        it: 'La segnalazione inizia con una domanda'
+      },
+      text: {
+        de: 'Der Fehlerbericht fragt zuerst, worum es geht. Fragen zu Account, Login, Abo oder Bezahlung führen direkt zum Anthropic-Support, denn darauf hat diese App keinen Zugriff.',
+        en: 'The bug report first asks what it is about. Questions about your account, login, subscription or billing lead straight to Anthropic support, since this app has no access to them.',
+        fr: 'Le rapport de bug demande d’abord de quoi il s’agit. Les questions de compte, de connexion, d’abonnement ou de paiement mènent directement au support Anthropic, car cette application n’y a pas accès.',
+        it: 'La segnalazione di bug chiede prima di cosa si tratta. Le domande su account, accesso, abbonamento o pagamento portano direttamente al supporto Anthropic, perché questa app non vi ha accesso.'
+      }
+    },
+    {
+      icon: 'shield',
+      title: {
+        de: 'Viele Fehler behoben',
+        en: 'Lots of fixes',
+        fr: 'De nombreuses corrections',
+        it: 'Molte correzioni'
+      },
+      text: {
+        de: 'Tabs kommen nach dem Schließen über das X wieder richtig zurück, Hotkeys mit Sonderzeichen werden nicht mehr still gelöscht, der Markdown-Export behält Absätze, und bei Netzproblemen erscheint die Offline-Seite. Im Leerlauf braucht die App weniger Rechenleistung, und Zwischenablage und Benachrichtigungen gibt es nur noch für claude.ai.',
+        en: 'Tabs come back correctly after closing with the X, hotkeys with special keys are no longer cleared silently, Markdown export keeps paragraphs, and network trouble shows the offline page. The app uses less processing power when idle, and clipboard and notification access is limited to claude.ai.',
+        fr: 'Les onglets reviennent correctement après une fermeture par la croix, les raccourcis avec des touches spéciales ne sont plus effacés en silence, l’export Markdown conserve les paragraphes et les problèmes réseau affichent la page hors ligne. L’application consomme moins au repos, et l’accès au presse-papiers et aux notifications est réservé à claude.ai.',
+        it: 'Le schede tornano correttamente dopo la chiusura con la X, le scorciatoie con tasti speciali non vengono più cancellate in silenzio, l’esportazione Markdown mantiene i paragrafi e i problemi di rete mostrano la pagina offline. A riposo l’app usa meno risorse, e l’accesso ad appunti e notifiche è riservato a claude.ai.'
+      }
+    },
+    {
+      icon: 'mic',
+      action: 'mixpilot',
+      title: {
+        de: 'In eigener Sache: Mixpilot',
+        en: 'A note from me: Mixpilot',
+        fr: 'Un mot de ma part : Mixpilot',
+        it: 'Una nota da parte mia: Mixpilot'
+      },
+      text: {
+        de: 'Neu von mir im Snap Store: Mixpilot, ein Mixer für PipeWire. Er sortiert deine Apps in vier Kanäle mit eigenen Reglern, filtert Hintergrundgeräusche aus deinem Mikrofon und hält die Lautstärke im Griff. Kostenlos und quelloffen. Dieser Hinweis erscheint nur einmal.',
+        en: 'New from me on the Snap Store: Mixpilot, a mixer for PipeWire. It sorts your apps into four channels with their own faders, filters background noise from your microphone and keeps the volume in check. Free and open source. You will only see this note once.',
+        fr: 'Nouveau de ma part sur le Snap Store : Mixpilot, une table de mixage pour PipeWire. Il répartit vos applications sur quatre canaux avec leurs propres curseurs, filtre les bruits de fond de votre micro et garde le volume sous contrôle. Gratuit et open source. Ce message n’apparaît qu’une seule fois.',
+        it: 'Novità da parte mia nello Snap Store: Mixpilot, un mixer per PipeWire. Smista le tue app in quattro canali con i propri cursori, filtra i rumori di fondo dal microfono e tiene il volume sotto controllo. Gratuito e open source. Questo messaggio compare una sola volta.'
+      }
+    }
+  ],
   '1.4.21': [
     {
       icon: 'heart',
@@ -1359,6 +1498,7 @@ const RELEASE_NOTES = {
 
 // Optionaler Update-Titel pro Version, gross im Kopf des "Was ist neu"-Fensters.
 const RELEASE_TITLES = {
+  '1.5.0': { de: 'Das Wayland-Update', en: 'The Wayland Update', fr: 'La mise à jour Wayland', it: 'L’aggiornamento Wayland' },
   '1.4.21': { de: 'Unterstützung und App-Theme', en: 'Support and App Theme', fr: 'Soutien et thème de l’app', it: 'Supporto e tema dell’app' }
 };
 
