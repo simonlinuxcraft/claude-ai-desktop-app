@@ -919,7 +919,7 @@ function themeScript() {
 ipcMain.on('cd-theme-mode', (e) => {
   const st = themeState();
   let staticCSS = '';
-  try { if (st.mode === 'oled' || st.mode === 'midnight' || st.mode === 'matrix') staticCSS = cdBuildStaticCSS(st); } catch {}
+  try { staticCSS = cdBuildStaticCSS(st); } catch {}
   // ctl: derselbe Controller, den dom-ready spaeter injiziert. Der Preload setzt ihn schon
   // bei document-start als Script-Tag ein, weil executeJavaScript bei dom-ready hinter
   // Reacts Hydration in der Task-Queue landet (gemessen 2,3s, mit 6x CPU-Drossel 9,7s).

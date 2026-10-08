@@ -74,17 +74,16 @@ function cdThemeState() {
 
 // Anti-FOUC: die Flaechenfarbe schon bei document-start setzen (laeuft vor dem ersten Paint),
 // damit beim kalten Start/Tab nicht claude.ais eigenes Grau aufblitzt, bis der Theme-Controller
-// bei dom-ready greift. Nur auf claude.ai, nur in Modi die die Seite selbst umfaerben
-// (OLED, Mitternachtsblau). Der Controller raeumt das
+// bei dom-ready greift. Nur auf claude.ai, in allen Modi. Der Controller raeumt das
 // cd-theme-preload-Sheet beim Uebernehmen wieder weg (sonst stoert es einen spaeteren Light-Switch).
 (function () {
   try {
     if (!/(^|\.)claude\.ai$/.test(location.hostname)) return;
     var st = cdThemeState();
-    // Nur Modi, die die Seite selbst umfaerben. dark laeuft auf claude.ais eigener Palette,
-    // light auf dem Invert-Filter, beide brauchen kein Vorab-Sheet.
-    var PRE_BG = { oled: '#050306', midnight: '#070c18', matrix: '#040806' };
-    if (!PRE_BG[st.mode]) return;
+    // Alle Modi brauchen das Vorab-Sheet: dark und light fuer Brand-Stern, Ring und den Invert,
+    // sonst steht der erste Frame in claude.ais Orange bzw. dunkel. Leer = Seitenfarbe behalten.
+    var PRE_BG = { oled: '#050306', midnight: '#070c18', matrix: '#040806', dark: '', light: '#000' };
+    if (PRE_BG[st.mode] === undefined) return;
     var BG = PRE_BG[st.mode];
     // Sternenfeld identisch zu theme.js sparkleBg(); muss mit theme.js synchron bleiben,
     // damit beim Uebergang Preload -> Controller kein Sprung sichtbar ist.
@@ -107,7 +106,7 @@ function cdThemeState() {
       // dieses hier; ohne die Bremse stellt ein spaeteres readystatechange das Vorab-Sheet
       // wieder her, das er gerade entfernt hat, und das stoert einen Wechsel nach Hell.
       if (document.getElementById('cd-theme-static')) return true;
-      de.style.backgroundColor = BG;
+      if (BG) de.style.backgroundColor = BG;
       de.setAttribute('data-cd-theme', st.mode);
       de.setAttribute('data-cd-surface', 'dark');
       // data-cd-design und data-cd-rain gehoeren hier genauso hin wie theme und surface:
@@ -117,6 +116,10 @@ function cdThemeState() {
       // der body dasselbe Muster statisch, sonst bleibt der Hintergrund hier leer.
       de.setAttribute('data-cd-design', st.design === 'classic' ? 'classic' : 'modern');
       de.setAttribute('data-cd-rain', 'off');
+      var ac2 = st.accent || {};
+      de.style.setProperty('--cd-accent-from', ac2.from || '#F26A3F');
+      de.style.setProperty('--cd-accent-to', ac2.to || '#E83B6E');
+      if (ac2.brandHsl && /^[\d.]+\s+[\d.]+%\s+[\d.]+%$/.test(ac2.brandHsl)) de.style.setProperty('--accent-brand', ac2.brandHsl, 'important');
       if (!document.getElementById('cd-theme-preload')) {
         var s = document.createElement('style');
         s.id = 'cd-theme-preload';

@@ -1,11 +1,13 @@
 'use strict';
 // Sichert ab, dass das erzeugte Stylesheet fuer die bestehenden Modi Byte-gleich bleibt.
-// Baseline ist die Kopie aus .backups/2026-09-23-ring-steps; fehlt sie, ueberspringt der
-// Test statt zu scheitern. Zweimal wurde sie bewusst nachgezogen: am 2026-08-17, als die
+// Baseline ist die Kopie aus .backups/2026-10-06-ring-steps30; fehlt sie, ueberspringt der
+// Test statt zu scheitern. Dreimal wurde sie bewusst nachgezogen: am 2026-08-17, als die
 // Wurzelfarbe des Hell-Modus von #fff auf #000 korrigiert wurde (sie liegt unter dem
 // Invert-Filter), und am 2026-09-23, als die Ring-Animation von ease-in-out auf steps(60)
 // wechselte. Der Ring animiert background-position und lief mit 60 Frames pro Sekunde
 // dauerhaft; gemessen kostete das rund 60% eines CPU-Kerns im Leerlauf, mit steps rund 14%.
+// Am 2026-10-06 dann steps(30): steps gilt je Keyframe-Abschnitt, steps(60) lief mit 20 statt
+// der gemeinten 10 Stufen pro Sekunde.
 // Ohne einen solchen Anlass wird die Baseline nicht angefasst.
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
@@ -13,7 +15,7 @@ const path = require('path');
 
 const CUR = require('../inject/theme-static.js');
 let base = null;
-try { base = require('../.backups/2026-09-23-ring-steps/inject/theme-static.js'); } catch {}
+try { base = require('../.backups/2026-10-06-ring-steps30/inject/theme-static.js'); } catch {}
 
 const AC = { from: '#F26A3F', to: '#E83B6E', mid: '#E8524F' };
 const ST = {

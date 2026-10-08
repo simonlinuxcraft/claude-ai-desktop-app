@@ -129,7 +129,7 @@
     var RAIN = rainBg();
     // Verlaufsring um die Composer-Karte, animiert. Selektor davor setzen.
     var D = 'html[data-cd-design="modern"]';
-    var RING = '{content:"";position:absolute;inset:-2px;border-radius:var(--cd-composer-radius,14px);padding:2px;background:linear-gradient(135deg,var(--cd-accent-from),var(--cd-accent-to),var(--cd-accent-from),var(--cd-accent-to));background-size:300% 300%;animation:cdGradShift 6s steps(60) infinite;-webkit-mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);-webkit-mask-composite:xor;mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);mask-composite:exclude;pointer-events:none;z-index:5}';
+    var RING = '{content:"";position:absolute;inset:-2px;border-radius:var(--cd-composer-radius,14px);padding:2px;background:linear-gradient(135deg,var(--cd-accent-from),var(--cd-accent-to),var(--cd-accent-from),var(--cd-accent-to));background-size:300% 300%;animation:cdGradShift 6s steps(30) infinite;-webkit-mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);-webkit-mask-composite:xor;mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);mask-composite:exclude;pointer-events:none;z-index:5}';
 
     // [class*="X"] matcht auch Tailwinds Opacity-Modifier "X/NN" (z.B. eine helle 5%-Toenung
     // fuer einen Preis-Chip), die sonst faelschlich volldeckend geschwaerzt wird und ihren
@@ -269,7 +269,7 @@
       O + ' [role="menu"] [role="menuitem"]:hover,' + O + ' [role="menu"] button:hover,' + O + ' [role="menu"] a:hover,' + O + ' [role="listbox"] [role="option"]:hover,' + O + ' [role="menuitem"][data-highlighted]{background-color:#1c181b !important}',
       O + ' input:focus,' + O + ' textarea:focus,' + O + ' [role="searchbox"]:focus,' + O + ' [role="combobox"]:focus{outline:1.5px solid ' + FOCUS + ' !important;outline-offset:2px !important}',
       // --- OLED: Composer-Gradient-Rand ---
-      // steps(60) statt ease-in-out, also zehn Stufen pro Sekunde. Das Verschieben der
+      // steps(30) statt ease-in-out: steps gilt je Keyframe-Abschnitt, 2 x 30 in 6s = zehn Stufen/s. Das Verschieben der
       // background-position rechnet Gradient und Maske bei jedem Frame neu, und weil das im
       // Compositing steckt, taucht es in RecalcStyle und Layout nicht auf (beide 0.0ms).
       // Gemessen als CPU-Zeit aller Prozesse ueber /proc, je 15s im direkten Wechsel:
@@ -349,6 +349,11 @@
       // Classic hat keinen Ring, dann braucht die Eingabekarte ihren eigenen Rand zurueck. Die dunklen
       // Themes setzen ihn fuer den Ring auf transparent, ohne ihn hob sich die Karte kaum ab.
       'html[data-cd-design="classic"][data-cd-theme][data-cd-surface] .cd-composer{border-color:revert-layer !important}'
+    ]).concat([
+      // Boot-Composer: claude.ai zeigt bis zur Hydration ein statisches Kartenstueck (id static-composer-box, kein fieldset).
+      D + ' #static-composer-box{position:relative;overflow:visible !important;--cd-composer-radius:16px}',
+      D + ' #static-composer-box::before' + RING,
+      W + '[data-cd-design="modern"] #static-composer-box::before{filter:invert(1) hue-rotate(180deg)}'
     ]).join('');
   }
 
