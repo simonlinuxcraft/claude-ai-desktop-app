@@ -62,6 +62,21 @@ const RELEASE_NOTES = {
       }
     },
     {
+      icon: 'refresh',
+      title: {
+        de: 'Schneller beim Laden',
+        en: 'Faster loading',
+        fr: 'Chargement plus rapide',
+        it: 'Caricamento più veloce'
+      },
+      text: {
+        de: 'Hotkey und Quick-Prompt öffnen neue Chats jetzt so schnell wie ein neuer Tab. Nach einem Neustart öffnet die App wieder den Tab, in dem du zuletzt warst, und beim Laden blitzen keine falschen Farben mehr auf. Fällt das Netz weg, zeigt die App die Offline-Seite und verbindet sich von selbst wieder.',
+        en: 'The hotkey and the quick prompt now open new chats as quickly as a new tab. After a restart the app opens the tab you were last in, and pages no longer flash the wrong colours while loading. If the network drops, the app shows the offline page and reconnects on its own.',
+        fr: 'Le raccourci et le Quick-Prompt ouvrent désormais les nouvelles discussions aussi vite qu’un nouvel onglet. Après un redémarrage, l’application rouvre l’onglet dans lequel vous étiez en dernier, et les pages n’affichent plus de mauvaises couleurs pendant le chargement. Si le réseau tombe, l’application affiche la page hors ligne et se reconnecte d’elle-même.',
+        it: 'La scorciatoia e il Quick-Prompt ora aprono le nuove chat con la stessa rapidità di una nuova scheda. Dopo un riavvio l’app riapre l’ultima scheda che stavi usando, e durante il caricamento non lampeggiano più colori sbagliati. Se la rete cade, l’app mostra la pagina offline e si riconnette da sola.'
+      }
+    },
+    {
       icon: 'palette',
       title: {
         de: 'Alle Fenster neu gestaltet',
@@ -70,10 +85,10 @@ const RELEASE_NOTES = {
         it: 'Tutte le finestre ridisegnate'
       },
       text: {
-        de: 'Einstellungen, App-Theme, Über, Fehlerbericht und die Hinweisfenster haben einen einheitlichen, aufgeräumten Aufbau. Das App-Menü öffnet sich jetzt direkt im Fenster.',
-        en: 'Settings, App Theme, About, the bug report and the message dialogs share one tidy layout. The app menu now opens right inside the window.',
-        fr: 'Les paramètres, le thème de l’app, À propos, le rapport de bug et les boîtes de dialogue partagent une mise en page claire et commune. Le menu de l’application s’ouvre désormais directement dans la fenêtre.',
-        it: 'Impostazioni, tema dell’app, Informazioni, la segnalazione di bug e le finestre di dialogo hanno un aspetto unico e ordinato. Il menu dell’app ora si apre direttamente nella finestra.'
+        de: 'Einstellungen, App-Theme, Über, Fehlerbericht und die Hinweisfenster haben einen einheitlichen, aufgeräumten Aufbau. Das App-Menü öffnet sich jetzt direkt im Fenster. Das Herz in der Tab-Leiste führt zur freiwilligen Unterstützung.',
+        en: 'Settings, App Theme, About, the bug report and the message dialogs share one tidy layout. The app menu now opens right inside the window. The heart in the tab bar leads to voluntary support.',
+        fr: 'Les paramètres, le thème de l’app, À propos, le rapport de bug et les boîtes de dialogue partagent une mise en page claire et commune. Le menu de l’application s’ouvre désormais directement dans la fenêtre. Le cœur dans la barre d’onglets mène au soutien volontaire.',
+        it: 'Impostazioni, tema dell’app, Informazioni, la segnalazione di bug e le finestre di dialogo hanno un aspetto unico e ordinato. Il menu dell’app ora si apre direttamente nella finestra. Il cuore nella barra delle schede porta al supporto volontario.'
       }
     },
     {
@@ -131,10 +146,10 @@ const RELEASE_NOTES = {
         it: 'Molte correzioni'
       },
       text: {
-        de: 'Tabs kommen nach dem Schließen über das X wieder richtig zurück, Hotkeys mit Sonderzeichen werden nicht mehr still gelöscht, der Markdown-Export behält Absätze, und bei Netzproblemen erscheint die Offline-Seite. Im Leerlauf braucht die App weniger Rechenleistung, und Zwischenablage und Benachrichtigungen gibt es nur noch für claude.ai.',
-        en: 'Tabs come back correctly after closing with the X, hotkeys with special keys are no longer cleared silently, Markdown export keeps paragraphs, and network trouble shows the offline page. The app uses less processing power when idle, and clipboard and notification access is limited to claude.ai.',
-        fr: 'Les onglets reviennent correctement après une fermeture par la croix, les raccourcis avec des touches spéciales ne sont plus effacés en silence, l’export Markdown conserve les paragraphes et les problèmes réseau affichent la page hors ligne. L’application consomme moins au repos, et l’accès au presse-papiers et aux notifications est réservé à claude.ai.',
-        it: 'Le schede tornano correttamente dopo la chiusura con la X, le scorciatoie con tasti speciali non vengono più cancellate in silenzio, l’esportazione Markdown mantiene i paragrafi e i problemi di rete mostrano la pagina offline. A riposo l’app usa meno risorse, e l’accesso ad appunti e notifiche è riservato a claude.ai.'
+        de: 'Tabs kommen nach dem Schließen über das X wieder richtig zurück, Hotkeys mit Sonderzeichen werden nicht mehr still gelöscht, und der Markdown-Export behält Absätze. Im Leerlauf braucht die App weniger Rechenleistung, und Zwischenablage und Benachrichtigungen gibt es nur noch für claude.ai.',
+        en: 'Tabs come back correctly after closing with the X, hotkeys with special keys are no longer cleared silently, and Markdown export keeps paragraphs. The app uses less processing power when idle, and clipboard and notification access is limited to claude.ai.',
+        fr: 'Les onglets reviennent correctement après une fermeture par la croix, les raccourcis avec des touches spéciales ne sont plus effacés en silence et l’export Markdown conserve les paragraphes. L’application consomme moins au repos, et l’accès au presse-papiers et aux notifications est réservé à claude.ai.',
+        it: 'Le schede tornano correttamente dopo la chiusura con la X, le scorciatoie con tasti speciali non vengono più cancellate in silenzio e l’esportazione Markdown mantiene i paragrafi. A riposo l’app usa meno risorse, e l’accesso ad appunti e notifiche è riservato a claude.ai.'
       }
     },
     {

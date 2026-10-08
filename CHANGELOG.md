@@ -7,6 +7,59 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.5.0] - 2026-10-08 - The Wayland Update
+
+### Added
+
+- The app runs natively on Wayland instead of going through XWayland, so text and icons stay
+  sharp at fractional scaling such as 125%. `--ozone-platform=x11` brings back the old way.
+- On Wayland the global hotkeys are registered through the desktop portal. GNOME 48 or newer
+  and KDE ask for confirmation once.
+- Tabs show a pulsing dot while Claude is writing and keep it once an answer in a background
+  tab is done. The plus button sits right after the last tab, the tab bar scrolls with the
+  mouse wheel and keeps the active tab in view, and a right click offers copy, paste and links.
+- Rounded window corners, as an experimental option in App Theme.
+- The bug report first asks what it is about and sends account, login, subscription and billing
+  questions to Anthropic support, since the app has no access to them.
+- AppImage updates download in the background with a progress ring in the tab bar and a
+  restart button instead of a dialog.
+- A heart button in the tab bar opens the support dialog.
+
+### Changed
+
+- Settings, App Theme, About, What's New, the quick prompt, the bug report and all message
+  dialogs are redesigned. Dialogs no longer have a system title bar and only appear once they
+  are drawn. The app menu opens as an overlay inside the main window.
+- Electron is updated to 44.5.1.
+- The hotkey and the quick prompt open new chats from the preloaded pool, as fast as a new tab.
+  Preloaded tabs older than 30 minutes are replaced.
+- After a restart the app opens the tab that was active last and loads it first.
+- The theme, the accent colours and the composer ring are in place from the first frame in
+  every mode, so White and Classic no longer flash claude.ai's own colours.
+- Less work when idle and when switching themes: the composer ring steps ten times a second,
+  the app menu is built once, and the updater only loads when it is needed.
+- The Ko-fi link opens the profile page instead of the tip widget.
+- What's New for this version includes a one-time note about Mixpilot, a PipeWire mixer by the
+  same author.
+
+### Fixed
+
+- OLED black looked grey under native Wayland, because Chromium's Wayland colour management
+  lifted dark tones. It is turned off and black is black again.
+- The offline page returns to the chat within seconds of the connection coming back instead of
+  up to a minute, and load errors on a working connection retry on their own. Ctrl+R on the
+  offline page reloads the chat, and tabs that never went offline are no longer reloaded.
+- Minimised windows come back on Wayland from the tray, the hotkey and a second launch.
+- Typing right after Ctrl+T or a tab switch reaches the chat.
+- Tabs closed with the window's X come back correctly, hotkeys with special keys are no longer
+  cleared silently, Markdown export keeps paragraphs, and Enter in dialogs acts on the focused
+  button.
+- Clipboard and notification access is limited to claude.ai, and links in dialogs are checked
+  against an allow list.
+- A prompt template containing `<!--` could break the settings window.
+
+---
+
 ## [1.4.21] - 2026-10-05 - Support and App Theme
 
 ### Added

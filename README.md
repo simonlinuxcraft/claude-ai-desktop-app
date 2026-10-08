@@ -25,7 +25,7 @@
 
 ---
 
-> **v1.4.21** - Support and App Theme. The app stays free; a new "Support the app" entry in the menu and a link in the About window lead to a voluntary contribution on [Ko-fi](https://ko-fi.com/simonlinuxcraft), and nothing about the app changes either way. The "Design" menu entry and window are now called "App Theme", since users read "Design" as Claude Design. Copied diagnostics and bug reports now include the distribution, the desktop environment and the display scale, so a report can be matched to a setup.
+> **v1.5.0** - The Wayland Update. The app now runs natively on Wayland, so text stays sharp at fractional scaling, and the global hotkey goes through the desktop portal. Tabs show when Claude is answering, every window has a new look with optional rounded corners, new chats and restarts load faster, and the app reconnects on its own after a network drop. If something misbehaves on Wayland, see [Wayland](#wayland).
 
 ---
 
@@ -108,7 +108,7 @@ cat > ~/.local/share/applications/claude-desktop.desktop << EOF
 [Desktop Entry]
 Name=Desktop for Claude
 Comment=Unofficial desktop app for Claude AI
-Exec=/path/to/Claude-Desktop-1.4.21.AppImage --no-sandbox
+Exec=/path/to/Claude-Desktop-1.5.0.AppImage --no-sandbox
 Icon=/path/to/icon.png
 Type=Application
 Categories=Utility;
@@ -151,6 +151,20 @@ Snap users don't need to do anything – `snapd` handles updates in the backgrou
 ## Note on --no-sandbox
 
 The `--no-sandbox` flag is required for Electron AppImages on Linux because the Chrome SUID sandbox needs `root:4755` permissions, which are not possible inside an AppImage mount. `CHROME_DEVEL_SANDBOX=''` does **not** work as an alternative. The web content sandbox (`sandbox: true` in webPreferences) remains active and protects against untrusted web content.
+
+---
+
+## Wayland
+
+Since v1.5.0 the app runs natively on Wayland instead of through XWayland. If something does not work for you there, start it through XWayland as before by adding `--ozone-platform=x11`:
+
+```bash
+./Claude-Desktop-1.5.0.AppImage --no-sandbox --ozone-platform=x11
+```
+
+```bash
+snap run claude-ai-desktop --ozone-platform=x11
+```
 
 ---
 

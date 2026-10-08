@@ -2,7 +2,7 @@ name: claude-ai-desktop
 # Der Store zeigt title statt name. Der Name bleibt, sonst verliert die Installbasis den
 # Update-Pfad; der angezeigte Titel verweist auf Claude statt sich so zu nennen.
 title: Desktop for Claude (Unofficial)
-version: '1.4.21'
+version: '1.5.0'
 summary: Desktop for Claude, an unofficial Claude AI app with tabs and tray
 description: |
   Desktop for Claude is an unofficial app that runs claude.ai on Linux
@@ -21,26 +21,23 @@ description: |
   the official app does not support, and here in the Snap Store, where there
   is no official package.
 
-  What's new in v1.4.21:
+  What's new in v1.5.0, the Wayland update:
 
-  * The app stays free. A new "Support the app" entry in the menu and a
-    link in the About window explain how to support development with a
-    voluntary contribution on Ko-fi. Nothing about the app changes.
-  * The "Design" menu entry is now called "App Theme", so it is no
-    longer mixed up with Claude Design.
-  * Copied diagnostics and bug reports include the distribution, the
-    desktop environment and the display scale.
+  * Runs natively on Wayland, so text stays sharp at fractional scaling
+    such as 125%. Start with --ozone-platform=x11 for the old way.
+  * The global hotkey goes through the desktop portal on Wayland.
+    GNOME 48 or newer and KDE ask once.
+  * Tabs show when Claude is answering. New chats and restarts load
+    faster, and the app reconnects on its own after a network drop.
+  * Every window is redesigned, rounded corners are an experimental
+    option in App Theme.
+  * A bug report first asks what it is about. Account and billing
+    questions go straight to Anthropic support.
 
-  Highlights from v1.4.20:
+  Highlights from v1.4.21:
 
-  * The theme is in place from the first frame instead of claude.ai's
-    own colours showing for up to two seconds.
-
-  Highlights from v1.4.18:
-
-  * The screenshot entry in claude.ai's plus menu works. The app used
-    to turn screen capture down; on Wayland you now pick the screen in
-    the system dialog, no extra Snap permission needed.
+  * The app stays free. "Support the app" in the menu explains how to
+    support development with a voluntary contribution on Ko-fi.
 
   System requirements:
 
