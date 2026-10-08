@@ -1,6 +1,5 @@
 'use strict';
 const { app, BrowserWindow, WebContentsView, shell, Menu, Tray, globalShortcut, nativeImage, nativeTheme, dialog, Notification, session, ipcMain, net, screen, clipboard, powerMonitor, desktopCapturer } = require('electron');
-const { autoUpdater } = require('electron-updater');
 const path = require('path');
 const fs = require('fs');
 const os = require('os');
@@ -84,6 +83,13 @@ const POOL_SIZE = 2;
 const MAX_CRASH_RELOADS = 3;
 const CRASH_WINDOW_MS = 60_000;
 const ONLINE_CHECK_MS = 60_000;
+// Solange etwas fehlt, oefter pruefen: mit 60 s stand die Offline-Seite bis zu einer Minute
+// nach der Rueckkehr des Netzes. Die Frist faengt kurze WLAN-Aussetzer ab.
+const OFFLINE_CHECK_MS = 2000;
+const OFFLINE_GRACE_MS = 3000;
+// Wiederholversuche einer Offline-Seite, die von einem Ladefehler kommt (DNS, VPN, Captive
+// Portal). net.isOnline() bleibt dabei true, die Online-Flanke kommt also nie.
+const OFFLINE_RETRY_MS = [3000, 8000, 20000, 60000];
 const UPDATE_CHECK_MS = 3_600_000;
 const DOMAIN_CACHE_MAX = 50;
 // Nachfuellen des Tab-Pools: kurz nach einer Entnahme, laenger nach einem Theme-/Stilwechsel,
@@ -91,6 +97,8 @@ const DOMAIN_CACHE_MAX = 50;
 const POOL_REFILL_MS = 1200;
 const POOL_REFILL_AFTER_SWITCH_MS = 3000;
 const POOL_REFILL_FIRST_TAB_MS = 2000;
+// Eine stundenlang vorgeladene View zeigt eine veraltete Seitenleiste und einen alten Build.
+const POOL_MAX_AGE_MS = 30 * 60_000;
 // Laengstes Prompt, das Quick-Prompt und Clipboard-Chat annehmen. Dieselbe Zahl steht in
 // preload-quickprompt.js: der Preload laeuft mit sandbox:true und kann utils/ nicht requiren.
 const MAX_PROMPT_CHARS = 8000;
@@ -256,7 +264,7 @@ let microphoneConsentAsked = false;
 // (z.B. wenn Settings-Toggle und claude.ai-Mic-Click parallel triggern).
 let consentInflight = null;
 let updateCheckInterval = null;
-let onlineCheckInterval = null;
+let onlineCheckTimer = null;
 let waitForFirstTabInterval = null;
 let notificationsFetchInterval = null;
 let activeNotifications = [];                    // gefilterte, aktuell sichtbare Notifications
@@ -323,7 +331,16 @@ const STATE_SCHEMA = [
     get: () => (tabs.length
       ? tabs.map(tb => tb.url).filter(u => typeof u === 'string' && isAllowedDomain(u))
       : (Array.isArray(windowState.tabs) ? windowState.tabs : [])).slice(0, 20),
-    set: () => { /* Restore laeuft in createWindow, hier nur passthrough */ } }
+    set: () => { /* Restore laeuft in createWindow, hier nur passthrough */ } },
+  // Index in derselben gefilterten Liste wie 'tabs'. Ohne ihn lud der Start immer den ersten
+  // Tab, der zuletzt benutzte stand dann leer und lud erst beim Anklicken.
+  { key: 'activeTab',
+    get: () => {
+      if (!tabs.length) return Number.isInteger(windowState.activeTab) ? windowState.activeTab : 0;
+      const kept = tabs.filter(tb => typeof tb.url === 'string' && isAllowedDomain(tb.url)).slice(0, 20);
+      return Math.max(0, kept.indexOf(tabs[activeTabIndex]));
+    },
+    set: () => { /* Restore liest windowState.activeTab direkt */ } }
 ];
 
 
@@ -761,6 +778,12 @@ window.tabAPI.onDesignUpdate(style=>{
   document.getElementById('design-toggle').textContent=STYLE_LABEL[style]||style;
 });
 
+// Mausrad scrollt die Tabs waagerecht, eine senkrechte Bewegung haette hier keine Wirkung.
+tabsEl.addEventListener('wheel',e=>{
+  if(!e.deltaY||tabsEl.scrollWidth<=tabsEl.clientWidth)return;
+  tabsEl.scrollLeft+=e.deltaY;e.preventDefault();
+},{passive:false});
+
 window.tabAPI.onTabsUpdate(data=>{
   const c=data.tabs.length;
   while(tabEls.length>c)tabsEl.removeChild(tabEls.pop());
@@ -779,7 +802,11 @@ window.tabAPI.onTabsUpdate(data=>{
     const tab=data.tabs[i],ts=el.querySelector('.tab-title');
     if(ts.textContent!==tab.title)ts.textContent=tab.title;
     const a=i===data.activeIndex;
-    if(el.classList.contains('active')!==a)el.classList.toggle('active',a);
+    if(el.classList.contains('active')!==a){
+      el.classList.toggle('active',a);
+      // Bei vielen Tabs lag der aktive sonst ausserhalb der Leiste (Scrollbalken ist versteckt).
+      if(a)el.scrollIntoView({block:'nearest',inline:'nearest'});
+    }
     el.classList.toggle('busy',!!tab.busy);
     el.classList.toggle('unread',!!tab.unread&&!a);
     el.lastChild.style.display=c>1?'':'none';
@@ -1160,7 +1187,20 @@ function setupView(view) {
   wc.on('did-fail-load', (_e, code, _desc, _url, isMainFrame) => {
     if (!isMainFrame || !NET_ERROR_CODES.has(code)) return;
     const tab = tabs.find(tb => tb.view === view);
-    if (tab) showOfflinePage(tab);
+    if (!tab) return;
+    showOfflinePage(tab);
+    // Die Seite verspricht eine automatische Wiederverbindung. Ohne Netz uebernimmt das die
+    // Online-Flanke, hier geht es um Fehler bei bestehender Verbindung.
+    const delay = OFFLINE_RETRY_MS[Math.min(tab.offlineRetries || 0, OFFLINE_RETRY_MS.length - 1)];
+    tab.offlineRetries = (tab.offlineRetries || 0) + 1;
+    clearTimeout(tab.offlineRetryTimer);
+    tab.offlineRetryTimer = setTimeout(() => {
+      if (isOnline && alive(view) && view.webContents.getURL().startsWith('data:')) view.webContents.loadURL(tab.url || 'https://claude.ai');
+    }, delay);
+  });
+  wc.on('did-finish-load', () => {
+    const tab = tabs.find(tb => tb.view === view);
+    if (tab && !wc.getURL().startsWith('data:')) tab.offlineRetries = 0;
   });
 
   // Ohne eigenes Menue tat ein Rechtsklick in claude.ai gar nichts. Seiten mit eigenem Kontextmenue
@@ -1233,21 +1273,43 @@ function drainPool() {
   }
 }
 
+// Erst nach dem ersten Tab nachfuellen: frueher mitgeladen bremste der Pool ihn um ~190 ms.
+let poolArmed = false;
+
 function fillPool() {
-  if (!mainWindow || mainWindow.isDestroyed()) return;
+  poolArmed = true;
+  // Offline geladen landen beide Views auf der Fehlerseite; die Online-Flanke fuellt nach.
+  if (!mainWindow || mainWindow.isDestroyed() || !isOnline) return;
   while (viewPool.length < POOL_SIZE) {
     const view = createContentView();
     setupView(view);
     view.webContents.on('did-fail-load', (_e, code, _d, _u, isMainFrame) => { if (isMainFrame && code !== -3) view._cdFailed = true; });
     view.webContents.loadURL('https://claude.ai');
+    view._cdBornAt = Date.now();
     viewPool.push(view);
   }
 }
 
+// Alte Views im Hintergrund ersetzen statt sie beim naechsten Strg+T zu zeigen. Laeuft
+// am Fokus: dann ist die App ohnehin aktiv, und bis zum naechsten Tab ist die neue fertig.
+function refreshStalePool() {
+  const now = Date.now();
+  const stale = viewPool.filter(v => now - (v._cdBornAt || now) > POOL_MAX_AGE_MS);
+  if (!stale.length || !isOnline) return;
+  for (const v of stale) {
+    viewPool.splice(viewPool.indexOf(v), 1);
+    if (alive(v)) v.webContents.close();
+  }
+  fillPool();
+}
+
 function getPooledView() {
+  // Auch bei leerem Pool nachfuellen, sonst bliebe er nach drainPool() dauerhaft leer.
+  if (poolArmed) setTimeout(fillPool, POOL_REFILL_MS);
   while (viewPool.length > 0) {
     const view = viewPool.shift();
-    setTimeout(fillPool, POOL_REFILL_MS);
+    // Bei Dauerfokus kommt refreshStalePool nie dran: zu alt lieber frisch laden.
+    if (Date.now() - (view._cdBornAt || 0) > POOL_MAX_AGE_MS) { if (alive(view)) view.webContents.close(); continue; }
     // Vorgeladen kann eine View abgestuerzt sein, offline auf der Fehlerseite stehen oder noch die
     // Anmeldeseite von vor dem Login zeigen. Dann lieber frisch laden.
     if (alive(view) && !view.webContents.isCrashed() && !view._cdFailed && !/^https:\/\/claude\.ai\/login/.test(view.webContents.getURL())) return view;
@@ -1266,7 +1328,8 @@ function createTab(url = 'https://claude.ai', defer = false) {
   if (!mainWindow || mainWindow.isDestroyed()) return null;
   closeAppMenu();   // sonst laege die neue View ueber dem offenen Menue (Strg+T)
 
-  let view = (!defer && url === 'https://claude.ai') ? getPooledView() : null;
+  // Pool-Views laden https://claude.ai und landen damit ohnehin auf /new.
+  let view = (!defer && /^https:\/\/claude\.ai(\/new)?\/?$/.test(url)) ? getPooledView() : null;
   if (!view) {
     view = createContentView();
     setupView(view);
@@ -1277,7 +1340,6 @@ function createTab(url = 'https://claude.ai', defer = false) {
   tabs.push({ view, title: t('Neuer Chat', 'New Chat', 'Nouvelle conversation', 'Nuova chat'), url, crashCount: 0, pendingUrl: defer ? url : null });
   if (!defer) switchToTab(tabs.length - 1);
   else sendTabsUpdate();
-  updateMenu();
   return tabs[tabs.length - 1];
 }
 
@@ -1308,7 +1370,10 @@ function focusActiveView() {
 
 const resizeActiveView = throttle(() => {
   if (!mainWindow || mainWindow.isDestroyed() || !tabs[activeTabIndex]) return;
-  const b = mainWindow.getContentBounds();
+  // getBounds statt getContentBounds: rahmenlos sind beide gleich, aber unter X11 liefert
+  // getContentBounds beim resize-Event noch die alte Groesse, beim Maximieren stand dann
+  // 1-2 Frames ein Streifen ohne Inhalt. Nativ unter Wayland sind beide stets identisch.
+  const b = mainWindow.getBounds();
   const nh = getNotificationBarHeight();
   const bw = WINDOW_BORDER;
   const topInset = TAB_BAR_HEIGHT + nh + bw;
@@ -1444,9 +1509,11 @@ function switchToTab(index) {
 
   lastViewBounds = '';
   resizeActiveView();
+  // Ohne Fokus ging Tippen direkt nach Strg+T oder einem Tab-Wechsel ins Leere.
+  focusActiveView();
   updateTitle();
-  updateMenu();
   sendTabsUpdate();
+  saveWindowState();
 }
 
 function closeTab(index) {
@@ -1471,7 +1538,6 @@ function closeTab(index) {
       tab.view.webContents.close();
     }
   });
-  updateMenu();
   sendTabsUpdate();
   saveWindowState();
 }
@@ -1537,23 +1603,25 @@ function syncDesktopIcons() {
   execFile('gtk-update-icon-cache', ['-t', '-f', hicolor], () => {});
 }
 
+const syncDesktopIconsSoon = debounce(syncDesktopIcons, 800);
+
 // Design-Toggle
 
 function setDesignStyle(style) {
   if (!DESIGN_STYLES.includes(style) || style === designStyle) return;
   designStyle = style;
 
-  syncDesktopIcons();
-
   // Live wie beim Farbmodus. Frueher lud das Tab-Leiste und aktiven Tab neu, im Hell-Modus
   // stand dabei kurz die dunkle Seite da, bis der Invert wieder griff.
   applyThemeToAllViews();
   sendThemeUpdate();
   sendDesignUpdate();
+  // Icons kopieren und den Icon-Cache erneuern kostet 25-40 ms: erst nach dem sichtbaren
+  // Wechsel und gebuendelt, wenn man im App-Theme-Fenster durch die Stile klickt.
+  syncDesktopIconsSoon();
 
   setTimeout(fillPool, POOL_REFILL_AFTER_SWITCH_MS);
   saveWindowState();
-  updateMenu(true);
 }
 
 // Bug-Report-Dialog
@@ -1726,6 +1794,8 @@ async function resetClaudeVerification(targetTab) {
     console.error('resetClaudeVerification:', e);
   }
 
+  // Vorgeladene Views gehoeren noch zur alten Sitzung.
+  drainPool();
   const active = (targetTab && alive(targetTab.view)) ? targetTab : tabs[activeTabIndex];
   if (active && alive(active.view)) {
     active.view.webContents.loadURL('https://claude.ai');
@@ -2325,6 +2395,7 @@ function submitQuickPrompt(text) {
     if (alive(wc)) wc.off('did-finish-load', onLoad);
   });
   wc.on('did-finish-load', onLoad);
+  if (!wc.isLoading()) onLoad();
   setTimeout(() => {
     if (filled || !alive(wc)) return;
     wc.off('did-finish-load', onLoad);
@@ -4323,82 +4394,91 @@ function getMessageBoxHTML({ type, heading, message, detail, buttons, defaultId,
 
 // Menü
 
-let lastMenuHash = '';
-let menuPending = false;
+// Die Menüleiste ist versteckt, das Menü liefert nur die Tastenkürzel. Darum einmal bauen:
+// ein Neubau pro Tab-Aktion kostete 4-15 ms im Main-Prozess.
+function buildAppMenu() {
+  const tabItems = Array.from({ length: 9 }, (_, i) => ({
+    label: `Tab ${i + 1}`,
+    accelerator: `CmdOrCtrl+${i + 1}`,
+    click: () => { if (i < tabs.length) switchToTab(i); }
+  }));
 
-function updateMenu(force = false) {
-  const hash = `${tabs.length}:${activeTabIndex}`;
-  if (!force && hash === lastMenuHash) return;
-  lastMenuHash = hash;
-  if (menuPending) return;
-  menuPending = true;
-
-  setImmediate(() => {
-    menuPending = false;
-
-    const tabItems = tabs.map((_, i) => ({
-      label: `Tab ${i + 1}${i === activeTabIndex ? ' \u25cf' : ''}`,
-      accelerator: i < 9 ? `CmdOrCtrl+${i + 1}` : undefined,
-      click: () => switchToTab(i)
-    }));
-
-    Menu.setApplicationMenu(Menu.buildFromTemplate([
-      { label: 'Claude', submenu: [
-        { label: t('Neuer Tab', 'New Tab', 'Nouvel onglet', 'Nuova scheda'), accelerator: 'CmdOrCtrl+T', click: () => createTab() },
-        { label: t('Tab schlie\u00dfen', 'Close Tab', 'Fermer l’onglet', 'Chiudi scheda'), accelerator: 'CmdOrCtrl+W', click: () => closeTab(activeTabIndex) },
-        { type: 'separator' }, ...tabItems, { type: 'separator' },
-        { label: t('Konversation als Markdown exportieren\u2026', 'Export conversation as Markdown\u2026', 'Exporter la conversation en Markdown…', 'Esporta la conversazione in Markdown…'), accelerator: 'CmdOrCtrl+Shift+E', click: () => exportActiveConversation() },
-        { type: 'separator' },
-        { label: t('Einstellungen', 'Settings', 'Paramètres', 'Impostazioni'), accelerator: 'CmdOrCtrl+,', click: () => {
-          if (tabs[activeTabIndex] && alive(tabs[activeTabIndex].view))
-            tabs[activeTabIndex].view.webContents.loadURL('https://claude.ai/settings');
-        }},
-        { label: t('App-Einstellungen\u2026', 'App Settings\u2026', 'Paramètres de l’application…', 'Impostazioni dell’app…'), click: () => openSettingsWindow() },
-        { type: 'separator' },
-        { label: t('App-Theme', 'App Theme', 'Thème de l’app', 'Tema dell’app') + '\u2026', click: () => openDesignWindow() },
-        { label: t('Nach Updates suchen\u2026', 'Check for Updates\u2026', 'Rechercher des mises à jour…', 'Controlla aggiornamenti…'), click: () => triggerManualUpdateCheck() },
-        { label: (bugReportStrings[sysLang] || bugReportStrings.en).title, click: showBugReportDialog },
-        { type: 'separator' },
-        { role: 'quit', label: t('Beenden', 'Quit', 'Quitter', 'Esci') }
-      ]},
-      { label: t('Bearbeiten', 'Edit', 'Édition', 'Modifica'), submenu: [
-        { role: 'undo', label: t('R\u00fcckg\u00e4ngig', 'Undo', 'Annuler', 'Annulla') },
-        { role: 'redo', label: t('Wiederholen', 'Redo', 'Rétablir', 'Ripeti') },
-        { type: 'separator' },
-        { role: 'cut', label: t('Ausschneiden', 'Cut', 'Couper', 'Taglia') },
-        { role: 'copy', label: t('Kopieren', 'Copy', 'Copier', 'Copia') },
-        { role: 'paste', label: t('Einf\u00fcgen', 'Paste', 'Coller', 'Incolla') },
-        { role: 'selectAll', label: t('Alles ausw\u00e4hlen', 'Select All', 'Tout sélectionner', 'Seleziona tutto') }
-      ]},
-      { label: t('Ansicht', 'View', 'Affichage', 'Visualizza'), submenu: [
-        { label: t('Neu laden', 'Reload', 'Recharger', 'Ricarica'), accelerator: 'CmdOrCtrl+R', click: () => { if (tabs[activeTabIndex] && alive(tabs[activeTabIndex].view)) tabs[activeTabIndex].view.webContents.reload(); } },
-        { label: t('Erzwungen neu laden', 'Force Reload', 'Recharger de force', 'Ricarica forzata'), accelerator: 'CmdOrCtrl+Shift+R', click: () => { if (tabs[activeTabIndex] && alive(tabs[activeTabIndex].view)) tabs[activeTabIndex].view.webContents.reloadIgnoringCache(); } },
-        { label: t('Neu zeichnen', 'Redraw', 'Redessiner', 'Ridisegna'), accelerator: 'CmdOrCtrl+Alt+R', click: () => repaintActiveView() },
-        { type: 'separator' },
-        { role: 'resetZoom', label: t('Zoom zur\u00fccksetzen', 'Reset Zoom', 'Réinitialiser le zoom', 'Reimposta zoom') },
-        { role: 'zoomIn', label: t('Vergr\u00f6\u00dfern', 'Zoom In', 'Zoom avant', 'Aumenta zoom') },
-        { role: 'zoomOut', label: t('Verkleinern', 'Zoom Out', 'Zoom arrière', 'Riduci zoom') },
-        { type: 'separator' },
-        { role: 'togglefullscreen', label: t('Vollbild', 'Fullscreen', 'Plein écran', 'Schermo intero') },
-        ...(isDev ? [{ type: 'separator' }, { label: 'DevTools', accelerator: 'F12', click: () => { if (tabs[activeTabIndex] && alive(tabs[activeTabIndex].view)) tabs[activeTabIndex].view.webContents.toggleDevTools(); } }] : [])
-      ]},
-      { label: 'Tabs', submenu: [
-        { label: t('Neuer Tab', 'New Tab', 'Nouvel onglet', 'Nuova scheda'), accelerator: 'CmdOrCtrl+T', click: () => createTab() },
-        { label: t('Tab schlie\u00dfen', 'Close Tab', 'Fermer l’onglet', 'Chiudi scheda'), accelerator: 'CmdOrCtrl+W', click: () => closeTab(activeTabIndex) },
-        { type: 'separator' },
-        { label: t('N\u00e4chster Tab', 'Next Tab', 'Onglet suivant', 'Scheda successiva'), accelerator: 'CmdOrCtrl+Tab', click: () => switchToTab((activeTabIndex + 1) % tabs.length) },
-        { label: t('Vorheriger Tab', 'Previous Tab', 'Onglet précédent', 'Scheda precedente'), accelerator: 'CmdOrCtrl+Shift+Tab', click: () => switchToTab((activeTabIndex - 1 + tabs.length) % tabs.length) },
-        { type: 'separator' }, ...tabItems
-      ]},
-      { label: t('Fenster', 'Window', 'Fenêtre', 'Finestra'), submenu: [
-        { role: 'minimize', label: t('Minimieren', 'Minimize', 'Réduire', 'Riduci a icona') },
-        { role: 'close', label: t('Schlie\u00dfen', 'Close', 'Fermer', 'Chiudi') }
-      ]}
-    ]));
-  });
+  Menu.setApplicationMenu(Menu.buildFromTemplate([
+    { label: 'Claude', submenu: [
+      { label: t('Neuer Tab', 'New Tab', 'Nouvel onglet', 'Nuova scheda'), accelerator: 'CmdOrCtrl+T', click: () => createTab() },
+      { label: t('Tab schlie\u00dfen', 'Close Tab', 'Fermer l’onglet', 'Chiudi scheda'), accelerator: 'CmdOrCtrl+W', click: () => closeTab(activeTabIndex) },
+      { type: 'separator' }, ...tabItems, { type: 'separator' },
+      { label: t('Konversation als Markdown exportieren\u2026', 'Export conversation as Markdown\u2026', 'Exporter la conversation en Markdown…', 'Esporta la conversazione in Markdown…'), accelerator: 'CmdOrCtrl+Shift+E', click: () => exportActiveConversation() },
+      { type: 'separator' },
+      { label: t('Einstellungen', 'Settings', 'Paramètres', 'Impostazioni'), accelerator: 'CmdOrCtrl+,', click: () => {
+        if (tabs[activeTabIndex] && alive(tabs[activeTabIndex].view))
+          tabs[activeTabIndex].view.webContents.loadURL('https://claude.ai/settings');
+      }},
+      { label: t('App-Einstellungen\u2026', 'App Settings\u2026', 'Paramètres de l’application…', 'Impostazioni dell’app…'), click: () => openSettingsWindow() },
+      { type: 'separator' },
+      { label: t('App-Theme', 'App Theme', 'Thème de l’app', 'Tema dell’app') + '\u2026', click: () => openDesignWindow() },
+      { label: t('Nach Updates suchen\u2026', 'Check for Updates\u2026', 'Rechercher des mises à jour…', 'Controlla aggiornamenti…'), click: () => triggerManualUpdateCheck() },
+      { label: (bugReportStrings[sysLang] || bugReportStrings.en).title, click: showBugReportDialog },
+      { type: 'separator' },
+      { role: 'quit', label: t('Beenden', 'Quit', 'Quitter', 'Esci') }
+    ]},
+    { label: t('Bearbeiten', 'Edit', 'Édition', 'Modifica'), submenu: [
+      { role: 'undo', label: t('R\u00fcckg\u00e4ngig', 'Undo', 'Annuler', 'Annulla') },
+      { role: 'redo', label: t('Wiederholen', 'Redo', 'Rétablir', 'Ripeti') },
+      { type: 'separator' },
+      { role: 'cut', label: t('Ausschneiden', 'Cut', 'Couper', 'Taglia') },
+      { role: 'copy', label: t('Kopieren', 'Copy', 'Copier', 'Copia') },
+      { role: 'paste', label: t('Einf\u00fcgen', 'Paste', 'Coller', 'Incolla') },
+      { role: 'selectAll', label: t('Alles ausw\u00e4hlen', 'Select All', 'Tout sélectionner', 'Seleziona tutto') }
+    ]},
+    { label: t('Ansicht', 'View', 'Affichage', 'Visualizza'), submenu: [
+      { label: t('Neu laden', 'Reload', 'Recharger', 'Ricarica'), accelerator: 'CmdOrCtrl+R', click: () => reloadActiveTab() },
+      { label: t('Erzwungen neu laden', 'Force Reload', 'Recharger de force', 'Ricarica forzata'), accelerator: 'CmdOrCtrl+Shift+R', click: () => reloadActiveTab(true) },
+      { label: t('Neu zeichnen', 'Redraw', 'Redessiner', 'Ridisegna'), accelerator: 'CmdOrCtrl+Alt+R', click: () => repaintActiveView() },
+      { type: 'separator' },
+      { role: 'resetZoom', label: t('Zoom zur\u00fccksetzen', 'Reset Zoom', 'Réinitialiser le zoom', 'Reimposta zoom') },
+      { role: 'zoomIn', label: t('Vergr\u00f6\u00dfern', 'Zoom In', 'Zoom avant', 'Aumenta zoom') },
+      { role: 'zoomOut', label: t('Verkleinern', 'Zoom Out', 'Zoom arrière', 'Riduci zoom') },
+      { type: 'separator' },
+      { role: 'togglefullscreen', label: t('Vollbild', 'Fullscreen', 'Plein écran', 'Schermo intero') },
+      ...(isDev ? [{ type: 'separator' }, { label: 'DevTools', accelerator: 'F12', click: () => { if (tabs[activeTabIndex] && alive(tabs[activeTabIndex].view)) tabs[activeTabIndex].view.webContents.toggleDevTools(); } }] : [])
+    ]},
+    { label: 'Tabs', submenu: [
+      { label: t('Neuer Tab', 'New Tab', 'Nouvel onglet', 'Nuova scheda'), accelerator: 'CmdOrCtrl+T', click: () => createTab() },
+      { label: t('Tab schlie\u00dfen', 'Close Tab', 'Fermer l’onglet', 'Chiudi scheda'), accelerator: 'CmdOrCtrl+W', click: () => closeTab(activeTabIndex) },
+      { type: 'separator' },
+      { label: t('N\u00e4chster Tab', 'Next Tab', 'Onglet suivant', 'Scheda successiva'), accelerator: 'CmdOrCtrl+Tab', click: () => switchToTab((activeTabIndex + 1) % tabs.length) },
+      { label: t('Vorheriger Tab', 'Previous Tab', 'Onglet précédent', 'Scheda precedente'), accelerator: 'CmdOrCtrl+Shift+Tab', click: () => switchToTab((activeTabIndex - 1 + tabs.length) % tabs.length) },
+      { type: 'separator' }, ...tabItems
+    ]},
+    { label: t('Fenster', 'Window', 'Fenêtre', 'Finestra'), submenu: [
+      { role: 'minimize', label: t('Minimieren', 'Minimize', 'Réduire', 'Riduci a icona') },
+      { role: 'close', label: t('Schlie\u00dfen', 'Close', 'Fermer', 'Chiudi') }
+    ]}
+  ]));
 }
 
 // Offline-Handling
+
+let offlineSince = 0;
+function checkOnline() {
+  const online = net.isOnline();
+  if (online) offlineSince = 0;
+  else if (!offlineSince) offlineSince = Date.now();
+  if (online || Date.now() - offlineSince >= OFFLINE_GRACE_MS) handleOnlineChange(online);
+  clearTimeout(onlineCheckTimer);
+  onlineCheckTimer = setTimeout(checkOnline, (online && isOnline) ? ONLINE_CHECK_MS : OFFLINE_CHECK_MS);
+}
+
+// Auf der Offline-Seite laedt reload() nur die data:-Seite neu, nicht den Chat.
+function reloadActiveTab(ignoreCache = false) {
+  const tab = tabs[activeTabIndex];
+  if (!tab || !alive(tab.view)) return;
+  const wc = tab.view.webContents;
+  if (wc.getURL().startsWith('data:')) wc.loadURL(tab.url || 'https://claude.ai');
+  else if (ignoreCache) wc.reloadIgnoringCache();
+  else wc.reload();
+}
 
 function handleOnlineChange(online) {
   if (online === isOnline) return;
@@ -4412,13 +4492,16 @@ function handleOnlineChange(online) {
     // Jeder Tab, der auf der Offline-Seite haengt, muss per loadURL zurueck auf seinen
     // echten Chat. reload() wuerde nur die data:-Seite neu laden. Inaktive Tabs bleiben
     // sonst dauerhaft dort haengen, weil showOfflinePage nur den aktiven Tab trifft.
-    const active = tabs[activeTabIndex];
+    // Tabs, die nie offline waren, bleiben stehen: ein reload() traf frueher den aktiven Tab
+    // auch dann, wenn man waehrend des Ausfalls auf ihn gewechselt hatte, mitten in eine Antwort.
     for (const tab of tabs) {
-      if (!alive(tab.view)) continue;
-      if (tab.view.webContents.getURL().startsWith('data:'))
+      if (alive(tab.view) && tab.view.webContents.getURL().startsWith('data:'))
         tab.view.webContents.loadURL(tab.url || 'https://claude.ai');
-      else if (tab === active) tab.view.webContents.reload();
     }
+    // Offline vorgeladene Pool-Views stehen auf einer Fehlerseite und waeren beim naechsten
+    // Strg+T nutzlos. Offline verbrauchte Views fehlen ganz, darum in jedem Fall auffuellen.
+    if (viewPool.some(v => v._cdFailed)) drainPool();
+    if (poolArmed) fillPool();
     notify({ title: 'Desktop for Claude', body: t('Verbindung wiederhergestellt!', 'Connection restored!', 'Connexion rétablie !', 'Connessione ripristinata!') });
   }
 }
@@ -4567,8 +4650,17 @@ function setupDownloadManager() {
 
 // Auto-Updater
 
-autoUpdater.autoDownload = true;
-autoUpdater.autoInstallOnAppQuit = true;
+// Erst bei Bedarf laden: im Snap und im Dev-Modus laeuft der Updater nie, das require
+// verzoegerte app-ready trotzdem um 35-73 ms.
+let _autoUpdater = null;
+function updater() {
+  if (!_autoUpdater) {
+    _autoUpdater = require('electron-updater').autoUpdater;
+    _autoUpdater.autoDownload = true;
+    _autoUpdater.autoInstallOnAppQuit = true;
+  }
+  return _autoUpdater;
+}
 let manualUpdateCheck = false;
 // Stand fuer den Ring und den Neustart-Knopf in der Tab-Leiste.
 let updateState = null;
@@ -4591,7 +4683,7 @@ function triggerManualUpdateCheck() {
   }
   manualUpdateCheck = true;
   // Ist der Updater inaktiv (kein AppImage-Pfad), kommt null ohne Ereignis zurueck.
-  Promise.resolve(autoUpdater.checkForUpdates()).then(r => { if (!r) manualUpdateCheck = false; }).catch(() => { manualUpdateCheck = false; });
+  Promise.resolve(updater().checkForUpdates()).then(r => { if (!r) manualUpdateCheck = false; }).catch(() => { manualUpdateCheck = false; });
 }
 
 function setupAutoUpdater() {
@@ -4601,7 +4693,7 @@ function setupAutoUpdater() {
 
   const dialogParent = () => (mainWindow && !mainWindow.isDestroyed()) ? mainWindow : null;
 
-  autoUpdater.on('update-available', (info) => {
+  updater().on('update-available', (info) => {
     failures = 0;
     if (isQuitting) return;
     // Der stuendliche Check meldet ein schon geladenes Update erneut. Dann keine "wird geladen"-Meldung.
@@ -4621,7 +4713,7 @@ function setupAutoUpdater() {
     }
   });
 
-  autoUpdater.on('update-not-available', (info) => {
+  updater().on('update-not-available', (info) => {
     failures = 0;
     if (isQuitting) return;
     if (manualUpdateCheck) {
@@ -4636,11 +4728,11 @@ function setupAutoUpdater() {
 
   // Beim Update auf einen neuen Dateinamen zeigten Menue-Starter, Autostart und Portal-Datei sonst
   // auf die geloeschte alte Datei. Nach "beim Beenden installieren" startet die App nicht selbst neu.
-  autoUpdater.on('appimage-filename-updated', (newPath) => {
+  updater().on('appimage-filename-updated', (newPath) => {
     if (typeof newPath === 'string' && newPath) selfHealDesktopFiles(newPath);
   });
 
-  autoUpdater.on('download-progress', (p) => {
+  updater().on('download-progress', (p) => {
     if (isQuitting) return;
     if (mainWindow && !mainWindow.isDestroyed()) {
       mainWindow.setTitle(`Desktop for Claude - Update ${Math.round(p.percent)}%`);
@@ -4649,7 +4741,7 @@ function setupAutoUpdater() {
     setUpdateState({ state: 'downloading', percent: p.percent });
   });
 
-  autoUpdater.on('update-downloaded', (info) => {
+  updater().on('update-downloaded', (info) => {
     if (isQuitting) return;
     if (mainWindow && !mainWindow.isDestroyed()) { mainWindow.setTitle(`Desktop for Claude v${version}`); mainWindow.setProgressBar(-1); }
     // Kein Dialog mehr: der Knopf in der Tab-Leiste wartet, bis es passt. Ohne Klick
@@ -4657,7 +4749,7 @@ function setupAutoUpdater() {
     setUpdateState({ state: 'ready', version: info.version });
   });
 
-  autoUpdater.on('error', (err) => {
+  updater().on('error', (err) => {
     failures++;
     if (isDev) console.error(`Update-Fehler (${failures}x):`, err.message);
     if (updateState && updateState.state === 'downloading') {
@@ -4677,13 +4769,13 @@ function setupAutoUpdater() {
     }
   });
 
-  autoUpdater.checkForUpdates().catch(() => {});
+  updater().checkForUpdates().catch(() => {});
   updateCheckInterval = setInterval(() => {
     if (failures > 0) {
       const skip = (1 << Math.min(failures, 5)) - 1;
       if (Math.random() < skip / (skip + 1)) return;
     }
-    autoUpdater.checkForUpdates().catch(() => {});
+    updater().checkForUpdates().catch(() => {});
   }, UPDATE_CHECK_MS);
 }
 
@@ -5597,7 +5689,7 @@ ipcMain.on('msgbox-fit', (event, cssHeight) => {
 ipcMain.on('win-state-request', (event) => { if (fromMainWindow(event)) sendWindowState(); });
 ipcMain.on('update-state-request', (event) => { if (fromMainWindow(event) && updateState) event.sender.send('update-state', updateState); });
 ipcMain.on('update-install', (event) => {
-  if (fromMainWindow(event) && updateState && updateState.state === 'ready' && !isQuitting) autoUpdater.quitAndInstall();
+  if (fromMainWindow(event) && updateState && updateState.state === 'ready' && !isQuitting) updater().quitAndInstall();
 });
 
 ipcMain.on('tab-new', () => createTab());
@@ -5623,9 +5715,7 @@ ipcMain.on('appmenu-action', (event, name) => {
     case 'new-tab': createTab(); break;
     case 'close-tab': closeTab(activeTabIndex); break;
     case 'export': exportActiveConversation(); break;
-    case 'reload':
-      if (tabs[activeTabIndex] && alive(tabs[activeTabIndex].view)) tabs[activeTabIndex].view.webContents.reload();
-      break;
+    case 'reload': reloadActiveTab(); break;
     case 'design-open': openDesignWindow(); break;
     case 'official-app': showOfficialAppInfo(); break;
     case 'support': showSupportInfo(); break;
@@ -5709,11 +5799,11 @@ function createWindow() {
   // ein No-op. Debounced, kostet also nichts.
   mainWindow.on('show', () => { lastViewBounds = ''; resizeActiveView(); settleActiveView(); });
   mainWindow.on('restore', () => { focusActiveView(); settleActiveView(); });
-  // Online-Status beim Zurueckwechseln sofort pruefen statt bis zu 60s auf den Poll zu
-  // warten. handleOnlineChange ist flankengeguarded, also idempotent.
+  // Online-Status beim Zurueckwechseln sofort pruefen statt auf den Poll zu warten.
+  // handleOnlineChange ist flankengeguarded, also idempotent.
   // settleActiveView auch hier: wird die Flaeche schwarz waehrend die App im Hintergrund
   // liegt, faellt es dem Nutzer erst beim Zurueckkommen auf. Debounced, kein Flackern.
-  mainWindow.on('focus', () => { focusActiveView(); settleActiveView(); handleOnlineChange(net.isOnline()); });
+  mainWindow.on('focus', () => { focusActiveView(); settleActiveView(); checkOnline(); refreshStalePool(); });
 
   mainWindow.on('close', (e) => {
     if (!isQuitting && minimizeOnClose && tray) {
@@ -5744,8 +5834,10 @@ function createWindow() {
     const restored = Array.isArray(windowState.tabs)
       ? windowState.tabs.filter(u => typeof u === 'string' && isAllowedDomain(u)).slice(0, 20)
       : [];
-    const tab = createTab(restored[0] || 'https://claude.ai');
-    for (let i = 1; i < restored.length; i++) createTab(restored[i], true);
+    const ai = Number.isInteger(windowState.activeTab) && windowState.activeTab >= 0 && windowState.activeTab < restored.length ? windowState.activeTab : 0;
+    let tab = null;
+    restored.forEach((u, i) => { const tb = createTab(u, i !== ai); if (i === ai) tab = tb; });
+    if (!restored.length) tab = createTab('https://claude.ai');
     if (tab) {
       tab.view.webContents.once('did-finish-load', () => {
         lastViewBounds = '';
@@ -5819,7 +5911,7 @@ app.whenReady().then(() => {
   powerMonitor.on('resume', () => settleActiveView());
   powerMonitor.on('unlock-screen', () => settleActiveView());
   startSurfaceWatchdog();
-  updateMenu(true);
+  buildAppMenu();
   setupDownloadManager();
   setupAutoUpdater();
   setupNotifications();
@@ -5831,8 +5923,7 @@ app.whenReady().then(() => {
   currentHotkey = null; currentClipboardHotkey = null;
   if (hk && registerHotkey(hk) !== 'ok') currentHotkey = hk;
   if (clip && registerClipboardHotkey(clip) !== 'ok') currentClipboardHotkey = clip;
-  handleOnlineChange(net.isOnline());
-  onlineCheckInterval = setInterval(() => handleOnlineChange(net.isOnline()), ONLINE_CHECK_MS);
+  checkOnline();
   app.on('activate', () => { if (BrowserWindow.getAllWindows().length === 0) createWindow(); });
 
   // Sonst behalten Dock und Taskleiste nach einem Update mit neuem Icon das alte bis zum
@@ -5848,7 +5939,8 @@ app.whenReady().then(() => {
       saveWindowStateSync();
     };
     waitForFirstTabInterval = setInterval(() => {
-      const firstTab = tabs[0];
+      // Der aktive Tab, nicht tabs[0]: wiederhergestellte Nebentabs laden erst beim Anklicken.
+      const firstTab = tabs[activeTabIndex];
       if (firstTab && alive(firstTab.view)) {
         clearInterval(waitForFirstTabInterval);
         waitForFirstTabInterval = null;
@@ -5868,7 +5960,7 @@ app.on('window-all-closed', () => {
 app.on('before-quit', () => {
   isQuitting = true;
   if (updateCheckInterval) { clearInterval(updateCheckInterval); updateCheckInterval = null; }
-  if (onlineCheckInterval) { clearInterval(onlineCheckInterval); onlineCheckInterval = null; }
+  if (onlineCheckTimer) { clearTimeout(onlineCheckTimer); onlineCheckTimer = null; }
   if (waitForFirstTabInterval) { clearInterval(waitForFirstTabInterval); waitForFirstTabInterval = null; }
   if (notificationsFetchInterval) { clearInterval(notificationsFetchInterval); notificationsFetchInterval = null; }
   saveWindowStateSync();
