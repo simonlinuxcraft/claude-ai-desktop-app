@@ -3,7 +3,7 @@ const { app, BrowserWindow, WebContentsView, shell, Menu, Tray, globalShortcut, 
 const path = require('path');
 const fs = require('fs');
 const os = require('os');
-const { execFile, spawn } = require('child_process');
+const { execFile, execFileSync, spawn } = require('child_process');
 const { version } = require('./package.json');
 const { getFilteredNotes, RELEASE_TITLES } = require('./release-notes');
 const { bugReportStrings } = require('./bug-report-strings');
@@ -249,6 +249,7 @@ let windowState = {};
 let lastSavedState = '';
 let tray = null;
 let isQuitting = false;
+const MAX_TABS = 20;   // so viele werden auch gespeichert; mehr anzulegen ging beim Neustart still verloren
 let settingsWindow = null;
 let designWindow = null;
 let quickPromptWindow = null;
@@ -338,14 +339,14 @@ const STATE_SCHEMA = [
   { key: 'tabs',
     get: () => (tabs.length
       ? tabs.map(tb => tb.url).filter(u => typeof u === 'string' && isAllowedDomain(u))
-      : (Array.isArray(windowState.tabs) ? windowState.tabs : [])).slice(0, 20),
+      : (Array.isArray(windowState.tabs) ? windowState.tabs : [])).slice(0, MAX_TABS),
     set: () => { /* Restore laeuft in createWindow, hier nur passthrough */ } },
   // Index in derselben gefilterten Liste wie 'tabs'. Ohne ihn lud der Start immer den ersten
   // Tab, der zuletzt benutzte stand dann leer und lud erst beim Anklicken.
   { key: 'activeTab',
     get: () => {
       if (!tabs.length) return Number.isInteger(windowState.activeTab) ? windowState.activeTab : 0;
-      const kept = tabs.filter(tb => typeof tb.url === 'string' && isAllowedDomain(tb.url)).slice(0, 20);
+      const kept = tabs.filter(tb => typeof tb.url === 'string' && isAllowedDomain(tb.url)).slice(0, MAX_TABS);
       return Math.max(0, kept.indexOf(tabs[activeTabIndex]));
     },
     set: () => { /* Restore liest windowState.activeTab direkt */ } }
@@ -356,7 +357,10 @@ const STATE_SCHEMA = [
 function loadWindowState() {
   try {
     if (fs.existsSync(stateFile)) windowState = JSON.parse(fs.readFileSync(stateFile, 'utf8'));
-  } catch {}
+  } catch {
+    // Defekte Datei nicht stumm mit Defaults ueberschreiben: Kopie behalten, Einstellungen bleiben rettbar.
+    try { fs.copyFileSync(stateFile, stateFile + '.bak'); } catch {}
+  }
   if (!windowState || typeof windowState !== 'object' || Array.isArray(windowState)) windowState = {};
   for (const f of STATE_SCHEMA) {
     if (f.optional && windowState[f.key] === undefined) continue;
@@ -383,8 +387,15 @@ function loadWindowState() {
   // Mit gespeichertem Wert diesen nehmen, aber gegen die aktuelle Arbeitsflaeche clampen:
   // eine an einem grossen Monitor gemerkte Groesse ragte am Laptop sonst aus dem Schirm.
   // Bewusst nur die Fenstergroesse, kein Zoom - der Inhalt ist claude.ai selbst.
+  // Gegen den Monitor clampen, auf dem das Fenster zuletzt lag (nicht gegen den primaeren): ein am
+  // groesseren Zweitmonitor gewaehltes Fenster schrumpfte sonst bei jedem Start.
   let wa = null;
-  try { wa = screen.getPrimaryDisplay().workArea; } catch {}
+  try {
+    const hasPos = Number.isFinite(windowState.x) && Number.isFinite(windowState.y);
+    wa = (hasPos
+      ? screen.getDisplayMatching({ x: windowState.x, y: windowState.y, width: windowState.width || 1200, height: windowState.height || 800 })
+      : screen.getPrimaryDisplay()).workArea;
+  } catch {}
   const fallback = scaleWindow(1200, 800, wa);
   const maxW = wa ? wa.width : fallback.width;
   const maxH = wa ? wa.height : fallback.height;
@@ -399,10 +410,11 @@ function loadWindowState() {
   if (result.x !== undefined && result.y !== undefined) {
     try {
       const displays = screen.getAllDisplays();
+      // Die Oberkante (Tab-Leiste, einzige Bedienung des rahmenlosen Fensters) muss erreichbar sein.
       const onScreen = displays.some(d => {
         const wa = d.workArea;
-        return result.x < wa.x + wa.width && result.x + result.width > wa.x
-          && result.y < wa.y + wa.height && result.y + result.height > wa.y;
+        const overlapX = Math.min(result.x + result.width, wa.x + wa.width) - Math.max(result.x, wa.x);
+        return overlapX >= 100 && result.y >= wa.y - 8 && result.y < wa.y + wa.height - 40;
       });
       if (!onScreen) {
         delete result.x;
@@ -1335,7 +1347,7 @@ function getPooledView() {
 // Anklicken (pendingUrl in switchToTab). Fuer den Session-Restore, damit N Tabs nicht
 // gleichzeitig claude.ai anfragen.
 function createTab(url = 'https://claude.ai', defer = false) {
-  if (!mainWindow || mainWindow.isDestroyed()) return null;
+  if (!mainWindow || mainWindow.isDestroyed() || tabs.length >= MAX_TABS) return null;
   closeAppMenu();   // sonst laege die neue View ueber dem offenen Menue (Strg+T)
 
   // Pool-Views laden https://claude.ai und landen damit ohnehin auf /new.
@@ -2584,6 +2596,17 @@ function setupTray() {
   } catch (e) {
     tray = null;
   }
+}
+
+// GNOME ohne AppIndicator-Erweiterung: new Tray wirft nicht, das Symbol bleibt aber unsichtbar und
+// "In den Tray schliessen" waere ein Fenster ohne Rueckweg. Nur ein klares "false" zaehlt als fehlend.
+function trayHostAvailable() {
+  try {
+    const out = execFileSync('gdbus', ['call', '--session', '--dest', 'org.freedesktop.DBus',
+      '--object-path', '/org/freedesktop/DBus', '--method', 'org.freedesktop.DBus.NameHasOwner',
+      'org.kde.StatusNotifierWatcher'], { timeout: 800, encoding: 'utf8' });
+    return !/false/.test(out);
+  } catch { return true; }
 }
 
 function refreshTrayImage() {
@@ -5873,7 +5896,7 @@ function createWindow() {
   mainWindow.on('focus', () => { focusActiveView(); settleActiveView(); checkOnline(); refreshStalePool(); });
 
   mainWindow.on('close', (e) => {
-    if (!isQuitting && minimizeOnClose && tray) {
+    if (!isQuitting && minimizeOnClose && tray && trayHostAvailable()) {
       e.preventDefault();
       mainWindow.hide();
       return;
@@ -5892,6 +5915,23 @@ function createWindow() {
     drainPool();
   });
 
+  // Stirbt der Renderer der Tab-Leiste (z.B. OOM-Kill), fehlen Tabs, Fensterknoepfe und Menue des
+  // rahmenlosen Fensters. Neu laden und den Stand nachreichen; der Zeitstempel verhindert eine Schleife.
+  let lastTabBarCrash = 0;
+  mainWindow.webContents.on('render-process-gone', (_e, details) => {
+    const now = Date.now();
+    if (isQuitting || details.reason === 'clean-exit' || now - lastTabBarCrash < 5000) return;
+    lastTabBarCrash = now;
+    console.warn('[tabbar] renderer gone:', details.reason);
+    setTimeout(() => {
+      if (!mainWindow || mainWindow.isDestroyed()) return;
+      mainWindow.webContents.once('did-finish-load', () => {
+        sendTabsUpdate(); sendThemeUpdate(); sendDesignUpdate(); sendWindowState();
+      });
+      mainWindow.webContents.reload();
+    }, 300);
+  });
+
   // Erster Tab + Pool verzögert füllen. Weitere Tabs der letzten Sitzung werden
   // deferred angelegt und laden erst beim Anklicken.
   mainWindow.webContents.once('did-finish-load', () => {
@@ -5899,7 +5939,7 @@ function createWindow() {
     // Seite, wuerde dieser Fremd-Host sonst beim Start automatisch in die claude.ai-
     // Partition geladen.
     const restored = Array.isArray(windowState.tabs)
-      ? windowState.tabs.filter(u => typeof u === 'string' && isAllowedDomain(u)).slice(0, 20)
+      ? windowState.tabs.filter(u => typeof u === 'string' && isAllowedDomain(u)).slice(0, MAX_TABS)
       : [];
     const ai = Number.isInteger(windowState.activeTab) && windowState.activeTab >= 0 && windowState.activeTab < restored.length ? windowState.activeTab : 0;
     let tab = null;
