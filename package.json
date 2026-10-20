@@ -93,7 +93,7 @@
       "node_modules/**/*",
       "!node_modules/*/{test,tests,__tests__,docs,doc,example,examples,benchmark,benchmarks}/**",
       "!node_modules/**/*.{md,markdown,ts,map,d.ts,coffee,bak,log,h,c,cc,cpp,gyp,gypi,Makefile,mk}",
-      "!node_modules/**/{LICENSE,license,LICENCE,licence,CHANGELOG,changelog,HISTORY,history,AUTHORS,CONTRIBUTORS,NOTICE,README,readme}*",
+      "!node_modules/**/{CHANGELOG,changelog,HISTORY,history,AUTHORS,CONTRIBUTORS,README,readme}*",
       "!node_modules/**/{.github,.idea,.vscode,.nyc_output,.eslintrc*,.prettierrc*,.editorconfig,.travis.yml,.gitignore,.gitattributes,.npmignore,tsconfig*.json,jest.config*,karma.conf*,webpack.config*,rollup.config*,gulpfile*,Gruntfile*}",
       "!**/*.{md,ts,map,d.ts}"
     ],

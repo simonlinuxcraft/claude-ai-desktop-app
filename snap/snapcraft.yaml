@@ -65,7 +65,9 @@ description: |
   * Bug report form in DE/EN/FR/ES/IT
   * Auto-update synced with the GitHub Release
   * Window memory, crash recovery, offline page, download manager,
-    autostart, sandbox enabled
+    autostart
+  * Strict Snap confinement. Chromium's own process sandbox is off
+    (--no-sandbox); windows use context isolation and no Node integration.
 
   Snap permissions:
 
@@ -95,6 +97,7 @@ description: |
   Source code: https://github.com/simonlinuxcraft/claude-ai-desktop-app
   (MIT licence)
 
+license: MIT
 donation: https://ko-fi.com/simonlinuxcraft
 
 base: core24
@@ -142,10 +145,6 @@ parts:
     source: dist/linux-unpacked
     organize:
       '*': app/
-    stage:
-      # Chromium-Lizenz-Dump (19 MB) wird im Snap nicht gebraucht, spart ~8 MB komprimiert.
-      # Nur Excludes: snapcraft nimmt '*' als Default-Include an.
-      - -app/LICENSES.chromium.html
     stage-packages:
       - libnotify4
       - libnss3
