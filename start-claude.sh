@@ -29,6 +29,7 @@ chmod +x "$APPIMAGE"
 
 # AppImages können die Chromium SUID-Sandbox nicht nutzen (chrome-sandbox
 # braucht root:4755, was im gemounteten AppImage nicht möglich ist).
-# --no-sandbox deaktiviert nur die OS-Level Prozess-Sandbox.
-# Die Web-Content-Sandbox (sandbox: true in webPreferences) bleibt aktiv.
+# --no-sandbox deaktiviert die OS-Level Prozess-Sandbox von Chromium ganz, auch
+# die der Renderer. Geblieben sind contextIsolation, kein nodeIntegration in
+# webPreferences und die CSP der App-Fenster.
 exec "$APPIMAGE" --no-sandbox "$@"

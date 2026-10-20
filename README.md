@@ -45,7 +45,7 @@
 - **In-App Bug Report** – Description, optional error codes, optional contact email; auto-includes app/OS info on opt-in. Includes a clear notice that this is an unofficial community wrapper (not an official Anthropic product) with a direct link to [support.anthropic.com](https://support.anthropic.com) for account/login/billing/payment questions. Since v1.4.10 a required checkbox gates the Send button. Localized in DE, EN, FR, ES, IT
 - **App Settings Window** – Configure hotkeys, minimize-to-tray, autostart, background notifications and templates from `Claude → App Settings`
 - **Autostart** – Optional launch on system boot (Linux: writes a `.desktop` file to `~/.config/autostart/`; Snap: native autostart directive)
-- **Themes** – Dark, White, OLED and Midnight Blue, picked in the App Theme window that previews each one, plus three accent styles (Modern, Classic, Neon) that combine freely with any theme. The theme is applied before the first paint, so restored content appears already themed. claude.ai always runs in its dark palette; White is a GPU inversion of it, which switches in ~6ms instead of ~480ms for a real palette flip
+- **Themes** – Dark, White, OLED, Midnight Blue and Matrix, picked in the App Theme window that previews each one, plus four accent styles (Modern, Classic, Neon, Matrix) that combine freely with any theme. The theme is applied before the first paint, so restored content appears already themed. claude.ai always runs in its dark palette; White is a GPU inversion of it, which switches in ~6ms instead of ~480ms for a real palette flip
 - **Session Restore** – Open conversations are remembered and reopened on the next start; restored tabs load on first click, not all at once
 - **Blank-Screen Watchdog** – Detects when the chat area stops receiving frames and repairs it in escalating steps (redraw, bounds nudge, re-attaching the view), or manually via `Ctrl+Alt+R`
 - **Reset claude.ai Verification** – Toolbar button and menu entry that clears cookies and cache for all claude.ai origins, for when the Cloudflare security check is stuck in a loop (requires a new login afterwards)
@@ -58,7 +58,7 @@
 - **Offline Detection** – Automatic reconnect when connection is restored
 - **Crash Recovery** – Crashed tabs reload automatically (max 3 retries)
 - **Background Throttling** – Hidden tabs stop rendering; measured with three background tabs, renderer CPU drops from 13.5% to 6.7%
-- **Security** – Sandbox enabled, IPC validation, CSP headers, subframe allowlist
+- **Security** – Context isolation, no Node integration, IPC sender validation, CSP on the app's own windows, subframe allowlist. Chromium's process sandbox is off, see [Note on --no-sandbox](#note-on---no-sandbox)
 - **Performance** – GPU acceleration, disk caching, tab preloading
 
 ---
@@ -112,7 +112,7 @@ Exec=/path/to/Claude-Desktop-1.5.0.AppImage --no-sandbox
 Icon=/path/to/icon.png
 Type=Application
 Categories=Utility;
-StartupWMClass=claude-desktop
+StartupWMClass=io.github.simonlinuxcraft.DesktopForClaude
 EOF
 ```
 
@@ -150,7 +150,7 @@ Snap users don't need to do anything – `snapd` handles updates in the backgrou
 
 ## Note on --no-sandbox
 
-The `--no-sandbox` flag is required for Electron AppImages on Linux because the Chrome SUID sandbox needs `root:4755` permissions, which are not possible inside an AppImage mount. `CHROME_DEVEL_SANDBOX=''` does **not** work as an alternative. The web content sandbox (`sandbox: true` in webPreferences) remains active and protects against untrusted web content.
+The `--no-sandbox` flag is required for Electron AppImages on Linux because the Chrome SUID sandbox needs `root:4755` permissions, which are not possible inside an AppImage mount. `CHROME_DEVEL_SANDBOX=''` does **not** work as an alternative. The flag turns off Chromium's OS-level process sandbox. The app also sets it in code, and the Snap launcher passes it too. What stays in place is context isolation, no Node integration, IPC sender validation, a navigation and subframe allowlist and CSP on the app's own windows. In the Snap, strict confinement limits what the app can access.
 
 ---
 
@@ -202,6 +202,7 @@ snap run claude-ai-desktop --ozone-platform=x11
   - `preload-appmenu.js` – hamburger menu
   - `preload-bugreport.js` – bug report form
   - `preload-about.js` – about window
+  - `preload-design.js` – App Theme window
   - `preload-content.js` – claude.ai page itself
 - Theming from a single source: `inject/theme-static.js` runs before the first paint, `inject/theme.js` keeps it in sync afterwards. claude.ai stays in its dark palette in every theme; White is a root-level GPU inversion with images and iframes inverted back
 - Custom design via CSS variable overrides + DOM injection
@@ -213,9 +214,9 @@ snap run claude-ai-desktop --ozone-platform=x11
 
 ## Security
 
-Sandbox active on all windows, IPC validated, CSP headers, Electron 41.
+Context isolation and no Node integration on all windows, IPC validated, CSP on the app's own windows, Electron 44.
 
-Known limitation: `--no-sandbox` required for AppImage (SUID sandbox incompatibility). Web content sandbox remains active.
+Known limitation: Chromium's OS-level process sandbox is off (`--no-sandbox`, SUID sandbox incompatibility in AppImage). See [Note on --no-sandbox](#note-on---no-sandbox).
 
 ---
 
