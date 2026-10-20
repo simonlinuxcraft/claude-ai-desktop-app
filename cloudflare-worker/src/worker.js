@@ -42,7 +42,7 @@ export default {
     }
 
     const subject = sanitize(payload.subject, MAX_SUBJECT);
-    const message = sanitize(payload.message, MAX_MESSAGE);
+    const message = sanitize(payload.message, MAX_MESSAGE, true);
     if (!subject || !message) {
       return jsonResponse({ success: false, message: 'subject + message required' }, 400);
     }
@@ -92,13 +92,14 @@ export default {
   }
 };
 
-function sanitize(v, max) {
-  // Strip ASCII control chars (codes 0-31, 127) und schneide auf max
+function sanitize(v, max, multiline) {
+  // Strip ASCII control chars (codes 0-31, 127) und schneide auf max.
+  // Tab und LF bleiben nur mit multiline (Nachrichtentext), nie in subject/email (Header-Injection).
   const s = String(v == null ? '' : v);
   let out = '';
   for (let i = 0; i < s.length && out.length < max; i++) {
     const c = s.charCodeAt(i);
-    if (c >= 32 && c !== 127) out += s[i];
+    if (c >= 32 ? c !== 127 : multiline && (c === 9 || c === 10)) out += s[i];
   }
   return out.trim();
 }

@@ -20,20 +20,14 @@ nur diesen Endpoint an, der Key kommt nie ins Renderer- oder gepackte App-Bundle
    npx wrangler secret put WEB3FORMS_KEY
    ```
 
-   Wert: der bisher in `main.js` hardcodierte Key `269ca388-8c7d-41e9-9063-2b6429a81b6b`.
+   Wert: `<your Web3Forms access key>` (der bisher in `main.js` hardcodierte Key).
    **Tipp:** danach im Web3Forms-Dashboard einen NEUEN Key generieren und den
    alten ablaufen lassen — der alte ist bereits in den AppImage-/Snap-Releases
    geleakt und kann von jedem extrahiert werden, der ein altes Binary hat.
 
-5. Optional: schwachen App-Check aktivieren. Erschwert Casual-Spam, ist aber
-   trivial reverse-engineerbar (Secret liegt in der App).
-
-   ```
-   openssl rand -hex 32     # erzeugt 64-stelligen Hex-String
-   npx wrangler secret put APP_SHARED_SECRET
-   ```
-
-   Den Wert dann auch in `main.js` als `BUG_REPORT_APP_SECRET` eintragen.
+5. `APP_SHARED_SECRET` (weak app check): not supported by the app yet, leave
+   it unset. The app sends no `X-App-Secret` header, so with the secret set the
+   worker answers every submit with 403.
 
 6. Optional: Rate-Limit aktivieren (5 Submits/Stunde/IP).
 
@@ -44,6 +38,10 @@ nur diesen Endpoint an, der Key kommt nie ins Renderer- oder gepackte App-Bundle
    Die zurueckgegebene `id` in `wrangler.toml` eintragen und den Block
    ein-kommentieren.
 
+   Without the KV binding the rate limit does not apply at all. With it, the
+   counter is read and written in two steps (not atomic), so parallel requests
+   can exceed the limit.
+
 7. Deployen:
 
    ```
@@ -52,7 +50,7 @@ nur diesen Endpoint an, der Key kommt nie ins Renderer- oder gepackte App-Bundle
 
    Im Output steht die URL, z.B.
    `https://claude-desktop-bugreport.<account>.workers.dev`. Diese URL in
-   `main.js` als `BUG_REPORT_ENDPOINT` eintragen.
+   `main.js` als `BUG_REPORT_PROXY` eintragen.
 
 ## Endpoint
 
@@ -66,7 +64,7 @@ nur diesen Endpoint an, der Key kommt nie ins Renderer- oder gepackte App-Bundle
 }
 ```
 
-Header `X-App-Secret` falls `APP_SHARED_SECRET` gesetzt ist.
+The worker requires an `X-App-Secret` header if `APP_SHARED_SECRET` is set. The app does not send one yet.
 
 Response: `{ "success": true|false, "message": "..." }`
 
