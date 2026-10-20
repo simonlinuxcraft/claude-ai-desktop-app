@@ -171,7 +171,13 @@ function withTimeout(promise, ms) {
     .finally(() => clearTimeout(timer));
 }
 
+// Seitenskripte koennen window.open ohne Klick ausloesen: hoechstens 5 externe Oeffnungen je 10 s.
+let externalOpens = [];
 function openExternalSafe(url) {
+  const now = Date.now();
+  externalOpens = externalOpens.filter(ts => now - ts < 10000);
+  if (externalOpens.length >= 5) { console.warn('[nav] openExternal gedrosselt:', url); return; }
+  externalOpens.push(now);
   try { const p = shell.openExternal(url); if (p && p.catch) p.catch(() => {}); } catch {}
 }
 
@@ -1100,6 +1106,18 @@ function setupView(view) {
     const onRedirect = (_event, navUrl) => { if (isAllowedDomain(navUrl)) cleanup(); };
     const onDidNav = (_event, navUrl) => { if (isAllowedDomain(navUrl)) cleanup(); };
 
+    // Das Popup hat keine Adressleiste: der Host im Titel ist die einzige Gegenprobe gegen eine
+    // untergeschobene Anmeldeseite. Der Seitentitel wird bewusst nicht uebernommen.
+    const setHostTitle = (u) => {
+      if (childWindow.isDestroyed()) return;
+      let host = '';
+      try { host = new URL(u).hostname; } catch {}
+      childWindow.setTitle(host ? `${t('Anmeldung', 'Sign In', 'Connexion', 'Accesso')} - ${host}` : t('Anmeldung', 'Sign In', 'Connexion', 'Accesso'));
+    };
+    childWindow.webContents.on('page-title-updated', (e) => e.preventDefault());
+    childWindow.webContents.on('did-navigate', (_e, u) => setHostTitle(u));
+    setHostTitle(initialUrl);
+
     childWindow.webContents.on('will-navigate', onNav);
     childWindow.webContents.on('will-redirect', onRedirect);
     childWindow.webContents.on('did-navigate', onDidNav);
@@ -1186,7 +1204,7 @@ function setupView(view) {
   });
 
   // SPA-Navigation (Chat-Wechsel): Scripts re-injizieren
-  wc.on('did-navigate-in-page', () => reinjectScripts(wc));
+  wc.on('did-navigate-in-page', (_e, _url, isMainFrame) => { if (isMainFrame) reinjectScripts(wc); });
 
   // Aktuelle URL am Tab mitfuehren, damit Offline-Restore und Session-Wiederherstellung
   // den echten Chat kennen. data: ausschliessen, sonst frisst die Offline-Seite die URL.
@@ -5285,6 +5303,8 @@ function setupSession() {
       if (!isClaudeAiOrigin(details && details.requestingUrl)) return cb(false);
       const wantsAudio = !details || !details.mediaTypes || details.mediaTypes.includes('audio');
       if (!wantsAudio) return cb(false);
+      // Zustimmung und Einstellung gelten nur dem Mikrofon, eine Anfrage mit Kamera geht nicht durch.
+      if (details && Array.isArray(details.mediaTypes) && details.mediaTypes.includes('video')) return cb(false);
       if (microphoneEnabled) return cb(true);
       if (microphoneConsentAsked) return cb(false);
       getOrStartMicConsent().then(reason => {
