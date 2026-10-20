@@ -42,7 +42,15 @@ app.commandLine.appendSwitch('no-sandbox');
 // Single Instance
 // exit statt quit: quit ist asynchron, der Init lief bis dahin komplett durch (Fenster,
 // Tray, claude.ai in den Tabs) und das will-quit danach nahm den globalen Hotkey mit.
-if (!app.requestSingleInstanceLock()) { app.exit(0); }
+// Nach "Neustart" im Update-Dialog startet electron-updater das neue AppImage, waehrend die alte
+// Instanz noch herunterfaehrt und den Lock haelt: nur dann bis zu 10 s nachfassen.
+let gotInstanceLock = app.requestSingleInstanceLock();
+for (let i = 0; !gotInstanceLock && process.env.APPIMAGE_SILENT_INSTALL && i < 20; i++) {
+  Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 500);
+  gotInstanceLock = app.requestSingleInstanceLock();
+}
+delete process.env.APPIMAGE_SILENT_INSTALL;
+if (!gotInstanceLock) { app.exit(0); }
 
 // Konstanten
 
@@ -4709,8 +4717,12 @@ function triggerManualUpdateCheck() {
     showCustomMessageBox({ type: 'info', title: 'Desktop for Claude', heading: t('Updates über den Snap Store', 'Updates through the Snap Store', 'Mises à jour via le Snap Store', 'Aggiornamenti tramite lo Snap Store'), message: t('Updates werden über den Snap Store verwaltet und automatisch installiert.', 'Updates are managed by the Snap Store and installed automatically.', 'Les mises à jour sont gérées par le Snap Store et installées automatiquement.', 'Gli aggiornamenti sono gestiti dallo Snap Store e installati automaticamente.') });
     return;
   }
+  if (!process.env.APPIMAGE) {
+    // Ohne AppImage-Pfad liefert checkForUpdates() null ohne Ereignis, der Klick bliebe stumm.
+    showCustomMessageBox({ type: 'info', title: 'Desktop for Claude', heading: t('Keine automatischen Updates', 'No automatic updates', 'Pas de mises à jour automatiques', 'Nessun aggiornamento automatico'), message: t('Diese Installation ist kein AppImage. Updates kommen über den Paketmanager oder die GitHub-Releases.', 'This installation is not an AppImage. Get updates through your package manager or the GitHub releases.', 'Cette installation n’est pas un AppImage. Les mises à jour viennent du gestionnaire de paquets ou des versions GitHub.', 'Questa installazione non è un AppImage. Gli aggiornamenti arrivano dal gestore di pacchetti o dalle release di GitHub.') });
+    return;
+  }
   manualUpdateCheck = true;
-  // Ist der Updater inaktiv (kein AppImage-Pfad), kommt null ohne Ereignis zurueck.
   Promise.resolve(updater().checkForUpdates()).then(r => { if (!r) manualUpdateCheck = false; }).catch(() => { manualUpdateCheck = false; });
 }
 
@@ -5905,7 +5917,7 @@ function createWindow() {
 
 // App Lifecycle
 
-app.on('second-instance', () => showMainWindow());
+app.on('second-instance', () => { if (!isQuitting) showMainWindow(); });
 
 // Webview-Tags blockieren (Security)
 app.on('web-contents-created', (_, wc) => {
@@ -6010,6 +6022,10 @@ app.whenReady().then(() => {
       if (waitForFirstTabInterval) { clearInterval(waitForFirstTabInterval); waitForFirstTabInterval = null; }
     }, 15000);
   }
+}).catch((e) => {
+  // Ohne Fenster bliebe ein unsichtbarer Prozess, der den Single-Instance-Lock haelt.
+  console.error('[startup]', e);
+  if (!mainWindow || mainWindow.isDestroyed()) app.exit(1);
 });
 
 app.on('window-all-closed', () => {
