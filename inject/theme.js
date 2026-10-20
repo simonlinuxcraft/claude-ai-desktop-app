@@ -227,6 +227,23 @@
   // Selektoren, die als Nachfahre nie matchen: der html-Scope deckt sie schon ab.
   var SELF_SEL_RE = /^(:root|html|\*)$/;
 
+  // Trennt nur an Kommas auf oberster Ebene, nicht in :is(...)/:not(...)/[attr="a,b"] und nicht
+  // nach Backslash (Tailwind escaped Klammern und Kommas im Klassennamen).
+  function splitSel(s) {
+    var out = [], depth = 0, quote = '', start = 0;
+    for (var i = 0; i < s.length; i++) {
+      var ch = s.charAt(i);
+      if (ch === '\\') i++;
+      else if (quote) { if (ch === quote) quote = ''; }
+      else if (ch === '"' || ch === "'") quote = ch;
+      else if (ch === '(' || ch === '[') depth++;
+      else if (ch === ')' || ch === ']') { if (depth > 0) depth--; }
+      else if (ch === ',' && depth === 0) { out.push(s.slice(start, i)); start = i + 1; }
+    }
+    out.push(s.slice(start));
+    return out;
+  }
+
   // claude.ai definiert die --cds-Palette nicht nur auf :root, sondern ein zweites Mal auf
   // .cds-root-Containern mitten im Baum. Ein Override nur am <html> wird dort neu gesetzt
   // und alles darunter erbt wieder das Original (gemessen am Spark-Logo im Chat: fill
@@ -234,7 +251,7 @@
   // unter welchen Selektoren die Palette sonst noch definiert wird, und dort ebenfalls
   // ueberschreiben. Gesammelt statt fest verdrahtet, damit eine umbenannte Klasse folgt.
   function collectSel(selectorText, bag) {
-    var parts = String(selectorText).split(',');
+    var parts = splitSel(String(selectorText));
     for (var i = 0; i < parts.length; i++) {
       var one = parts[i].trim();
       if (one && !SELF_SEL_RE.test(one)) bag[one] = 1;
@@ -257,6 +274,9 @@
     var oledVal = {}, oledRank = {};
     try {
       for (var i = 0; i < document.styleSheets.length; i++) {
+        // Eigene Sheets nicht lesen: sonst landen unsere Overrides wieder in der Palette.
+        var own = document.styleSheets[i].ownerNode, oid = own && own.id;
+        if (oid === 'cd-theme-static' || oid === 'cd-theme-vars') continue;
         var cr;
         try { cr = document.styleSheets[i].cssRules; } catch (e) { continue; }
         if (!cr) continue;
@@ -525,6 +545,8 @@
       }
       // unsere Artefakte wiederherstellen, falls claude.ai sie entfernt
       if (!document.getElementById('cd-theme-static') || !document.getElementById('cd-theme-static').isConnected) setSheet('cd-theme-static', buildStaticCSS());
+      // Gleiches fuer die Variablen: buildVarsCSS lief bisher nur bei neu hinzugekommenen Sheets.
+      if (wantVars && !document.getElementById('cd-theme-vars')) { _varsKey = ''; buildVarsCSS(); }
       // In beide Richtungen: claude.ai baut den body beim Navigieren neu, dann fehlt die
       // Ebene; und wer das Theme oder den Schalter wechselt, soll sie wieder los sein.
       ensureRain(cur.mode === 'matrix' && cur.rain);

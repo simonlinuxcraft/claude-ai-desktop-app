@@ -1,7 +1,7 @@
 'use strict';
 // Sichert ab, dass das erzeugte Stylesheet fuer die bestehenden Modi Byte-gleich bleibt.
-// Baseline ist die Kopie aus .backups/2026-10-06-ring-steps30; fehlt sie, ueberspringt der
-// Test statt zu scheitern. Dreimal wurde sie bewusst nachgezogen: am 2026-08-17, als die
+// Baseline ist test/fixtures/theme-static.baseline.js (Kopie des Stands 2026-10-06-ring-steps30);
+// fehlt sie, scheitert der Test. Dreimal wurde sie bewusst nachgezogen: am 2026-08-17, als die
 // Wurzelfarbe des Hell-Modus von #fff auf #000 korrigiert wurde (sie liegt unter dem
 // Invert-Filter), und am 2026-09-23, als die Ring-Animation von ease-in-out auf steps(60)
 // wechselte. Der Ring animiert background-position und lief mit 60 Frames pro Sekunde
@@ -14,8 +14,8 @@ const assert = require('node:assert/strict');
 const path = require('path');
 
 const CUR = require('../inject/theme-static.js');
-let base = null;
-try { base = require('../.backups/2026-10-06-ring-steps30/inject/theme-static.js'); } catch {}
+const base = require('./fixtures/theme-static.baseline.js');
+const { THEME_MODES } = require('../utils/pure');
 
 const AC = { from: '#F26A3F', to: '#E83B6E', mid: '#E8524F' };
 const ST = {
@@ -29,7 +29,7 @@ const ST = {
 // Themes duerfen darum nur hinten anhaengen: was vorher drinstand, muss unveraendert und
 // in derselben Reihenfolge stehen bleiben.
 for (const name of Object.keys(ST)) {
-  test(`buildStaticCSS: ${name} haengt nur an, aendert nichts Bestehendes`, { skip: base ? false : 'keine Baseline' }, () => {
+  test(`buildStaticCSS: ${name} haengt nur an, aendert nichts Bestehendes`, () => {
     const before = base.buildStaticCSS(ST[name]);
     const now = CUR.buildStaticCSS(ST[name]);
     // Der eigentliche Schutz: kein Zeichen des alten Sheets darf sich geaendert haben oder
@@ -55,3 +55,54 @@ test('midnight bringt eigenen Scope und faerbt nicht ueber das OLED-Scope', () =
     if (rule.includes('#050306')) assert.ok(rule.includes('data-cd-theme="oled"'), 'OLED-Schwarz ausserhalb des OLED-Scopes: ' + rule.slice(0, 120));
   }
 });
+
+// Eine fehlende Klammer in einem der langen String-Bausteine kippt im Browser still die
+// restlichen Regeln. Gibt null zurueck oder die Beschreibung des ersten Fehlers. Klammern
+// in Strings (data:-URLs), Kommentaren und nach Backslash zaehlen nicht.
+function klammerFehler(css) {
+  const paar = { ')': '(', ']': '[', '}': '{' };
+  const stack = [];
+  let quote = '';
+  for (let i = 0; i < css.length; i++) {
+    const c = css[i];
+    if (c === '\\') { i++; continue; }
+    if (quote) { if (c === quote) quote = ''; continue; }
+    if (c === '"' || c === "'") { quote = c; continue; }
+    if (c === '/' && css[i + 1] === '*') {
+      const ende = css.indexOf('*/', i + 2);
+      if (ende < 0) return 'Kommentar nicht geschlossen';
+      i = ende + 1;
+      continue;
+    }
+    if (c === '(' || c === '[' || c === '{') stack.push(c);
+    else if (paar[c] && stack.pop() !== paar[c]) return `unpassende ${c} bei Zeichen ${i}`;
+  }
+  if (quote) return 'String nicht geschlossen';
+  return stack.length ? `${stack.length} Klammer(n) nicht geschlossen` : null;
+}
+
+test('klammerFehler: erkennt kaputtes CSS und ignoriert Klammern in Strings', () => {
+  assert.equal(klammerFehler('a[b="x)"]{c:url("d(e")}'), null);
+  assert.notEqual(klammerFehler('a{b:(c]}'), null);
+  assert.notEqual(klammerFehler('a{b:c'), null);
+  assert.notEqual(klammerFehler('a{b:c}}'), null);
+  assert.notEqual(klammerFehler('a{b:"c}'), null);
+});
+
+// buildStaticCSS liest nur st.mode, st.design und st.accent; Regen schaltet das Attribut
+// data-cd-rain am <html>, die Regeln stehen unabhaengig davon im Sheet. st.rain wird hier
+// trotzdem durchgespielt: bleibt die Ausgabe gleich, ist das die Zusicherung dafuer.
+for (const mode of THEME_MODES) {
+  for (const design of ['modern', 'classic']) {
+    test(`buildStaticCSS: ${mode}/${design} hat ausgeglichene Klammern`, () => {
+      const css = new Map();
+      for (const rain of [true, false]) {
+        const out = CUR.buildStaticCSS({ mode, design, rain, accent: AC });
+        assert.ok(out.length > 0, 'leeres Sheet');
+        assert.equal(klammerFehler(out), null, `rain=${rain}`);
+        css.set(rain, out);
+      }
+      assert.equal(css.get(true), css.get(false), 'rain veraendert das Sheet');
+    });
+  }
+}

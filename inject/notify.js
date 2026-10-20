@@ -11,8 +11,8 @@
   // bricht, greifen die anderen. Bei Erst-Match jeder Strategie loggen wir einmal,
   // damit man bei Regressionen in DevTools sieht welche noch greift.
 
-  // Wortgrenzen: ohne sie traf "halt" auch "Inhalt kopieren".
-  var STOP_RE = /\b(stop|stoppen|abbrechen|abbruch|halt)\b/i;
+  // Wortgrenzen: ohne sie traf "halt" auch "Inhalt kopieren". \b kennt kein ê, darum arr[eê]ter.
+  var STOP_RE = /\b(stop|stoppen|abbrechen|abbruch|halt|arr[eê]ter|interrompre|interrompi|ferma|detener|parar)\b/i;
   var lastFire = 0;
   var COOLDOWN = 2000;
   var wasGenerating = false;
@@ -129,7 +129,7 @@
     wasGenerating = generating;
   }
 
-  // Polling reicht aus — DOM-Mutationen sind haeufig, aber wir wollen nur den
+  // Polling reicht aus - DOM-Mutationen sind haeufig, aber wir wollen nur den
   // Uebergang erkennen. 700ms ist ein Kompromiss aus Latenz und CPU.
   // Nach einem Neuladen kann der alte Stand noch "antwortet" sein.
   report(false);

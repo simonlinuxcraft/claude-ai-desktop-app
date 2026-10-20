@@ -948,7 +948,7 @@ function verifyScript() {
     reset: t('Zurücksetzen', 'Reset', 'Réinitialiser', 'Reimposta'),
     dismiss: t('Schließen', 'Dismiss', 'Ignorer', 'Ignora')
   };
-  return VERIFY_SCRIPT.replace('__VERIFY_I18N__', JSON.stringify(i18n));
+  return VERIFY_SCRIPT.replace('__VERIFY_I18N__', () => JSON.stringify(i18n));
 }
 
 // Theme-State fuer den Controller (inject/theme.js): mode + design + accent.
