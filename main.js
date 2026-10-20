@@ -2808,7 +2808,7 @@ async function exportActiveConversation() {
     md += `## ${b.role === 'User' ? t('Du', 'You', 'Vous', 'Tu') : 'Claude'}\n\n${b.md}\n\n---\n\n`;
   }
 
-  const safeName = payload.title.replace(/[^\w\s.-]+/g, '_').slice(0, 80) || 'claude-chat';
+  const safeName = payload.title.replace(/[\\/:*?"<>|\x00-\x1f]+/g, '_').slice(0, 80) || 'claude-chat';
   const result = await dialog.showSaveDialog(mainWindow, {
     defaultPath: path.join(app.getPath('documents'), `${safeName}-${today}.md`),
     filters: [
@@ -4617,6 +4617,9 @@ function setupDownloadManager() {
   const activeKeys = new Set();
   const cooldownUntil = new Map();
   const COOLDOWN_MS = 3000;
+  // Zwischendateien im privaten userData statt im geteilten /tmp (vorhersagbare Namen dort).
+  const dlTmpDir = path.join(app.getPath('userData'), 'dl-tmp');
+  try { fs.mkdirSync(dlTmpDir, { recursive: true, mode: 0o700 }); } catch {}
 
   function dropKey(key) {
     activeKeys.delete(key);
@@ -4630,19 +4633,20 @@ function setupDownloadManager() {
   session.fromPartition('persist:claude').on('will-download', (event, item) => {
     const fileName = item.getFilename();
     const url = item.getURL();
-    const keys = [url, fileName].filter(Boolean);
+    // Dateiname mit Groesse, damit zwei verschiedene Dateien gleichen Namens nicht als Echo zaehlen.
+    const keys = [url, fileName && `${fileName}|${item.getTotalBytes()}`].filter(Boolean);
     const now = Date.now();
 
     // Echo-Filter: Duplikat → Temp-Pfad + cancel (Auto-Dialog wird unterdrückt)
     for (const k of keys) {
       const u = cooldownUntil.get(k);
       if (u && now < u) {
-        try { item.setSavePath(path.join(app.getPath('temp'), '.cd-discard-' + now)); } catch {}
+        try { item.setSavePath(path.join(dlTmpDir, '.cd-discard-' + now)); } catch {}
         try { item.cancel(); } catch {}
         return;
       }
       if (activeKeys.has(k)) {
-        try { item.setSavePath(path.join(app.getPath('temp'), '.cd-discard-' + now)); } catch {}
+        try { item.setSavePath(path.join(dlTmpDir, '.cd-discard-' + now)); } catch {}
         try { item.cancel(); } catch {}
         return;
       }
@@ -4652,7 +4656,7 @@ function setupDownloadManager() {
 
     // SYNCHRON: Temp-Pfad setzen — sonst öffnet Chromium parallel seinen eigenen Save-Dialog!
     const safeName = fileName.replace(/[^\w.-]+/g, '_');
-    const tmpPath = path.join(app.getPath('temp'), '.cd-pending-' + now + '-' + safeName);
+    const tmpPath = path.join(dlTmpDir, '.cd-pending-' + now + '-' + safeName);
     try { item.setSavePath(tmpPath); } catch {}
 
     let chosenPath = null;
