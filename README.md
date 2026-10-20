@@ -31,35 +31,35 @@
 
 ## Features
 
-- **Voice Input** – Microphone permission for claude.ai's voice features, scoped strictly to claude.ai (artifact iframes can't piggyback). Snap users get an in-app setup wizard that detects whether the `audio-record` plug is connected and links straight to the Snap Store permissions page. Since v1.3.8 the App Settings show a live colored status pill next to the toggle and the Allow button briefly pulses the moment the Snap permission is granted
-- **Live Notifications** – Tab-bar banner for service-side notices (info / warn / critical / success), fetched from the repo every 6h with version filters and per-ID dismiss state, so urgent hints land without a new release
-- **Custom App Menu (Hamburger)** – In-app menu with keyboard navigation, replaces the native menu bar; quick access to all actions including new tab, export, settings, updates and bug report
-- **Tab System** – Multiple chats side by side with a visual tab bar (Ctrl+T, Ctrl+W, Ctrl+Tab); direct buttons in the tab bar for Markdown export and bug report
-- **Markdown Export** – Save the active conversation as a `.md` file via `Ctrl+Shift+E`, including code blocks, lists, headings and links
-- **Frameless Window** – Own title bar with the tab bar integrated, no doubled system frame
-- **System Tray** – Optional minimize-to-tray instead of closing the window
-- **Global Quick-Prompt Hotkey** – Configurable hotkey opens a frameless prompt window that injects your text into a new chat
-- **Prompt Templates** – Define named prefixes (e.g. "Translate to English:"), pick them with Tab in the Quick-Prompt window
-- **Clipboard Hotkey** – Separate global hotkey that opens a new chat with your clipboard text already inserted
-- **Background-Tab Response Notifications** – Optional native notification when Claude finishes a response in a tab you're not currently viewing
-- **In-App Bug Report** – Description, optional error codes, optional contact email; auto-includes app/OS info on opt-in. Includes a clear notice that this is an unofficial community wrapper (not an official Anthropic product) with a direct link to [support.anthropic.com](https://support.anthropic.com) for account/login/billing/payment questions. Since v1.4.10 a required checkbox gates the Send button. Localized in DE, EN, FR, ES, IT
-- **App Settings Window** – Configure hotkeys, minimize-to-tray, autostart, background notifications and templates from `Claude → App Settings`
-- **Autostart** – Optional launch on system boot (Linux: writes a `.desktop` file to `~/.config/autostart/`; Snap: native autostart directive)
-- **Themes** – Dark, White, OLED, Midnight Blue and Matrix, picked in the App Theme window that previews each one, plus four accent styles (Modern, Classic, Neon, Matrix) that combine freely with any theme. The theme is applied before the first paint, so restored content appears already themed. claude.ai always runs in its dark palette; White is a GPU inversion of it, which switches in ~6ms instead of ~480ms for a real palette flip
-- **Session Restore** – Open conversations are remembered and reopened on the next start; restored tabs load on first click, not all at once
-- **Blank-Screen Watchdog** – Detects when the chat area stops receiving frames and repairs it in escalating steps (redraw, bounds nudge, re-attaching the view), or manually via `Ctrl+Alt+R`
-- **Reset claude.ai Verification** – Toolbar button and menu entry that clears cookies and cache for all claude.ai origins, for when the Cloudflare security check is stuck in a loop (requires a new login afterwards)
-- **Copy Diagnostics Info** – Collects app version, Electron/Chrome build, kernel, display session, GPU vendor and WebGL renderer into the clipboard for bug reports
-- **Auto-Update** – Updates via GitHub Releases (AppImage) or `snapd` (Snap). Since v1.3.7 the AppImage also rewrites stale `.desktop` and autostart entries on startup, so the menu shortcut keeps pointing at the current file after `electron-updater` replaces the AppImage
-- **Manual Update Check** – Menu entry shows a dialog with the result
-- **What's-New Popup** – Shows the changelog once after each version upgrade, including notes for skipped versions, as a slideshow with one slide per change
-- **In-App OAuth Popups** – Google, GitHub, Google Drive, GitLab, Bitbucket, Microsoft, Auth0, Higgsfield
-- **Multilingual UI** – Full interface in German, English, French and Italian, selected by system language with English fallback (the bug-report dialog covers additional languages)
-- **Offline Detection** – Automatic reconnect when connection is restored
-- **Crash Recovery** – Crashed tabs reload automatically (max 3 retries)
-- **Background Throttling** – Hidden tabs stop rendering; measured with three background tabs, renderer CPU drops from 13.5% to 6.7%
-- **Security** – Context isolation, no Node integration, IPC sender validation, CSP on the app's own windows, subframe allowlist. Chromium's process sandbox is off, see [Note on --no-sandbox](#note-on---no-sandbox)
-- **Performance** – GPU acceleration, disk caching, tab preloading
+- **Voice Input** - Microphone permission for claude.ai's voice features, scoped strictly to claude.ai (artifact iframes can't piggyback). Snap users get an in-app setup wizard that detects whether the `audio-record` plug is connected and links straight to the Snap Store permissions page. Since v1.3.8 the App Settings show a live colored status pill next to the toggle and the Allow button briefly pulses the moment the Snap permission is granted
+- **Live Notifications** - Tab-bar banner for service-side notices (info / warn / critical / success), fetched from the repo every 6h with version filters and per-ID dismiss state, so urgent hints land without a new release
+- **Custom App Menu (Hamburger)** - In-app menu with keyboard navigation, replaces the native menu bar; quick access to all actions including new tab, export, settings, updates and bug report
+- **Tab System** - Multiple chats side by side with a visual tab bar (Ctrl+T, Ctrl+W, Ctrl+Tab); direct buttons in the tab bar for Markdown export and bug report
+- **Markdown Export** - Save the active conversation as a `.md` file via `Ctrl+Shift+E`, including code blocks, lists, headings and links
+- **Frameless Window** - Own title bar with the tab bar integrated, no doubled system frame
+- **System Tray** - Optional minimize-to-tray instead of closing the window
+- **Global Quick-Prompt Hotkey** - Configurable hotkey opens a frameless prompt window that injects your text into a new chat
+- **Prompt Templates** - Define named prefixes (e.g. "Translate to English:"), pick them with Tab in the Quick-Prompt window
+- **Clipboard Hotkey** - Separate global hotkey that opens a new chat with your clipboard text already inserted
+- **Background-Tab Response Notifications** - Optional native notification when Claude finishes a response in a tab you're not currently viewing
+- **In-App Bug Report** - Description, optional error codes, optional contact email; auto-includes app/OS info on opt-in. Includes a clear notice that this is an unofficial community wrapper (not an official Anthropic product) with a direct link to [support.anthropic.com](https://support.anthropic.com) for account/login/billing/payment questions. Since v1.4.10 a required checkbox gates the Send button. Localized in DE, EN, FR, ES, IT
+- **App Settings Window** - Configure hotkeys, minimize-to-tray, autostart, background notifications and templates from `Claude → App Settings`
+- **Autostart** - Optional launch on system boot (Linux: writes a `.desktop` file to `~/.config/autostart/`; Snap: native autostart directive)
+- **Themes** - Dark, White, OLED, Midnight Blue and Matrix, picked in the App Theme window that previews each one, plus four accent styles (Modern, Classic, Neon, Matrix) that combine freely with any theme. The theme is applied before the first paint, so restored content appears already themed. claude.ai always runs in its dark palette; White is a GPU inversion of it, which switches in ~6ms instead of ~480ms for a real palette flip
+- **Session Restore** - Open conversations are remembered and reopened on the next start; restored tabs load on first click, not all at once
+- **Blank-Screen Watchdog** - Detects when the chat area stops receiving frames and repairs it in escalating steps (redraw, bounds nudge, re-attaching the view), or manually via `Ctrl+Alt+R`
+- **Reset claude.ai Verification** - Toolbar button and menu entry that clears cookies and cache for all claude.ai origins, for when the Cloudflare security check is stuck in a loop (requires a new login afterwards)
+- **Copy Diagnostics Info** - Collects app version, Electron/Chrome build, kernel, display session, GPU vendor and WebGL renderer into the clipboard for bug reports
+- **Auto-Update** - Updates via GitHub Releases (AppImage) or `snapd` (Snap). Since v1.3.7 the AppImage also rewrites stale `.desktop` and autostart entries on startup, so the menu shortcut keeps pointing at the current file after `electron-updater` replaces the AppImage
+- **Manual Update Check** - Menu entry shows a dialog with the result
+- **What's-New Popup** - Shows the changelog once after each version upgrade, including notes for skipped versions, as a slideshow with one slide per change
+- **In-App OAuth Popups** - Google, GitHub, Google Drive, GitLab, Bitbucket, Microsoft, Auth0, Higgsfield
+- **Multilingual UI** - Full interface in German, English, French and Italian, selected by system language with English fallback (the bug-report dialog covers additional languages)
+- **Offline Detection** - Automatic reconnect when connection is restored
+- **Crash Recovery** - Crashed tabs reload automatically (max 3 retries)
+- **Background Throttling** - Hidden tabs stop rendering; measured with three background tabs, renderer CPU drops from 13.5% to 6.7%
+- **Security** - Context isolation, no Node integration, IPC sender validation, CSP on the app's own windows, subframe allowlist. Chromium's process sandbox is off, see [Note on --no-sandbox](#note-on---no-sandbox)
+- **Performance** - GPU acceleration, disk caching, tab preloading
 
 ---
 
@@ -71,7 +71,7 @@
 sudo snap install claude-ai-desktop
 ```
 
-Snap updates are handled automatically by `snapd` – no action needed.
+Snap updates are handled automatically by `snapd` - no action needed.
 
 ### AppImage (all Linux distros)
 
@@ -139,12 +139,12 @@ npm run build-appimage
 
 The AppImage updates itself via `electron-updater` whenever the app is **fully quit** (not just minimized). If you're stuck on an older version like v1.2.0:
 
-1. **Quit the app completely** – Right-click the tray icon → Quit, or `File → Quit`. Just closing the window is not enough if minimize-to-tray is enabled.
-2. **Restart the app** – The pending update installs on next launch.
-3. **Check your Desktop shortcut** – If your `~/.local/share/applications/claude-desktop.desktop` still has a hardcoded path like `Claude-Desktop-1.2.0.AppImage`, update it to point to the new file. Since v1.3.7 the app rewrites this file on startup, so once you've launched a v1.3.7+ AppImage at least once, future updates fix the shortcut on their own.
-4. **Manual check** – `Claude → Check for Updates` forces an immediate check and shows the result.
+1. **Quit the app completely** - Right-click the tray icon → Quit, or `File → Quit`. Just closing the window is not enough if minimize-to-tray is enabled.
+2. **Restart the app** - The pending update installs on next launch.
+3. **Check your Desktop shortcut** - If your `~/.local/share/applications/claude-desktop.desktop` still has a hardcoded path like `Claude-Desktop-1.2.0.AppImage`, update it to point to the new file. Since v1.3.7 the app rewrites this file on startup, so once you've launched a v1.3.7+ AppImage at least once, future updates fix the shortcut on their own.
+4. **Manual check** - `Claude → Check for Updates` forces an immediate check and shows the result.
 
-Snap users don't need to do anything – `snapd` handles updates in the background.
+Snap users don't need to do anything - `snapd` handles updates in the background.
 
 ---
 
@@ -176,7 +176,7 @@ snap run claude-ai-desktop --ozone-platform=x11
 | Ctrl+W | Close tab |
 | Ctrl+Tab | Next tab |
 | Ctrl+Shift+Tab | Previous tab |
-| Ctrl+1–9 | Switch to tab |
+| Ctrl+1-9 | Switch to tab |
 | Ctrl+N | New chat |
 | Ctrl+Shift+E | Export conversation as Markdown |
 | Ctrl+, | Settings |
@@ -194,16 +194,16 @@ snap run claude-ai-desktop --ozone-platform=x11
 - Tab contents rendered as `WebContentsView` (one per tab)
 - Tab bar as inline HTML in the main window
 - IPC communication through dedicated preload scripts (contextBridge):
-  - `preload-tabbar.js` – tab bar
-  - `preload-settings.js` – settings window
-  - `preload-quickprompt.js` – quick-prompt window
-  - `preload-whatsnew.js` – what's-new popup
-  - `preload-messagebox.js` – custom message boxes
-  - `preload-appmenu.js` – hamburger menu
-  - `preload-bugreport.js` – bug report form
-  - `preload-about.js` – about window
-  - `preload-design.js` – App Theme window
-  - `preload-content.js` – claude.ai page itself
+  - `preload-tabbar.js` - tab bar
+  - `preload-settings.js` - settings window
+  - `preload-quickprompt.js` - quick-prompt window
+  - `preload-whatsnew.js` - what's-new popup
+  - `preload-messagebox.js` - custom message boxes
+  - `preload-appmenu.js` - hamburger menu
+  - `preload-bugreport.js` - bug report form
+  - `preload-about.js` - about window
+  - `preload-design.js` - App Theme window
+  - `preload-content.js` - claude.ai page itself
 - Theming from a single source: `inject/theme-static.js` runs before the first paint, `inject/theme.js` keeps it in sync afterwards. claude.ai stays in its dark palette in every theme; White is a root-level GPU inversion with images and iframes inverted back
 - Custom design via CSS variable overrides + DOM injection
 - Session: `persist:claude` partition shared between tabs and OAuth popups
