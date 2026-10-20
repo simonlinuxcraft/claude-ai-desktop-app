@@ -5207,12 +5207,13 @@ ${customTitlebarHTML(escapeHtml(i18n.title))}
 
 // Test-Override-Pfad für lokale Entwicklung. Hat Vorrang vor dem GitHub-Fetch.
 // Setze CLAUDE_NOTIFICATIONS_OVERRIDE auf einen absoluten Pfad zu einer JSON-Datei.
-// In dev (npm start, !app.isPackaged) wird zusätzlich automatisch ./notifications.json
-// im Projektroot probiert, falls die ENV-Var nicht gesetzt ist.
+// In dev (npm start, !app.isPackaged) wird zusätzlich automatisch ./notifications.dev.json
+// (gitignored) im Projektroot probiert, falls die ENV-Var nicht gesetzt ist. Die getrackte
+// notifications.json ist die Live-Datei, die alle Nutzer abrufen, und wird nicht zum Testen benutzt.
 function getNotificationsOverridePath() {
   if (process.env.CLAUDE_NOTIFICATIONS_OVERRIDE) return process.env.CLAUDE_NOTIFICATIONS_OVERRIDE;
   if (!app.isPackaged) {
-    const local = path.join(__dirname, 'notifications.json');
+    const local = path.join(__dirname, 'notifications.dev.json');
     if (fs.existsSync(local)) return local;
   }
   return null;

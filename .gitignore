@@ -12,9 +12,10 @@ build-flatpak.sh
 .craft/
 ORCHESTRATOR_REPORT*.md
 
-# Live-Notifications: lokale Test-Datei, niemals committen.
+# Live-Notifications: notifications.json ist die getrackte Live-Datei, die lokale
+# Test-Datei heisst notifications.dev.json und wird nie committet.
 # Echte Notifications werden separat via GitHub-Web-UI direkt auf main hochgeladen.
-notifications.json
+notifications.dev.json
 
 # Persoenliche Snap-Anleitungen, bleiben lokal.
 SNAP-RELEASE.md
@@ -27,6 +28,7 @@ cloudflare-worker/.wrangler/
 
 # Lokale Claude-Code-Config (auch via globaler gitignore, hier klon-fest)
 .claude/
+.codex/
 
 # OS- und Editor-Dateien
 .DS_Store
