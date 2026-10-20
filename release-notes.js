@@ -15,6 +15,53 @@ const RELEASE_NOTES_REVISIT = {
 };
 
 const RELEASE_NOTES = {
+  '1.5.1': [
+    {
+      icon: 'refresh',
+      title: {
+        de: 'Zuverlässigerer Start und Neustart',
+        en: 'More reliable start and restart',
+        fr: 'Démarrage et redémarrage plus fiables',
+        it: 'Avvio e riavvio più affidabili'
+      },
+      text: {
+        de: 'Nach einem Update startet die App neu, auch wenn die alte Instanz noch herunterfährt. Ein fehlgeschlagener Start hinterlässt keinen unsichtbaren Prozess mehr, der den nächsten Start blockiert. Das Fenster erscheint nach dem Abstecken eines Monitors wieder auf dem Bildschirm, und die Tab-Leiste erholt sich nach einem Absturz.',
+        en: 'After an update the app restarts even while the old instance is still shutting down. A failed start no longer leaves an invisible process that blocks the next start. The window comes back on screen after a monitor is unplugged, and the tab bar recovers from a crash.',
+        fr: 'Après une mise à jour, l’application redémarre même si l’ancienne instance est encore en train de se fermer. Un démarrage échoué ne laisse plus de processus invisible qui bloque le suivant. La fenêtre revient à l’écran après le débranchement d’un moniteur, et la barre d’onglets se rétablit après un plantage.',
+        it: 'Dopo un aggiornamento l’app si riavvia anche se la vecchia istanza si sta ancora chiudendo. Un avvio fallito non lascia più un processo invisibile che blocca quello successivo. La finestra torna sullo schermo dopo lo scollegamento di un monitor e la barra delle schede si riprende dopo un arresto anomalo.'
+      }
+    },
+    {
+      icon: 'check',
+      title: {
+        de: 'Kleinere Korrekturen',
+        en: 'Smaller fixes',
+        fr: 'Petites corrections',
+        it: 'Piccole correzioni'
+      },
+      text: {
+        de: 'Exportierte Dateinamen behalten Umlaute und Akzente. Zwei Downloads mit gleichem Namen brechen sich nicht mehr gegenseitig ab. "In den Tray schließen" blendet das Fenster nur aus, wenn der Desktop einen Tray hat. Das Quick-Prompt-Feld stoppt am Limit, statt Text still zu verwerfen, und die Systemsprache wird auch aus LANGUAGE und LC_MESSAGES gelesen.',
+        en: 'Exported file names keep umlauts and accents. Two downloads with the same name no longer cancel each other. "Close to tray" only hides the window when the desktop has a tray. The quick prompt field stops at the limit instead of silently dropping text, and the system language is also read from LANGUAGE and LC_MESSAGES.',
+        fr: 'Les noms de fichiers exportés conservent les trémas et les accents. Deux téléchargements portant le même nom ne s’annulent plus. « Fermer dans la zone de notification » ne masque la fenêtre que si le bureau en a une. Le champ du Quick-Prompt s’arrête à la limite au lieu de supprimer le texte en silence, et la langue du système est aussi lue depuis LANGUAGE et LC_MESSAGES.',
+        it: 'I nomi dei file esportati mantengono dieresi e accenti. Due download con lo stesso nome non si annullano più a vicenda. “Chiudi nel vassoio” nasconde la finestra solo se il desktop ha un vassoio di sistema. Il campo del Quick-Prompt si ferma al limite invece di scartare il testo in silenzio, e la lingua di sistema viene letta anche da LANGUAGE e LC_MESSAGES.'
+      }
+    },
+    {
+      icon: 'shield',
+      title: {
+        de: 'Sicherheit und Lizenzen',
+        en: 'Security and licences',
+        fr: 'Sécurité et licences',
+        it: 'Sicurezza e licenze'
+      },
+      text: {
+        de: 'Anfragen, die auch die Kamera wollen, werden abgelehnt, die App fragt nur nach dem Mikrofon. Das Anmeldefenster zeigt in der Titelzeile, auf welchem Host es sich befindet. Die Lizenztexte der enthaltenen Pakete liegen jetzt der App bei.',
+        en: 'Requests that also ask for the camera are turned down, the app only asks about the microphone. The sign-in window shows the host it is on in its title. The licence texts of the bundled packages now ship with the app.',
+        fr: 'Les demandes qui réclament aussi la caméra sont refusées, l’application ne demande que le microphone. La fenêtre de connexion affiche dans son titre l’hôte sur lequel elle se trouve. Les textes de licence des paquets inclus sont désormais fournis avec l’application.',
+        it: 'Le richieste che chiedono anche la fotocamera vengono rifiutate, l’app chiede solo il microfono. La finestra di accesso mostra nel titolo l’host su cui si trova. I testi delle licenze dei pacchetti inclusi ora sono forniti con l’app.'
+      }
+    }
+  ],
   '1.5.0': [
     {
       icon: 'bolt',
@@ -1513,6 +1560,7 @@ const RELEASE_NOTES = {
 
 // Optionaler Update-Titel pro Version, gross im Kopf des "Was ist neu"-Fensters.
 const RELEASE_TITLES = {
+  '1.5.1': { de: 'Stabilität und Lizenzen', en: 'Stability and Licences', fr: 'Stabilité et licences', it: 'Stabilità e licenze' },
   '1.5.0': { de: 'Das Wayland-Update', en: 'The Wayland Update', fr: 'La mise à jour Wayland', it: 'L’aggiornamento Wayland' },
   '1.4.21': { de: 'Unterstützung und App-Theme', en: 'Support and App Theme', fr: 'Soutien et thème de l’app', it: 'Supporto e tema dell’app' }
 };

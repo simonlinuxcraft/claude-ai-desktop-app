@@ -7,6 +7,51 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.5.1] - 2026-10-20 - Stability and Licences
+
+### Fixed
+
+- Restarting after an AppImage update could end with the app gone: the new instance gave up on the
+  single-instance lock while the old one was still shutting down. It now retries for up to 10 s
+  when the updater started it.
+- A failed startup left an invisible process holding the lock, so the app never started again until
+  it was killed. It now exits.
+- The saved window position is only restored when the top edge is on a display, and the size is
+  clamped to the monitor the window was on instead of the primary one.
+- The tab bar reloads after its renderer crashes. A corrupt `window-state.json` is kept as
+  `window-state.json.bak` instead of being overwritten.
+- Closing to the tray hid the window with no way back on desktops without a tray host, such as GNOME
+  without the AppIndicator extension. It now closes normally there.
+- Two different downloads with the same file name cancelled each other. Exported file names turned
+  umlauts and accents into underscores.
+- `LANG=C.UTF-8` forced English even when `LANGUAGE` or `LC_MESSAGES` named another language.
+- The quick prompt dropped text over the limit without a hint; the input now stops at the limit,
+  including a template prefix.
+- The theme palette scan read the app's own style sheets and split selectors inside `:is()`, which
+  could produce an invalid selector. The variables sheet is rebuilt when claude.ai removes it.
+- A notification with an invalid `minVersion`, `maxVersion` or `expires` was shown to everyone, and
+  hotkeys such as `Ctrl+Foo` passed validation. Both are rejected now.
+- "Check for updates" did nothing outside an AppImage or Snap. It now says so.
+
+### Security
+
+- A media request that includes the camera is turned down; the consent and the setting only cover
+  the microphone.
+- External opens fired by page scripts are limited to 5 per 10 s, and the sign-in window shows the
+  host it is on in its title, since it has no address bar.
+- The four dialogs that had no content security policy got one, quick prompt templates are escaped
+  like in the other dialogs, and download temp files go to a private directory.
+
+### Changed
+
+- The licence texts of the bundled packages and Chromium's licence list ship with the app. The Snap
+  grows by about 2 MB.
+- The bug report limits its fields and shows the reason when the server rejects a report.
+- The README states that `--no-sandbox` turns off Chromium's process sandbox. For local notification
+  tests the dev build reads `notifications.dev.json` instead of the tracked `notifications.json`.
+
+---
+
 ## [1.5.0] - 2026-10-08 - The Wayland Update
 
 ### Added

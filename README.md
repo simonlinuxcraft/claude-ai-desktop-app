@@ -25,7 +25,7 @@
 
 ---
 
-> **v1.5.0** - The Wayland Update. The app now runs natively on Wayland, so text stays sharp at fractional scaling, and the global hotkey goes through the desktop portal. Tabs show when Claude is answering, every window has a new look with optional rounded corners, new chats and restarts load faster, and the app reconnects on its own after a network drop. If something misbehaves on Wayland, see [Wayland](#wayland).
+> **v1.5.1** - Stability and Licences. The window comes back on screen after a monitor is unplugged, the tab bar recovers from a crash, closing to the tray only hides the window when the desktop has a tray, and a failed start or an update restart no longer ends with the app gone. Exported file names keep umlauts, camera requests are turned down, and the licence texts of the bundled packages now ship with the app.
 
 ---
 
@@ -108,7 +108,7 @@ cat > ~/.local/share/applications/claude-desktop.desktop << EOF
 [Desktop Entry]
 Name=Desktop for Claude
 Comment=Unofficial desktop app for Claude AI
-Exec=/path/to/Claude-Desktop-1.5.0.AppImage --no-sandbox
+Exec=/path/to/Claude-Desktop-1.5.1.AppImage --no-sandbox
 Icon=/path/to/icon.png
 Type=Application
 Categories=Utility;
@@ -159,7 +159,7 @@ The `--no-sandbox` flag is required for Electron AppImages on Linux because the 
 Since v1.5.0 the app runs natively on Wayland instead of through XWayland. If something does not work for you there, start it through XWayland as before by adding `--ozone-platform=x11`:
 
 ```bash
-./Claude-Desktop-1.5.0.AppImage --no-sandbox --ozone-platform=x11
+./Claude-Desktop-1.5.1.AppImage --no-sandbox --ozone-platform=x11
 ```
 
 ```bash
