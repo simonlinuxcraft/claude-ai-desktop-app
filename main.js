@@ -2001,7 +2001,7 @@ ${customTitlebarHTML(s.title)}
   <form id="bugform" novalidate>
     <div class="field">
       <label for="desc" class="lbl">${uiIcon('chat', 15)}${s.descLabel}</label>
-      <textarea id="desc" class="desc" required placeholder="${s.descPlaceholder}"></textarea>
+      <textarea id="desc" class="desc" required maxlength="3000" placeholder="${s.descPlaceholder}"></textarea>
     </div>
     <div class="nudge" id="support-nudge" role="note">
       <span class="ico">${uiIcon('info', 17)}</span>
@@ -2010,11 +2010,11 @@ ${customTitlebarHTML(s.title)}
     <button type="button" class="add" id="add-errors">${uiIcon('plus', 14)}${s.addErrors}</button>
     <div class="field" id="err-field" hidden>
       <label for="errcodes" class="lbl">${uiIcon('terminal', 15)}${s.errorLabel}</label>
-      <textarea id="errcodes" class="errcodes" placeholder="${s.errorPlaceholder}"></textarea>
+      <textarea id="errcodes" class="errcodes" maxlength="800" placeholder="${s.errorPlaceholder}"></textarea>
     </div>
     <div class="field">
       <label for="email" class="lbl">${uiIcon('mail', 15)}${s.emailLabel}</label>
-      <input type="email" id="email" placeholder="${s.emailPlaceholder}" autocomplete="email">
+      <input type="email" id="email" maxlength="200" placeholder="${s.emailPlaceholder}" autocomplete="email">
     </div>
     <div class="group">
       <label class="item" for="autoinfo"><span class="txt"><span class="ttl">${s.autoInfoLabel}</span><span class="desc-s">${s.autoInfoHint}</span></span><input type="checkbox" class="switch" id="autoinfo" checked></label>
@@ -2034,6 +2034,7 @@ ${customTitlebarHTML(s.title)}
   <div class="icon" style="color:${btnBg}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg></div>
   <h3>${s.errorTitle}</h3>
   <p>${s.errorHint}</p>
+  <p id="err-detail" style="opacity:.7;font-size:12px" hidden></p>
   <div class="email" id="err-email"></div>
   <div class="error-row">
     <button class="secondary" id="err-back">${s.backBtn}</button>
@@ -2198,6 +2199,10 @@ ${customTitlebarHTML(s.title)}
       }
     } catch (err) {
       console.error('Bug-report submit failed:', err);
+      // Nur Ablehnungen des Servers (Error aus dem else-Zweig) zeigen, nicht Netz- oder Abbruchfehler.
+      const det = document.getElementById('err-detail');
+      det.textContent = err && err.name === 'Error' ? String(err.message).slice(0, 200) : '';
+      det.hidden = !det.textContent;
       showView('error');
     } finally {
       clearTimeout(abortTimer);
@@ -2249,9 +2254,7 @@ function getQuickPromptHTML() {
     send: t('senden', 'send', 'envoyer', 'invia'),
     template: t('Vorlage', 'template', 'modèle', 'modello')
   };
-  // XSS-safe: </script> in Template-Namen würde sonst aus dem Script-Kontext brechen
-  const tpls = JSON.stringify(promptTemplates.map(t => ({ id: t.id, name: t.name, prefix: t.prefix })))
-    .replace(/<\//g, '<\\/');
+  const tpls = safeJson(promptTemplates.map(t => ({ id: t.id, name: t.name, prefix: t.prefix })));
   return `<!DOCTYPE html><html><head>
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src data:;">
 <style>
@@ -2308,8 +2311,11 @@ const tabsEl = document.getElementById('tabs');
 const TEMPLATES = ${tpls};
 const I = ${safeJson(i18n)};
 let cur = -1;
+// Obergrenze wie im Preload; die Vorlage zaehlt mit, sonst verwirft der Preload den Text still.
+const limit = () => ${MAX_PROMPT_CHARS} - (TEMPLATES[cur] ? TEMPLATES[cur].prefix.trimEnd().length + 1 : 0);
 
 function renderTabs() {
+  q.maxLength = Math.max(1, limit());
   tabsEl.textContent = '';
   if (!TEMPLATES.length) { document.getElementById('tabhint').hidden = true; return; }
   [{ name: I.plain }].concat(TEMPLATES).forEach((tp, i) => {
@@ -2339,6 +2345,7 @@ q.addEventListener('keydown', (e) => {
     e.preventDefault();
     const v = q.value.trim();
     if (v.length === 0) { api.cancel(); return; }
+    if (v.length > limit()) { q.value = v.slice(0, limit()); return; }
     const tpl = TEMPLATES[cur];
     api.submit(tpl ? (tpl.prefix.trimEnd() + ' ' + v) : v);
   }
@@ -3959,6 +3966,7 @@ function getOfficialAppHTML(channel) {
 <html>
 <head>
 <meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src data:;">
 <title>${escapeHtml(t('Offizielle Claude-App', 'Official Claude app', 'Application Claude officielle', 'App Claude ufficiale'))}</title>
 <style>
   ${sharedDialogCSS()}
@@ -4055,6 +4063,7 @@ function getSupportHTML(channel) {
 <html>
 <head>
 <meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src data:;">
 <title>${escapeHtml(t('App unterstützen', 'Support the app', 'Soutenir l’app', 'Sostieni l’app'))}</title>
 <style>
   ${sharedDialogCSS()}
@@ -4404,6 +4413,7 @@ function getMessageBoxHTML({ type, heading, message, detail, buttons, defaultId,
 <html>
 <head>
 <meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src data:;">
 <title>${escapeHtml(title)}</title>
 <style>
   ${sharedDialogCSS()}
@@ -5070,7 +5080,7 @@ function getMicConsentHTML({ respondChannel, snapOpenChannel, statusChannel, cop
   <div class="allow-blocker">${i18n.snapNeedConnect}</div>` : '';
 
   return `<!DOCTYPE html>
-<html><head><meta charset="utf-8"><title>${escapeHtml(i18n.title)}</title>
+<html><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src data:;"><title>${escapeHtml(i18n.title)}</title>
 <style>
 ${sharedDialogCSS()}
 body{overflow:hidden}
