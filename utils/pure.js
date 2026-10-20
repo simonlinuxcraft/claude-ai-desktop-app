@@ -2,6 +2,21 @@
 // Pure utility functions, frei von Electron-Abhaengigkeiten.
 // Werden von main.js requirt UND von node --test getestet.
 
+// Pre-Release-Bezeichner nach SemVer: punktweise, rein numerische Teile numerisch (beta.9 < beta.10),
+// numerisch vor alphanumerisch, bei Gleichstand gewinnt die laengere Liste.
+function comparePre(a, b) {
+  const pa = a.split('.'), pb = b.split('.');
+  for (let i = 0; i < Math.min(pa.length, pb.length); i++) {
+    const x = pa[i], y = pb[i];
+    if (x === y) continue;
+    const nx = /^\d+$/.test(x), ny = /^\d+$/.test(y);
+    if (nx && ny) return Number(x) - Number(y);
+    if (nx !== ny) return nx ? -1 : 1;
+    return x.localeCompare(y);
+  }
+  return pa.length - pb.length;
+}
+
 // Vergleicht Semver-aehnliche Versionen mit optionalem Pre-Release-Suffix.
 // 1.3.0-beta.1 < 1.3.0 < 1.3.1
 function compareVersions(a, b) {
@@ -16,7 +31,7 @@ function compareVersions(a, b) {
   }
   if (A.pre && !B.pre) return -1;
   if (!A.pre && B.pre) return 1;
-  if (A.pre && B.pre) return A.pre.localeCompare(B.pre);
+  if (A.pre && B.pre) return comparePre(A.pre, B.pre);
   return 0;
 }
 
@@ -109,11 +124,12 @@ function filterNotifications(payload, { appVersion = '0.0.0', isSnap = false, di
     if (dismissedIds.includes(n.id)) continue;
     if (n.if === 'snap' && !isSnap) continue;
     if (n.if === 'appimage' && isSnap) continue;
-    if (typeof n.minVersion === 'string' && NOTIFICATION_VERSION_RE.test(n.minVersion) && compareVersions(appVersion, n.minVersion) < 0) continue;
-    if (typeof n.maxVersion === 'string' && NOTIFICATION_VERSION_RE.test(n.maxVersion) && compareVersions(appVersion, n.maxVersion) > 0) continue;
-    if (typeof n.expires === 'string') {
-      const exp = Date.parse(n.expires);
-      if (Number.isFinite(exp) && exp < now) continue;
+    // Fail-closed: ein gesetztes, aber ungueltiges Gating-Feld verwirft den Hinweis. Fehlend (undefined/null) ist erlaubt.
+    if (n.minVersion != null && !(typeof n.minVersion === 'string' && NOTIFICATION_VERSION_RE.test(n.minVersion) && compareVersions(appVersion, n.minVersion) >= 0)) continue;
+    if (n.maxVersion != null && !(typeof n.maxVersion === 'string' && NOTIFICATION_VERSION_RE.test(n.maxVersion) && compareVersions(appVersion, n.maxVersion) <= 0)) continue;
+    if (n.expires != null) {
+      const exp = typeof n.expires === 'string' ? Date.parse(n.expires) : NaN;
+      if (!Number.isFinite(exp) || exp < now) continue;
     }
     const loc = n.i18n && typeof n.i18n === 'object' && n.i18n[lang] && typeof n.i18n[lang] === 'object' ? n.i18n[lang] : {};
     const pick = (k) => (typeof loc[k] === 'string' && loc[k].length > 0 ? loc[k] : n[k]);
@@ -189,7 +205,8 @@ function scaleWindow(designWidth, designHeight, workArea) {
   };
 }
 
-const HOTKEY_RE = /^(?:(?:Command|Cmd|Control|Ctrl|CommandOrControl|CmdOrCtrl|Alt|Option|AltGr|Shift|Super|Meta)\+)*[A-Za-z0-9]+$|^(?:(?:Command|Cmd|Control|Ctrl|CommandOrControl|CmdOrCtrl|Alt|Option|AltGr|Shift|Super|Meta)\+)*(?:F1[0-9]?|F20|F[1-9]|Plus|Space|Tab|Backspace|Delete|Insert|Return|Enter|Up|Down|Left|Right|Home|End|PageUp|PageDown|Escape|Esc|VolumeUp|VolumeDown|VolumeMute|MediaPlayPause|PrintScreen|numdec|numadd|numsub|nummult|numdiv|num[0-9])$/;
+// Modifier plus genau eine Taste: ein Zeichen A-Z/0-9, F1-F24 oder ein bekannter Electron-Name.
+const HOTKEY_RE = /^(?:(?:Command|Cmd|Control|Ctrl|CommandOrControl|CmdOrCtrl|Alt|Option|AltGr|Shift|Super|Meta)\+)*(?:[A-Za-z0-9]|F(?:[1-9]|1[0-9]|2[0-4])|Plus|Space|Tab|Backspace|Delete|Insert|Return|Enter|Up|Down|Left|Right|Home|End|PageUp|PageDown|Escape|Esc|VolumeUp|VolumeDown|VolumeMute|MediaPlayPause|PrintScreen|numdec|numadd|numsub|nummult|numdiv|num[0-9])$/;
 
 function validateAccelerator(accel) {
   if (typeof accel !== 'string' || accel.length === 0 || accel.length >= 64) return null;

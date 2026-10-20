@@ -5,6 +5,7 @@ const assert = require('node:assert/strict');
 const {
   compareVersions,
   safeJson,
+  escapeHtml,
   isClaudeAiOrigin,
   isPaymentFrameDomain,
   looksLikeOAuthUrl,
@@ -32,12 +33,46 @@ test('compareVersions: Pre-Release < Stable mit gleicher Versionsnummer', () => 
   assert.ok(compareVersions('1.3.0', '1.3.0-beta.1') > 0);
 });
 
-test('compareVersions: zwei Pre-Releases vergleichen lexikografisch', () => {
+test('compareVersions: zwei Pre-Releases vergleichen punktweise nach SemVer', () => {
   assert.ok(compareVersions('1.3.0-beta.1', '1.3.0-beta.2') < 0);
+  // Zaehler rein numerisch: lexikografisch laege beta.10 vor beta.9.
+  assert.ok(compareVersions('1.3.0-beta.9', '1.3.0-beta.10') < 0);
+  assert.ok(compareVersions('1.3.0-beta.10', '1.3.0-beta.9') > 0);
+  assert.ok(compareVersions('1.3.0-alpha.2', '1.3.0-beta.1') < 0);
+  assert.ok(compareVersions('1.3.0-beta.11', '1.3.0-rc.1') < 0);
+  assert.equal(compareVersions('1.3.0-beta.2', '1.3.0-beta.2'), 0);
+});
+
+test('compareVersions: Pre-Release numerisch vor alphanumerisch, mehr Teile gewinnen bei Gleichstand', () => {
+  assert.ok(compareVersions('1.3.0-1', '1.3.0-alpha') < 0);
+  assert.ok(compareVersions('1.3.0-alpha.1', '1.3.0-alpha.beta') < 0);
+  assert.ok(compareVersions('1.3.0-alpha', '1.3.0-alpha.1') < 0);
+  assert.ok(compareVersions('1.3.0-alpha.1', '1.3.0-alpha') > 0);
 });
 
 test('compareVersions: fehlende Patch-Stelle wird als 0 gewertet', () => {
   assert.equal(compareVersions('1.3', '1.3.0'), 0);
+});
+
+test('escapeHtml: ersetzt die fuenf HTML-Sonderzeichen', () => {
+  assert.equal(escapeHtml('&'), '&amp;');
+  assert.equal(escapeHtml('<'), '&lt;');
+  assert.equal(escapeHtml('>'), '&gt;');
+  assert.equal(escapeHtml('"'), '&quot;');
+  assert.equal(escapeHtml("'"), '&#39;');
+  assert.equal(escapeHtml('<a href="x" onclick=\'y\'>T&C</a>'), '&lt;a href=&quot;x&quot; onclick=&#39;y&#39;&gt;T&amp;C&lt;/a&gt;');
+});
+
+test('escapeHtml: schon Escaptes wird erneut escaped', () => {
+  assert.equal(escapeHtml('&lt;'), '&amp;lt;');
+});
+
+test('escapeHtml: Normalfall unveraendert, null/undefined leer, Nicht-Strings als Text', () => {
+  assert.equal(escapeHtml('Hallo Welt 123 \u00e4\u00f6\u00fc'), 'Hallo Welt 123 \u00e4\u00f6\u00fc');
+  assert.equal(escapeHtml(''), '');
+  assert.equal(escapeHtml(null), '');
+  assert.equal(escapeHtml(undefined), '');
+  assert.equal(escapeHtml(42), '42');
 });
 
 test('safeJson: escaped </script', () => {
@@ -155,6 +190,24 @@ test('validateAccelerator: Junk abgelehnt', () => {
   assert.equal(validateAccelerator('+E'), null);
 });
 
+test('validateAccelerator: Taste muss ein Zeichen, F1-F24 oder ein bekannter Name sein', () => {
+  assert.equal(validateAccelerator('Ctrl+Foo'), null);
+  assert.equal(validateAccelerator('Ctrl+Shift'), null);
+  assert.equal(validateAccelerator('Alt+ab'), null);
+  assert.equal(validateAccelerator('F25'), null);
+  assert.equal(validateAccelerator('Ctrl+F0'), null);
+  assert.equal(validateAccelerator('Ctrl+Alt+Shift'), null);
+  assert.equal(validateAccelerator('Ctrl+A+B'), null);
+  assert.equal(validateAccelerator('Ctrl+a'), 'Ctrl+a');
+  assert.equal(validateAccelerator('Ctrl+7'), 'Ctrl+7');
+  assert.equal(validateAccelerator('Ctrl+F1'), 'Ctrl+F1');
+  assert.equal(validateAccelerator('Alt+F24'), 'Alt+F24');
+  assert.equal(validateAccelerator('Super+Shift+PageDown'), 'Super+Shift+PageDown');
+  assert.equal(validateAccelerator('Ctrl+Plus'), 'Ctrl+Plus');
+  assert.equal(validateAccelerator('Ctrl+num5'), 'Ctrl+num5');
+  assert.equal(validateAccelerator('Alt+Return'), 'Alt+Return');
+});
+
 test('resolveThemeMode: neues Feld gewinnt', () => {
   assert.equal(resolveThemeMode({ themeMode: 'midnight', isDarkMode: true, oledMode: false }), 'midnight');
   assert.equal(resolveThemeMode({ themeMode: 'light' }), 'light');
@@ -269,6 +322,28 @@ test('filterNotifications: Version, Plattform, Ablauf und dismissed filtern', ()
   assert.equal(filterNotifications(notif({ expires: '2000-01-01' })).length, 0);
   assert.equal(filterNotifications(notif({ expires: '2999-01-01' })).length, 1);
   assert.equal(filterNotifications(notif(), { dismissedIds: ['a'] }).length, 0);
+});
+
+test('filterNotifications: ungueltige Gating-Felder verwerfen den Hinweis (fail-closed)', () => {
+  const ctx = { appVersion: '1.4.17' };
+  assert.equal(filterNotifications(notif({ maxVersion: 'bald' }), ctx).length, 0);
+  assert.equal(filterNotifications(notif({ maxVersion: '' }), ctx).length, 0);
+  assert.equal(filterNotifications(notif({ maxVersion: 142 }), ctx).length, 0);
+  assert.equal(filterNotifications(notif({ minVersion: 'neuer' }), ctx).length, 0);
+  assert.equal(filterNotifications(notif({ minVersion: '1.x' }), ctx).length, 0);
+  assert.equal(filterNotifications(notif({ minVersion: true }), ctx).length, 0);
+  assert.equal(filterNotifications(notif({ expires: 'irgendwann' }), ctx).length, 0);
+  assert.equal(filterNotifications(notif({ expires: '' }), ctx).length, 0);
+  assert.equal(filterNotifications(notif({ expires: 4102444800000 }), ctx).length, 0);
+});
+
+test('filterNotifications: gueltige und fehlende Gating-Felder kommen durch', () => {
+  const ctx = { appVersion: '1.4.17' };
+  assert.equal(filterNotifications(notif(), ctx).length, 1);
+  assert.equal(filterNotifications(notif({ minVersion: null, maxVersion: null, expires: null }), ctx).length, 1);
+  assert.equal(filterNotifications(notif({ minVersion: '1.4.17', maxVersion: '1.4.17' }), ctx).length, 1);
+  assert.equal(filterNotifications(notif({ minVersion: '1.4.0', maxVersion: '1.9.9', expires: '2999-01-01T00:00:00Z' }), ctx).length, 1);
+  assert.equal(filterNotifications(notif({ maxVersion: '1.4.16' }), ctx).length, 0);
 });
 
 test('filterNotifications: hoechstens 10 Eintraege', () => {
