@@ -1,7 +1,7 @@
 'use strict';
 // Release-Notes fuer das "Was ist neu"-Fenster, pro Version eine Liste von Slides.
 // title/text sind entweder ein String (nur Deutsch, Legacy) oder ein {de,en,fr,it}-Objekt;
-// localize() in i18n.js waehlt daraus. Optionales `icon`, optionales `image` (Pfad relativ
+// localize() in main.js waehlt daraus. Optionales `icon`, optionales `image` (Pfad relativ
 // zum App-Verzeichnis oder data:-URL), optionales `if: 'snap'|'appimage'`, optionales
 // `action: 'support'|'mixpilot'` fuer einen Link-Knopf unter dem Text (URLs in main.js).
 // Reine Daten, kein Electron-Zugriff.
@@ -1331,7 +1331,7 @@ const RELEASE_NOTES = {
         en: 'OLED theme as a third mode'
       },
       text: {
-        de: 'Das Sonne/Mond-Icon in der Leiste schaltet jetzt zwischen drei Modi um: Hell, Dunkel und OLED. Im OLED-Modus wird claude.ai auf einen warmen schwarzen Untergrund mit Brand-Glow umgefärbt – ideal für OLED-Bildschirme. Mit diesem Update ist OLED einmalig vorausgewählt; wer lieber Hell oder das klassische Dunkel möchte, klickt einfach das Sonne/Mond-Icon weiter, der Wechsel wird wie gewohnt gespeichert.',
+        de: 'Das Sonne/Mond-Icon in der Leiste schaltet jetzt zwischen drei Modi um: Hell, Dunkel und OLED. Im OLED-Modus wird claude.ai auf einen warmen schwarzen Untergrund mit Brand-Glow umgefärbt - ideal für OLED-Bildschirme. Mit diesem Update ist OLED einmalig vorausgewählt; wer lieber Hell oder das klassische Dunkel möchte, klickt einfach das Sonne/Mond-Icon weiter, der Wechsel wird wie gewohnt gespeichert.',
         en: 'The sun/moon icon in the bar now cycles through three modes: Light, Dark and OLED. In OLED mode claude.ai is rendered on a warm near-black background with a subtle brand glow, ideal for OLED screens. OLED is preselected on the first launch after the update; click the sun/moon icon to switch back to Light or the classic Dark, and your choice is remembered as usual.'
       }
     },
@@ -1342,7 +1342,7 @@ const RELEASE_NOTES = {
         en: 'Animated gradient around the chat box'
       },
       text: {
-        de: 'Das Eingabefeld auf der claude.ai-Startseite bekommt jetzt einen feinen, animierten Verlauf in der Markenfarbe – Orange wandert zu Magenta und zurück, im gleichen Stil wie das Quick-Prompt-Fenster.',
+        de: 'Das Eingabefeld auf der claude.ai-Startseite bekommt jetzt einen feinen, animierten Verlauf in der Markenfarbe - Orange wandert zu Magenta und zurück, im gleichen Stil wie das Quick-Prompt-Fenster.',
         en: 'The composer on the claude.ai home screen now gets a thin animated brand-color gradient, orange shifting to magenta and back, matching the Quick-Prompt window style.'
       }
     },
@@ -1423,7 +1423,7 @@ const RELEASE_NOTES = {
         en: 'Higgsfield connector can be linked'
       },
       text: {
-        de: 'Beim Klick auf "Connect" / "Accept" im Higgsfield-Connector-Dialog auf claude.ai passierte vorher nichts Sichtbares. Ursache: `higgsfield.ai` war in der OAuth-Allowlist nicht eingetragen, daher wurde das Auth-Popup in den Systembrowser umgeleitet, wo der Callback zurück zur App nicht ankam. `higgsfield.ai` und Subdomains gelten jetzt als OAuth-Domain — das Popup öffnet in der App, Callback landet in derselben Session.',
+        de: 'Beim Klick auf "Connect" / "Accept" im Higgsfield-Connector-Dialog auf claude.ai passierte vorher nichts Sichtbares. Ursache: `higgsfield.ai` war in der OAuth-Allowlist nicht eingetragen, daher wurde das Auth-Popup in den Systembrowser umgeleitet, wo der Callback zurück zur App nicht ankam. `higgsfield.ai` und Subdomains gelten jetzt als OAuth-Domain - das Popup öffnet in der App, Callback landet in derselben Session.',
         en: 'Clicking "Connect" / "Accept" in the Higgsfield connector dialog on claude.ai previously did nothing visible. Cause: `higgsfield.ai` was not in the OAuth allowlist, so the auth popup was redirected to the system browser where the callback never reached the app. `higgsfield.ai` and its subdomains now count as OAuth domains, the popup opens inside the app, and the callback lands in the same session.'
       }
     },
@@ -1434,7 +1434,7 @@ const RELEASE_NOTES = {
         en: 'Bug Report dialog: buttons no longer cut off'
       },
       text: {
-        de: 'Der in 1.3.11 hinzugefügte Browser-Gegencheck-Hinweis hat den Disclaimer-Block länger gemacht, die Fensterhöhe (760 px) blieb aber gleich – "Abbrechen" und "Bericht senden" waren je nach Skalierung halb oder ganz unten weggeschnitten. Höhe von 760 auf 860 px erhöht.',
+        de: 'Der in 1.3.11 hinzugefügte Browser-Gegencheck-Hinweis hat den Disclaimer-Block länger gemacht, die Fensterhöhe (760 px) blieb aber gleich - "Abbrechen" und "Bericht senden" waren je nach Skalierung halb oder ganz unten weggeschnitten. Höhe von 760 auf 860 px erhöht.',
         en: 'The browser-cross-check note added in 1.3.11 made the disclaimer block longer, but the window height (760 px) stayed the same, so "Cancel" and "Send report" were partly or fully cut off depending on scaling. Height bumped from 760 to 860 px.'
       }
     },
@@ -1458,7 +1458,7 @@ const RELEASE_NOTES = {
         en: 'Cloudflare verification loop fixed'
       },
       text: {
-        de: 'Manche Nutzer blieben auf der Seite "Performing security verification" / "Verifying you are human" hängen. Drei Ursachen wurden gefixt: (1) Der Cloudflare-Turnstile-iframe (`challenges.cloudflare.com`) war in der internen Allowlist nicht eingetragen und wurde von `will-frame-navigate` blockiert – die Challenge konnte nie fertig werden. (2) Die UA-Header (inkl. Sec-Ch-Ua) wurden nur für `claude.ai` gesetzt, nicht für Sandbox-Origins, `*.anthropic.com` oder den Challenge-Endpunkt – was Cloudflare als Bot-Signal wertet. (3) `Sec-Ch-Ua-Full-Version-List` und `Sec-Ch-Ua-Platform-Version` fehlten (bekannter Electron-Bug #34762) und werden nun konsistent mit identischer Brand-Reihenfolge mitgesendet.',
+        de: 'Manche Nutzer blieben auf der Seite "Performing security verification" / "Verifying you are human" hängen. Drei Ursachen wurden gefixt: (1) Der Cloudflare-Turnstile-iframe (`challenges.cloudflare.com`) war in der internen Allowlist nicht eingetragen und wurde von `will-frame-navigate` blockiert - die Challenge konnte nie fertig werden. (2) Die UA-Header (inkl. Sec-Ch-Ua) wurden nur für `claude.ai` gesetzt, nicht für Sandbox-Origins, `*.anthropic.com` oder den Challenge-Endpunkt - was Cloudflare als Bot-Signal wertet. (3) `Sec-Ch-Ua-Full-Version-List` und `Sec-Ch-Ua-Platform-Version` fehlten (bekannter Electron-Bug #34762) und werden nun konsistent mit identischer Brand-Reihenfolge mitgesendet.',
         en: 'Some users got stuck on the "Performing security verification" / "Verifying you are human" page. Three root causes were fixed: (1) The Cloudflare Turnstile iframe (`challenges.cloudflare.com`) was missing from the internal allowlist and was blocked by `will-frame-navigate`, so the challenge could never finish. (2) UA headers (incl. Sec-Ch-Ua) were only set for `claude.ai`, not for sandbox origins, `*.anthropic.com` or the challenge endpoint, which Cloudflare treats as a bot signal. (3) `Sec-Ch-Ua-Full-Version-List` and `Sec-Ch-Ua-Platform-Version` were missing (known Electron bug #34762) and are now sent consistently with identical brand ordering.'
       }
     },

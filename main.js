@@ -197,7 +197,9 @@ function alive(viewOrWc) {
 // i18n (multi-language)
 
 const sysLang = (() => {
-  const l = (process.env.LANG || process.env.LANGUAGE || '').toLowerCase();
+  // Wie gettext: LANGUAGE (erster Eintrag), LC_ALL, LC_MESSAGES, LANG; "C"/"POSIX" zaehlt nicht als Sprache.
+  const l = ([(process.env.LANGUAGE || '').split(':')[0], process.env.LC_ALL, process.env.LC_MESSAGES, process.env.LANG]
+    .find(v => v && !/^(c|posix)(\.|$)/i.test(v)) || '').toLowerCase();
   if (l.startsWith('de')) return 'de';
   if (l.startsWith('fr')) return 'fr';
   if (l.startsWith('es')) return 'es';
@@ -551,7 +553,7 @@ function warnColor() {
   return { fg: w.fg, title: w.title, a: v => `rgba(${w.rgb},${Math.round(v * w.k * 100) / 100})` };
 }
 
-// Beta-Build erkennen — eigene Icons (BETA-Badge) zur visuellen Unterscheidung von Stable
+// Beta-Build erkennen - eigene Icons (BETA-Badge) zur visuellen Unterscheidung von Stable
 const isBeta = process.env.CLAUDE_BETA === '1'
             || (process.env.APPIMAGE || '').toLowerCase().includes('beta');
 
@@ -2395,7 +2397,7 @@ function openQuickPrompt() {
 
 // Quick-Prompt: Text in Eingabefeld einfügen und Cursor positionieren.
 // Bewusst KEIN Auto-Submit: kein Button-Klick, kein synthetisches KeyboardEvent.
-// User drückt selbst Enter zum Absenden – konsistent mit dem "passiver Wrapper"-Prinzip.
+// User drückt selbst Enter zum Absenden - konsistent mit dem "passiver Wrapper"-Prinzip.
 function submitQuickPrompt(text) {
   if (typeof text !== 'string') return;
   const trimmed = text.trim();
@@ -2862,7 +2864,7 @@ function getSettingsHTML() {
     micSnapButton: t('Im Snap-Store \u00f6ffnen', 'Open in Snap Store', 'Ouvrir dans le Snap Store', 'Apri nello Snap Store'),
     micSnapCmdLabel: t('Oder im Terminal:', 'Or in a terminal:', 'Ou dans un terminal :', 'Oppure in un terminale:'),
     micSnapCmdCopy: t('Befehl kopieren', 'Copy command', 'Copier la commande', 'Copia comando'),
-    micSnapCmdCopied: t('Kopiert \u2713', 'Copied \u2713', 'Copi\u00e9 \u2713', 'Copiato \u2713'),
+    micSnapCmdCopied: t('Kopiert', 'Copied', 'Copi\u00e9', 'Copiato'),
     micResetLabel: t('Erneut fragen beim n\u00e4chsten Mikrofon-Klick', 'Ask again on next microphone click', 'Redemander au prochain clic sur le microphone', 'Chiedi di nuovo al prossimo clic sul microfono'),
     micResetDone: t('Erledigt. Der Dialog erscheint beim n\u00e4chsten Mikrofon-Klick wieder.', 'Done. The dialog appears again on the next microphone click.', 'Termin\u00e9, le dialogue r\u00e9appara\u00eetra au prochain clic sur le microphone.', 'Fatto, la finestra riapparir\u00e0 al prossimo clic sul microfono.'),
     micResetButton: t('Zur\u00fccksetzen', 'Reset', 'R\u00e9initialiser', 'Reimposta'),
@@ -3300,14 +3302,14 @@ document.addEventListener('keydown', (e) => {
 </body></html>`;
 }
 
-function getWhatsNewHTML(force = false) {
+function getWhatsNewHTML() {
   const th = subTheme();
   const ac = accent();
   // Neon und Matrix haben ein helles Deko-Paar, das hier Lichtschein, Ringe und Logo faerbt.
   const glow = ac.neonFrom || ac.from;
   const glow2 = ac.neonTo || ac.to;
   // Immer nur die Notes der aktuellen Version zeigen (alles seit dem letzten Release),
-  // nie kumuliert ueber uebersprungene Versionen. force=true erzwingt versionsToShow=[version].
+  // nie kumuliert ueber uebersprungene Versionen. force:true erzwingt versionsToShow=[version].
   const notes = getFilteredNotes(version, windowState.lastSeenVersion, { isSnap, force: true });
   // Aeltere Notes nennen das Zahnrad 'settings'; unbekannte Namen bekommen den Haken.
   const iconName = (n) => { const k = n.icon === 'settings' ? 'cog' : n.icon; return UI_ICONS[k] ? k : 'check'; };
@@ -3454,7 +3456,7 @@ ${customTitlebarHTML(t('Was ist neu', 'What’s new', 'Nouveautés', 'Novità'))
 </body></html>`;
 }
 
-function openWhatsNewWindow(force = false) {
+function openWhatsNewWindow() {
   if (whatsNewWindow && !whatsNewWindow.isDestroyed()) {
     whatsNewWindow.focus();
     return;
@@ -3481,7 +3483,7 @@ function openWhatsNewWindow(force = false) {
   revealWhenReady(whatsNewWindow);
   whatsNewWindow.setMenu(null);
   applyUiScale(whatsNewWindow, size.scale);
-  whatsNewWindow.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(getWhatsNewHTML(force)));
+  whatsNewWindow.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(getWhatsNewHTML()));
   whatsNewWindow.on('closed', () => { whatsNewWindow = null; });
 }
 
@@ -4340,7 +4342,7 @@ function openAppMenu(rendererX, rendererY) {
   view.webContents.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(getAppMenuHTML(x / s, y / s)));
 }
 
-// Custom MessageBox – zentriert über der App statt GTK-nativ
+// Custom MessageBox - zentriert über der App statt GTK-nativ
 
 let _msgboxCounter = 0;
 
@@ -4664,7 +4666,7 @@ function setupDownloadManager() {
 
     keys.forEach(k => activeKeys.add(k));
 
-    // SYNCHRON: Temp-Pfad setzen — sonst öffnet Chromium parallel seinen eigenen Save-Dialog!
+    // SYNCHRON: Temp-Pfad setzen - sonst öffnet Chromium parallel seinen eigenen Save-Dialog!
     const safeName = fileName.replace(/[^\w.-]+/g, '_');
     const tmpPath = path.join(dlTmpDir, '.cd-pending-' + now + '-' + safeName);
     try { item.setSavePath(tmpPath); } catch {}
@@ -5312,7 +5314,7 @@ function setupSession() {
       if (details && Array.isArray(details.mediaTypes) && details.mediaTypes.length === 0) {
         return cb(isClaudeAiOrigin(details.requestingUrl));
       }
-      // Mikrofon nur für claude.ai zulassen — claudeusercontent.com (Artifact-iframes)
+      // Mikrofon nur für claude.ai zulassen - claudeusercontent.com (Artifact-iframes)
       // explizit ausschließen, damit User-generierter Code keinen Mic-Zugriff erbt.
       if (!isClaudeAiOrigin(details && details.requestingUrl)) return cb(false);
       const wantsAudio = !details || !details.mediaTypes || details.mediaTypes.includes('audio');
@@ -5401,9 +5403,9 @@ function getAutostart() {
 }
 
 // Liefert eine der Konstanten:
-//   'ok'       — Autostart-Status erfolgreich gesetzt
-//   'denied'   — Schreibzugriff verweigert (sollte unter normalen Bedingungen nicht passieren)
-//   'failed'   — sonstiger Fehler
+//   'ok'       - Autostart-Status erfolgreich gesetzt
+//   'denied'   - Schreibzugriff verweigert (sollte unter normalen Bedingungen nicht passieren)
+//   'failed'   - sonstiger Fehler
 function setAutostart(enabled) {
   enabled = !!enabled;
   if (process.platform !== 'linux') {
@@ -5529,7 +5531,6 @@ function settingsState() {
     autostart: getAutostart()
   };
 }
-ipcMain.handle('settings-get', () => settingsState());
 ipcMain.on('settings-minimize', (_, v) => {
   minimizeOnClose = v === true;
   saveWindowState();
@@ -5765,18 +5766,12 @@ function handOverWindow(oldWin, newWin) {
   setTimeout(close, 2000);
 }
 
-ipcMain.on('whatsnew-open-settings', () => {
-  const old = whatsNewWindow;
-  openSettingsWindow();
-  handOverWindow(old, settingsWindow);
-});
-
 ipcMain.on('about-close', () => {
   if (aboutWindow && !aboutWindow.isDestroyed()) aboutWindow.close();
 });
 ipcMain.on('about-open-whatsnew', () => {
   const old = aboutWindow;
-  openWhatsNewWindow(true);
+  openWhatsNewWindow();
   handOverWindow(old, whatsNewWindow);
 });
 const ABOUT_LINKS = new Set(['https://github.com/simonlinuxcraft/claude-ai-desktop-app', SUPPORT_URL, 'https://support.anthropic.com']);
@@ -5850,7 +5845,7 @@ ipcMain.on('appmenu-action', (event, name) => {
     case 'bug-report': showBugReportDialog(); break;
     case 'copy-diagnostics': copyDiagnosticsInfo(); break;
     case 'reset-verification': resetClaudeVerification(); break;
-    case 'whats-new': openWhatsNewWindow(true); break;
+    case 'whats-new': openWhatsNewWindow(); break;
     case 'about': openAboutWindow(); break;
     case 'quit': isQuitting = true; app.quit(); break;
   }
