@@ -126,10 +126,6 @@ apps:
     command: app/electron-launch
     extensions: [gnome]
     autostart: claude-ai-desktop.desktop
-    environment:
-      # Electron liest CHROME_DESKTOP fuer den desktop-entry-Hint der Notifications;
-      # ohne ihn ordnet GNOME Shell sie keiner App zu und filtert sie unter strict confinement
-      CHROME_DESKTOP: claude-ai-desktop.desktop
     plugs:
       - browser-support
       - network
