@@ -65,7 +65,7 @@ description: |
   * Five colour themes (Light, Dark, OLED, Midnight Blue, Matrix) and
     four accent styles (Modern, Classic, Neon, Matrix), freely combinable
   * Bug report form in DE/EN/FR/ES/IT
-  * Auto-update synced with the GitHub Release
+  * Updates through the Snap Store
   * Window memory, crash recovery, offline page, download manager,
     autostart
   * Strict Snap confinement. Chromium's own process sandbox is off
@@ -100,6 +100,10 @@ description: |
   (MIT licence)
 
 license: MIT
+contact: simonlinuxcraft@pm.me
+issues: https://github.com/simonlinuxcraft/claude-ai-desktop-app/issues
+source-code: https://github.com/simonlinuxcraft/claude-ai-desktop-app
+website: https://github.com/simonlinuxcraft/claude-ai-desktop-app
 donation: https://ko-fi.com/simonlinuxcraft
 
 base: core24
