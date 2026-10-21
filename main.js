@@ -2468,6 +2468,7 @@ html::after{content:'';position:fixed;inset:-1px;border-radius:${CORNER_RADIUS +
 
 function customTitlebarCSS() {
   const th = subTheme();
+  const ac = accent();
   // Sub-Fenster nutzen pro Theme nur ihre flache Theme-Farbe (kein Brand-Glow mehr).
   // Soft-Depth-Fensterrahmen (oben heller, unten dunkler) gleich wie Hauptfenster, gemeinsam fuer
   // alle Dialoge die diese Titlebar einbinden (Bug-Report/Settings/What's-New/About).
@@ -2483,7 +2484,7 @@ ${roundFrameCSS(th.frameHi, th.frameLo)}
   cursor:pointer;color:${th.textActive};border:0;background:transparent;
   transition:background .12s,color .12s;opacity:.78;padding:0;font-family:inherit}
 .cd-titlebar-btn:hover{background:${th.bgHover};opacity:1}
-.cd-titlebar-btn.cd-close:hover{background:#e05e3e;color:#fff}
+.cd-titlebar-btn.cd-close:hover{background:linear-gradient(135deg,${ac.from},${ac.to});color:#fff}
 .cd-titlebar-btn svg{width:11px;height:11px;display:block}`;
 }
 
@@ -4395,6 +4396,8 @@ function getMessageBoxHTML({ type, heading, message, detail, buttons, defaultId,
   const th = subTheme();
   const ac = accent();
   const w = warnColor();
+  // Gefahr-Knopf: Modern/Classic behalten das Rotorange, Neon und Matrix folgen ihrem Stil.
+  const dangerBg = ac.neonFrom ? `linear-gradient(135deg, ${ac.from}, ${ac.to})` : '#d9532f';
   const look = {
     success: { icon: 'check', from: ac.from, to: ac.to },
     warning: { icon: 'warn', from: w.fg, to: w.fg },
@@ -4431,7 +4434,7 @@ function getMessageBoxHTML({ type, heading, message, detail, buttons, defaultId,
     user-select: text; -webkit-user-select: text; }
   .actions { width: 100%; display: flex; flex-direction: column; gap: 8px; margin-top: 20px; }
   .btn { width: 100%; padding: 10px 16px; font-size: 13.5px; border-radius: 8px; }
-  .btn.danger { background: #d9532f; color: #fff; border-color: transparent; font-weight: 500; }
+  .btn.danger { background: ${dangerBg}; color: #fff; border-color: transparent; font-weight: 500; }
   .btn.danger:hover { filter: brightness(1.08); }
   .btn.ghost { background: transparent; border-color: transparent; color: ${th.text}; }
   .btn.ghost:hover { background: ${th.bgHover}; color: ${th.textActive}; }
@@ -4601,6 +4604,7 @@ const NET_ERROR_CODES = new Set([-21, -100, -101, -102, -104, -105, -106, -109, 
 function showOfflinePage(tab = tabs[activeTabIndex]) {
   if (!tab || !alive(tab.view)) return;
   const th = theme();
+  const ac = accent();
   tab.view.webContents.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(
     `<!DOCTYPE html><html><head>
     <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline';">
@@ -4608,8 +4612,8 @@ function showOfflinePage(tab = tabs[activeTabIndex]) {
     body{background:${th.bg};color:${th.textActive};font-family:system-ui,sans-serif;display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;margin:0}
     h1{font-size:22px;font-weight:600;margin-bottom:8px}
     p{color:${th.text};font-size:14px;max-width:360px;text-align:center;line-height:1.6}
-    button{margin-top:20px;background:#E8524F;color:#fff;border:none;padding:10px 28px;border-radius:10px;font-size:14px;cursor:pointer;font-weight:500}
-    button:hover{background:#F0635C}
+    button{margin-top:20px;background:linear-gradient(135deg,${ac.from},${ac.to});color:#fff;border:none;padding:10px 28px;border-radius:10px;font-size:14px;cursor:pointer;font-weight:500}
+    button:hover{filter:brightness(1.08)}
     .pulse{animation:p 2s ease-in-out infinite}@keyframes p{0%,100%{opacity:.3}50%{opacity:1}}${REDUCED_MOTION_CSS}
     </style></head><body>
     <h1>${t('Keine Verbindung', 'No Connection', 'Pas de connexion', 'Nessuna connessione')}</h1>
