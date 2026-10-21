@@ -151,15 +151,6 @@ parts:
     source: dist/linux-unpacked
     organize:
       '*': app/
-    stage-packages:
-      - libnotify4
-      - libnss3
-      - libxss1
-      - libxtst6
-      - xdg-utils
-      - libdrm2
-      - libgbm1
-      - libayatana-appindicator3-1
 
   launcher:
     plugin: dump
