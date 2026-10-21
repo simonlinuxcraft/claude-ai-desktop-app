@@ -32,6 +32,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - A notification with an invalid `minVersion`, `maxVersion` or `expires` was shown to everyone, and
   hotkeys such as `Ctrl+Foo` passed validation. Both are rejected now.
 - "Check for updates" did nothing outside an AppImage or Snap. It now says so.
+- The close button of dialogs, the confirm button of warnings such as the verification reset, and the
+  offline page used a fixed orange. They now follow the chosen style, like the main window does, so
+  Matrix shows green and Neon blue.
 
 ### Security
 
@@ -44,8 +47,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- The licence texts of the bundled packages and Chromium's licence list ship with the app. The Snap
-  grows by about 2 MB.
+- The licence texts of the bundled packages and Chromium's licence list ship with the app.
+- The Snap no longer carries the stage packages it never loaded (the libraries come from the GNOME
+  and Mesa content snaps) and shrinks from about 175 to 101 MiB, licence files included.
 - The bug report limits its fields and shows the reason when the server rejects a report.
 - The README states that `--no-sandbox` turns off Chromium's process sandbox. For local notification
   tests the dev build reads `notifications.dev.json` instead of the tracked `notifications.json`.
