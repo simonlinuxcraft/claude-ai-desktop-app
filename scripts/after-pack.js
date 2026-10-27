@@ -24,10 +24,13 @@ DIR="$(dirname "$(readlink -f "$0")")"
 # Liegt der Wrapper selbst im Snap, hat der Snap-Starter den Wert richtig gesetzt.
 if [ -z "$SNAP" ] || [ "\${DIR#"$SNAP"/}" = "$DIR" ]; then unset GIO_MODULE_DIR; fi
 
-# Unter Wayland laeuft die App nativ, mit --ozone-platform=x11 ueber XWayland.
+# Unter Wayland laeuft die App nativ, mit --ozone-platform=x11 ueber XWayland. Die Einstellung
+# "X11 statt Wayland" setzt das Flag vor "$@", ein eigenes --ozone-platform gewinnt also.
+X11=()
+grep -qs '"forceX11":true' "\${XDG_CONFIG_HOME:-$HOME/.config}/claude-desktop/window-state.json" && X11=(--ozone-platform=x11)
 case " $* " in
-  *" --no-sandbox "*) exec "$DIR/${exeName}.bin" "$@" ;;
-  *) exec "$DIR/${exeName}.bin" --no-sandbox "$@" ;;
+  *" --no-sandbox "*) exec "$DIR/${exeName}.bin" "\${X11[@]}" "$@" ;;
+  *) exec "$DIR/${exeName}.bin" --no-sandbox "\${X11[@]}" "$@" ;;
 esac
 `;
 

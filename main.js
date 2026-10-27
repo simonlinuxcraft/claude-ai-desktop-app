@@ -73,11 +73,10 @@ const isWayland = process.platform === 'linux'
 // Benachrichtigungen an CHROME_DESKTOP.
 const APP_ID = 'io.github.simonlinuxcraft.DesktopForClaude';
 if (!process.env.SNAP) app.setDesktopName(`${APP_ID}.desktop`);
-// Einstellung "X11 erzwingen" (Abhilfe bei Grafikfehlern unter nativem Wayland). Muss vor
-// whenReady stehen, darum hier direkt aus der State-Datei statt ueber loadWindowState.
+// Einstellung "X11 erzwingen" (Abhilfe bei Grafikfehlern unter nativem Wayland). Wirkt nur ueber
+// die Starter (electron-launch, AppImage-Wrapper): ein appendSwitch von hier erreicht nur die
+// Kindprozesse, der Hauptprozess steht dann schon auf Wayland und der GPU-Prozess stuerzt ab.
 let forceX11 = false;
-try { forceX11 = JSON.parse(fs.readFileSync(path.join(app.getPath('userData'), 'window-state.json'), 'utf8')).forceX11 === true; } catch {}
-if (isWayland && forceX11) app.commandLine.appendSwitch('ozone-platform', 'x11');
 // Nativ, ausser jemand startet ausdruecklich mit --ozone-platform=x11.
 const nativeWayland = isWayland && app.commandLine.getSwitchValue('ozone-platform') !== 'x11'
   && app.commandLine.getSwitchValue('ozone-platform-hint') !== 'x11' && process.env.ELECTRON_OZONE_PLATFORM_HINT !== 'x11';
