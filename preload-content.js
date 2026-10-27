@@ -17,6 +17,17 @@ ipcRenderer.on('cd-frame-ping', () => {
   requestAnimationFrame(() => ipcRenderer.send('cd-frame-pong', 'raf'));
 });
 
+// Strg+Mausrad zoomt. Touchpad-Pinch liefert viele kleine Deltas, darum erst ab 100 einen Schritt.
+let zoomWheel = 0;
+window.addEventListener('wheel', (e) => {
+  if (!e.ctrlKey) return;
+  e.preventDefault();
+  zoomWheel += e.deltaY;
+  if (Math.abs(zoomWheel) < 100) return;
+  ipcRenderer.send('cd-zoom', zoomWheel < 0 ? 0.5 : -0.5);
+  zoomWheel = 0;
+}, { capture: true, passive: false });
+
 contextBridge.exposeInMainWorld('claudeDesktop', {
   responseDone: (payload) => {
     let preview = '';

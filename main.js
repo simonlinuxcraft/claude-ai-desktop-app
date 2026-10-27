@@ -277,6 +277,7 @@ let promptTemplates = [];      // [{ id, name, prefix }]
 let bgNotificationsEnabled = false;
 let microphoneEnabled = false;
 let microphoneConsentAsked = false;
+let contentZoom = 0;           // Chromium-Zoomlevel fuer claude.ai, 0 = 100 %
 // Modul-weiter Mutex fuer den Mic-Consent-Dialog. Verhindert Double-Modals
 // (z.B. wenn Settings-Toggle und claude.ai-Mic-Click parallel triggern).
 let consentInflight = null;
@@ -332,6 +333,8 @@ const STATE_SCHEMA = [
     set: v => { microphoneEnabled = v === true; } },
   { key: 'microphoneConsentAsked', get: () => microphoneConsentAsked,
     set: v => { microphoneConsentAsked = v === true; } },
+  { key: 'contentZoom', get: () => contentZoom,
+    set: v => { contentZoom = Number.isFinite(v) ? Math.max(-3, Math.min(5, v)) : 0; } },
   { key: 'dismissedNotificationIds', get: () => dismissedNotificationIds.slice(0, 200),
     set: v => {
       dismissedNotificationIds = Array.isArray(v)
@@ -1203,6 +1206,16 @@ function setupView(view) {
   wc.on('did-finish-load', () => {
     updateTitle();
     injectScripts(wc);
+    if (contentZoom) wc.setZoomLevel(contentZoom);
+  });
+  // Das Menue-Kuerzel CmdOrCtrl+Plus trifft auf Layouts ohne Shift-Plus (z.B. deutsch) nie,
+  // darum hier per key statt keyCode. preventDefault unterdrueckt auch das Menue-Kuerzel.
+  wc.on('before-input-event', (e, input) => {
+    if (input.type !== 'keyDown' || !input.control || input.alt || input.meta) return;
+    const step = { '+': 0.5, '=': 0.5, '-': -0.5, '0': 0 }[input.key];
+    if (step === undefined) return;
+    e.preventDefault();
+    zoomContent(step);
   });
 
   // SPA-Navigation (Chat-Wechsel): Scripts re-injizieren
@@ -4157,6 +4170,8 @@ const UI_ICONS = {
     warn:    '<path d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>',
     error:   '<circle cx="12" cy="12" r="9"/><path d="M15 9l-6 6M9 9l6 6"/>',
     external:'<path d="M14 4h6v6M20 4l-9 9"/><path d="M18 14v5a1 1 0 01-1 1H5a1 1 0 01-1-1V7a1 1 0 011-1h5"/>',
+    zoomIn:  '<circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3M8 11h6M11 8v6"/>',
+    zoomOut: '<circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3M8 11h6"/>',
     lifebuoy:'<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/><path d="M15 15l3.4 3.4M9 15l-3.4 3.4M9 9L5.6 5.6M15 9l3.4-3.4"/>',
     github:  '<path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 00-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0020 4.77 5.07 5.07 0 0019.91 1S18.73.65 16 2.48a13.38 13.38 0 00-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 005 4.77a5.44 5.44 0 00-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 009 18.13V22"/>'
 };
@@ -4171,6 +4186,10 @@ function getAppMenuItems() {
     { type: 'sep' },
     { type: 'item', action: 'export', label: t('Konversation exportieren', 'Export conversation', 'Exporter la conversation', 'Esporta la conversazione'), accel: 'Ctrl+Shift+E', icon: 'export' },
     { type: 'item', action: 'reload', label: t('Neu laden', 'Reload', 'Recharger', 'Ricarica'), accel: 'Ctrl+R', icon: 'refresh' },
+    { type: 'sep' },
+    { type: 'item', action: 'zoom-in', label: t('Vergrößern', 'Zoom In', 'Zoom avant', 'Aumenta zoom'), accel: 'Ctrl++', icon: 'zoomIn' },
+    { type: 'item', action: 'zoom-out', label: t('Verkleinern', 'Zoom Out', 'Zoom arrière', 'Riduci zoom'), accel: 'Ctrl+-', icon: 'zoomOut' },
+    { type: 'item', action: 'zoom-reset', label: t('Zoom zurücksetzen', 'Reset Zoom', 'Réinitialiser le zoom', 'Reimposta zoom'), accel: 'Ctrl+0', icon: 'refresh' },
     { type: 'sep' },
     { type: 'item', action: 'design-open', label: t('App-Theme', 'App Theme', 'Thème de l’app', 'Tema dell’app'), icon: 'palette' },
     { type: 'item', action: 'settings', label: t('App-Einstellungen', 'App Settings', 'Paramètres de l\'application', 'Impostazioni dell\'app'), accel: 'Ctrl+,', icon: 'cog' },
@@ -4528,9 +4547,9 @@ function buildAppMenu() {
       { label: t('Erzwungen neu laden', 'Force Reload', 'Recharger de force', 'Ricarica forzata'), accelerator: 'CmdOrCtrl+Shift+R', click: () => reloadActiveTab(true) },
       { label: t('Neu zeichnen', 'Redraw', 'Redessiner', 'Ridisegna'), accelerator: 'CmdOrCtrl+Alt+R', click: () => repaintActiveView() },
       { type: 'separator' },
-      { role: 'resetZoom', label: t('Zoom zur\u00fccksetzen', 'Reset Zoom', 'Réinitialiser le zoom', 'Reimposta zoom') },
-      { role: 'zoomIn', label: t('Vergr\u00f6\u00dfern', 'Zoom In', 'Zoom avant', 'Aumenta zoom') },
-      { role: 'zoomOut', label: t('Verkleinern', 'Zoom Out', 'Zoom arrière', 'Riduci zoom') },
+      { accelerator: 'CmdOrCtrl+0', click: () => zoomContent(0), label: t('Zoom zur\u00fccksetzen', 'Reset Zoom', 'Réinitialiser le zoom', 'Reimposta zoom') },
+      { accelerator: 'CmdOrCtrl+Plus', click: () => zoomContent(0.5), label: t('Vergr\u00f6\u00dfern', 'Zoom In', 'Zoom avant', 'Aumenta zoom') },
+      { accelerator: 'CmdOrCtrl+-', click: () => zoomContent(-0.5), label: t('Verkleinern', 'Zoom Out', 'Zoom arrière', 'Riduci zoom') },
       { type: 'separator' },
       { role: 'togglefullscreen', label: t('Vollbild', 'Fullscreen', 'Plein écran', 'Schermo intero') },
       ...(isDev ? [{ type: 'separator' }, { label: 'DevTools', accelerator: 'F12', click: () => { if (tabs[activeTabIndex] && alive(tabs[activeTabIndex].view)) tabs[activeTabIndex].view.webContents.toggleDevTools(); } }] : [])
@@ -4560,6 +4579,21 @@ function checkOnline() {
   if (online || Date.now() - offlineSince >= OFFLINE_GRACE_MS) handleOnlineChange(online);
   clearTimeout(onlineCheckTimer);
   onlineCheckTimer = setTimeout(checkOnline, (online && isOnline) ? ONLINE_CHECK_MS : OFFLINE_CHECK_MS);
+}
+
+// Die Menue-Rollen zoomIn/zoomOut treffen das Fenster selbst (Tab-Leiste), nicht die
+// claude.ai-View. Chromium haelt den Level pro Origin, alle Tabs ziehen also mit.
+ipcMain.on('cd-zoom', (event, step) => {
+  const tab = tabs[activeTabIndex];
+  if (tab && alive(tab.view) && event.sender === tab.view.webContents && (step === 0.5 || step === -0.5)) zoomContent(step);
+});
+
+function zoomContent(delta) {
+  const tab = tabs[activeTabIndex];
+  if (!tab || !alive(tab.view)) return;
+  contentZoom = delta ? Math.max(-3, Math.min(5, contentZoom + delta)) : 0;
+  tab.view.webContents.setZoomLevel(contentZoom);
+  saveWindowState();
 }
 
 // Auf der Offline-Seite laedt reload() nur die data:-Seite neu, nicht den Chat.
@@ -5840,6 +5874,9 @@ ipcMain.on('appmenu-action', (event, name) => {
     case 'close-tab': closeTab(activeTabIndex); break;
     case 'export': exportActiveConversation(); break;
     case 'reload': reloadActiveTab(); break;
+    case 'zoom-in': zoomContent(0.5); break;
+    case 'zoom-out': zoomContent(-0.5); break;
+    case 'zoom-reset': zoomContent(0); break;
     case 'design-open': openDesignWindow(); break;
     case 'official-app': showOfficialAppInfo(); break;
     case 'support': showSupportInfo(); break;
