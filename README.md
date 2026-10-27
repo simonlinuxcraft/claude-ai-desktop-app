@@ -25,7 +25,7 @@
 
 ---
 
-> **v1.5.1** - Stability and Licences. The window comes back on screen after a monitor is unplugged, the tab bar recovers from a crash, closing to the tray only hides the window when the desktop has a tray, and a failed start or an update restart no longer ends with the app gone. Exported file names keep umlauts, camera requests are turned down, and the licence texts of the bundled packages now ship with the app.
+> **v1.5.2** - Zoom and X11 Option. Zoom works again with `Ctrl++`, `Ctrl+-`, `Ctrl+0` and `Ctrl`+mouse wheel on any keyboard layout, the level is kept after a restart and the entries are in the app menu. A new setting runs the app through X11 instead of Wayland, for flicker, graphics glitches or a freezing monitor.
 
 ---
 
@@ -108,7 +108,7 @@ cat > ~/.local/share/applications/claude-desktop.desktop << EOF
 [Desktop Entry]
 Name=Desktop for Claude
 Comment=Unofficial desktop app for Claude AI
-Exec=/path/to/Claude-Desktop-1.5.1.AppImage --no-sandbox
+Exec=/path/to/Claude-Desktop-1.5.2.AppImage --no-sandbox
 Icon=/path/to/icon.png
 Type=Application
 Categories=Utility;
@@ -156,10 +156,10 @@ The `--no-sandbox` flag is required for Electron AppImages on Linux because the 
 
 ## Wayland
 
-Since v1.5.0 the app runs natively on Wayland instead of through XWayland. If something does not work for you there, start it through XWayland as before by adding `--ozone-platform=x11`:
+Since v1.5.0 the app runs natively on Wayland instead of through XWayland. If something does not work for you there, turn on "Use X11 instead of Wayland" in the app settings and restart the app. Since v1.5.2 that switch is the easy way; adding `--ozone-platform=x11` on the command line does the same:
 
 ```bash
-./Claude-Desktop-1.5.1.AppImage --no-sandbox --ozone-platform=x11
+./Claude-Desktop-1.5.2.AppImage --no-sandbox --ozone-platform=x11
 ```
 
 ```bash
@@ -183,7 +183,7 @@ snap run claude-ai-desktop --ozone-platform=x11
 | Ctrl+R | Reload |
 | Ctrl+Shift+R | Force reload |
 | Ctrl+Alt+R | Redraw (chat area stays blank) |
-| Ctrl++ / Ctrl+- | Zoom |
+| Ctrl++ / Ctrl+- / Ctrl+0 | Zoom in, out, reset (also Ctrl+mouse wheel) |
 | F11 | Fullscreen |
 | *(configurable)* | Quick-Prompt window |
 

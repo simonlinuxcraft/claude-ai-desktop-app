@@ -2,7 +2,7 @@ name: claude-ai-desktop
 # Der Store zeigt title statt name. Der Name bleibt, sonst verliert die Installbasis den
 # Update-Pfad; der angezeigte Titel verweist auf Claude statt sich so zu nennen.
 title: Desktop for Claude (Unofficial)
-version: '1.5.1'
+version: '1.5.2'
 summary: Desktop for Claude, an unofficial Claude AI app with tabs and tray
 description: |
   Desktop for Claude is an unofficial app that runs claude.ai on Linux
@@ -21,23 +21,20 @@ description: |
   the official app does not support, and here in the Snap Store, where there
   is no official package.
 
-  What's new in v1.5.1, stability and licences:
+  What's new in v1.5.2, zoom and X11 option:
 
-  * The window comes back on screen after a monitor is unplugged, the
-    tab bar recovers from a crash, and closing to the tray only hides
-    the window when the desktop has a tray.
-  * A failed start no longer leaves an invisible process behind, and
+  * Zoom works with Ctrl++, Ctrl+-, Ctrl+0 and Ctrl+mouse wheel on any
+    keyboard layout, the level is kept after a restart, and the entries
+    are in the app menu.
+  * New setting "Use X11 instead of Wayland" for flicker, graphics
+    glitches or a freezing monitor.
+
+  Highlights from v1.5.1 and v1.5.0:
+
+  * The window comes back on screen after a monitor is unplugged, and
     restarting after an update is more reliable.
-  * Exported file names keep umlauts, and two downloads with the same
-    name no longer cancel each other.
-  * Camera requests are turned down, the sign-in window shows the host
-    it is on, and the licence texts of the bundled packages ship with
-    the app.
-
-  Highlights from v1.5.0:
-
   * Runs natively on Wayland, so text stays sharp at fractional scaling
-    such as 125%. Start with --ozone-platform=x11 for the old way.
+    such as 125%.
   * Tabs show when Claude is answering, and the app reconnects on its
     own after a network drop.
 

@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.5.2] - 2026-10-27 - Zoom and X11 Option
+
+### Fixed
+
+- Zoom did not work. The View menu entries zoomed the window's own tab bar instead of claude.ai, and
+  `Ctrl+Plus` never matched on layouts where `+` needs no Shift, such as German. `Ctrl++`, `Ctrl+-`,
+  `Ctrl+0` and `Ctrl`+mouse wheel (or touchpad pinch) now zoom the page on any layout. The level
+  applies to all tabs and is kept after a restart, and the entries are also in the app menu.
+
+### Added
+
+- Setting "Use X11 instead of Wayland" in the app settings, shown under Wayland only. It helps with
+  flicker, graphics glitches or a monitor that freezes, and takes effect after a restart. The Snap
+  launcher and the AppImage wrapper pass `--ozone-platform=x11`, a flag given on the command line
+  still wins.
+
+---
+
 ## [1.5.1] - 2026-10-21 - Stability and Licences
 
 ### Fixed

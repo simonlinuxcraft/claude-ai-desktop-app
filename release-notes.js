@@ -15,6 +15,38 @@ const RELEASE_NOTES_REVISIT = {
 };
 
 const RELEASE_NOTES = {
+  '1.5.2': [
+    {
+      icon: 'zoomIn',
+      title: {
+        de: 'Zoomen funktioniert',
+        en: 'Zoom works',
+        fr: 'Le zoom fonctionne',
+        it: 'Lo zoom funziona'
+      },
+      text: {
+        de: 'Strg+Plus, Strg+Minus und Strg+0 vergrößern, verkleinern und setzen zurück, auf jedem Tastaturlayout. Strg+Mausrad und das Zusammenziehen auf dem Touchpad zoomen ebenfalls. Die Stufe gilt für alle Tabs und bleibt nach einem Neustart erhalten, und die Einträge stehen auch im App-Menü.',
+        en: 'Ctrl+Plus, Ctrl+Minus and Ctrl+0 zoom in, out and reset, on any keyboard layout. Ctrl+mouse wheel and pinching on the touchpad zoom as well. The level applies to all tabs and is kept after a restart, and the entries are also in the app menu.',
+        fr: 'Ctrl+Plus, Ctrl+Moins et Ctrl+0 agrandissent, réduisent et réinitialisent, quelle que soit la disposition du clavier. Ctrl+molette et le pincement sur le pavé tactile zooment aussi. Le niveau s’applique à tous les onglets et est conservé après un redémarrage, et les entrées figurent aussi dans le menu de l’application.',
+        it: 'Ctrl+Più, Ctrl+Meno e Ctrl+0 ingrandiscono, riducono e ripristinano, con qualsiasi layout di tastiera. Anche Ctrl+rotellina e il gesto di pizzico sul touchpad fanno lo zoom. Il livello vale per tutte le schede e resta dopo un riavvio, e le voci sono anche nel menu dell’app.'
+      }
+    },
+    {
+      icon: 'warn',
+      title: {
+        de: 'X11 statt Wayland',
+        en: 'X11 instead of Wayland',
+        fr: 'X11 au lieu de Wayland',
+        it: 'X11 invece di Wayland'
+      },
+      text: {
+        de: 'In den App-Einstellungen gibt es unter Wayland den Schalter "X11 statt Wayland verwenden". Er hilft bei Flackern, Grafikfehlern oder einem Monitor, der einfriert, und wirkt nach einem Neustart der App.',
+        en: 'Under Wayland the app settings have a new switch, "Use X11 instead of Wayland". It helps with flicker, graphics glitches or a monitor that freezes, and takes effect after restarting the app.',
+        fr: 'Sous Wayland, les paramètres de l’application ont un nouvel interrupteur, « Utiliser X11 au lieu de Wayland ». Il aide en cas de scintillement, de défauts graphiques ou d’un écran qui se fige, et prend effet après un redémarrage de l’application.',
+        it: 'Su Wayland le impostazioni dell’app hanno un nuovo interruttore, “Usa X11 invece di Wayland”. Aiuta in caso di sfarfallio, difetti grafici o un monitor che si blocca, e ha effetto dopo il riavvio dell’app.'
+      }
+    }
+  ],
   '1.5.1': [
     {
       icon: 'refresh',
@@ -1560,6 +1592,7 @@ const RELEASE_NOTES = {
 
 // Optionaler Update-Titel pro Version, gross im Kopf des "Was ist neu"-Fensters.
 const RELEASE_TITLES = {
+  '1.5.2': { de: 'Zoom und X11-Option', en: 'Zoom and X11 Option', fr: 'Zoom et option X11', it: 'Zoom e opzione X11' },
   '1.5.1': { de: 'Stabilität und Lizenzen', en: 'Stability and Licences', fr: 'Stabilité et licences', it: 'Stabilità e licenze' },
   '1.5.0': { de: 'Das Wayland-Update', en: 'The Wayland Update', fr: 'La mise à jour Wayland', it: 'L’aggiornamento Wayland' },
   '1.4.21': { de: 'Unterstützung und App-Theme', en: 'Support and App Theme', fr: 'Soutien et thème de l’app', it: 'Supporto e tema dell’app' }
