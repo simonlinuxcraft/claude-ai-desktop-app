@@ -6,7 +6,7 @@ nur diesen Endpoint an, der Key kommt nie ins Renderer- oder gepackte App-Bundle
 ## Setup (einmalig)
 
 1. Cloudflare-Account anlegen (gratis: https://dash.cloudflare.com/sign-up).
-2. Wrangler installieren oder via npx benutzen — kein globales Install noetig.
+2. Wrangler installieren oder via npx benutzen, kein globales Install noetig.
 3. In diesem Ordner einloggen:
 
    ```
@@ -22,7 +22,7 @@ nur diesen Endpoint an, der Key kommt nie ins Renderer- oder gepackte App-Bundle
 
    Wert: `<your Web3Forms access key>` (der bisher in `main.js` hardcodierte Key).
    **Tipp:** danach im Web3Forms-Dashboard einen NEUEN Key generieren und den
-   alten ablaufen lassen — der alte ist bereits in den AppImage-/Snap-Releases
+   alten ablaufen lassen, der alte ist bereits in den AppImage-/Snap-Releases
    geleakt und kann von jedem extrahiert werden, der ein altes Binary hat.
 
 5. `APP_SHARED_SECRET` (weak app check): not supported by the app yet, leave
@@ -54,7 +54,7 @@ nur diesen Endpoint an, der Key kommt nie ins Renderer- oder gepackte App-Bundle
 
 ## Endpoint
 
-`POST <worker-url>/submit` — JSON-Body:
+`POST <worker-url>/submit`, JSON-Body:
 
 ```json
 {
