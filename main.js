@@ -73,6 +73,11 @@ const isWayland = process.platform === 'linux'
 // Benachrichtigungen an CHROME_DESKTOP.
 const APP_ID = 'io.github.simonlinuxcraft.DesktopForClaude';
 if (!process.env.SNAP) app.setDesktopName(`${APP_ID}.desktop`);
+// Einstellung "X11 erzwingen" (Abhilfe bei Grafikfehlern unter nativem Wayland). Muss vor
+// whenReady stehen, darum hier direkt aus der State-Datei statt ueber loadWindowState.
+let forceX11 = false;
+try { forceX11 = JSON.parse(fs.readFileSync(path.join(app.getPath('userData'), 'window-state.json'), 'utf8')).forceX11 === true; } catch {}
+if (isWayland && forceX11) app.commandLine.appendSwitch('ozone-platform', 'x11');
 // Nativ, ausser jemand startet ausdruecklich mit --ozone-platform=x11.
 const nativeWayland = isWayland && app.commandLine.getSwitchValue('ozone-platform') !== 'x11'
   && app.commandLine.getSwitchValue('ozone-platform-hint') !== 'x11' && process.env.ELECTRON_OZONE_PLATFORM_HINT !== 'x11';
@@ -333,6 +338,7 @@ const STATE_SCHEMA = [
     set: v => { microphoneEnabled = v === true; } },
   { key: 'microphoneConsentAsked', get: () => microphoneConsentAsked,
     set: v => { microphoneConsentAsked = v === true; } },
+  { key: 'forceX11', get: () => forceX11, set: v => { forceX11 = v === true; } },
   { key: 'contentZoom', get: () => contentZoom,
     set: v => { contentZoom = Number.isFinite(v) ? Math.max(-3, Math.min(5, v)) : 0; } },
   { key: 'dismissedNotificationIds', get: () => dismissedNotificationIds.slice(0, 200),
@@ -2872,6 +2878,8 @@ function getSettingsHTML() {
     autostartFailed: t('Autostart konnte nicht aktiviert werden.', 'Could not enable autostart.', 'Impossible d\'activer le d\u00e9marrage automatique.', 'Impossibile attivare l\'avvio automatico.'),
     bgNotifLabel: t('Antwort-Benachrichtigung f\u00fcr Hintergrund-Tabs', 'Notify when a background tab finishes a response', 'Notification de r\u00e9ponse pour les onglets en arri\u00e8re-plan', 'Notifica di risposta per le schede in background'),
     bgNotifHint: t('Native Notification, sobald Claude in einem nicht aktiven Tab fertig geantwortet hat.', 'Native notification once Claude finishes a response in a tab you\u2019re not currently looking at.', 'Notification native d\u00e8s que Claude a termin\u00e9 sa r\u00e9ponse dans un onglet que vous ne regardez pas.', 'Notifica nativa non appena Claude termina una risposta in una scheda che non stai guardando.'),
+    x11Label: t('X11 statt Wayland verwenden', 'Use X11 instead of Wayland', 'Utiliser X11 au lieu de Wayland', 'Usa X11 invece di Wayland'),
+    x11Hint: t('Hilft bei Flackern, Grafikfehlern oder einem einfrierenden Monitor. Wirkt nach einem Neustart der App, Text kann bei gebrochener Skalierung unschärfer sein.', 'Helps with flicker, graphics glitches or a freezing monitor. Takes effect after restarting the app, text may look softer with fractional scaling.', 'Aide en cas de scintillement, de défauts graphiques ou d\u2019un écran qui se fige. Prend effet après un redémarrage de l\u2019application, le texte peut être moins net avec une mise à l\u2019échelle fractionnaire.', 'Aiuta in caso di sfarfallio, difetti grafici o un monitor che si blocca. Ha effetto dopo il riavvio dell\u2019app, con il ridimensionamento frazionario il testo può apparire meno nitido.'),
     micLabel: t('Mikrofon-Zugriff erlauben', 'Allow microphone access', 'Autoriser l\'acc\u00e8s au microphone', 'Consenti l\'accesso al microfono'),
     micHint: t('Erlaubt Claude, dein Mikrofon f\u00fcr Spracheingaben zu nutzen. Beim ersten Klick auf das Mikrofon-Symbol fragt die App einmal nach, \u00e4ndern kannst du das hier jederzeit.', 'Lets Claude use your microphone for voice input. The app asks once the first time you click the microphone icon, you can change it here at any time.', 'Permet \u00e0 Claude d\'utiliser votre microphone pour la saisie vocale. Au premier clic sur l\'ic\u00f4ne du microphone, l\'application demande une fois, vous pouvez modifier ce choix ici \u00e0 tout moment.', 'Permette a Claude di usare il microfono per l\'input vocale. Al primo clic sull\'icona del microfono l\'app chiede una volta, puoi modificare questa scelta qui in qualsiasi momento.'),
     micSnapHint: t('Auf Snap muss das Mikrofon einmalig freigegeben werden. Entweder im Snap-Store \u00f6ffnen und \u201eAudio Record\u201c aktivieren oder den Befehl unten im Terminal ausf\u00fchren.', 'On Snap the microphone must be enabled once. Either open the Snap Store and enable \u201cAudio Record\u201d or run the command below in a terminal.', 'Sur Snap, le microphone doit \u00eatre autoris\u00e9 une fois. Ouvrez le Snap Store et activez \u00ab Audio Record \u00bb, ou ex\u00e9cutez la commande ci-dessous dans un terminal.', 'Su Snap il microfono deve essere autorizzato una volta. Apri lo Snap Store e attiva "Audio Record", oppure esegui il comando qui sotto in un terminale.'),
@@ -2999,6 +3007,7 @@ ${customTitlebarHTML(t('Desktop for Claude - Einstellungen', 'Desktop for Claude
         <label class="item"><span class="ico">${uiIcon('tray', 17)}</span><span class="txt"><span class="ttl">${i18n.minimizeLabel}</span><span class="desc">${i18n.minimizeHint}</span></span><input type="checkbox" class="switch" id="mc"></label>
         <label class="item"><span class="ico">${uiIcon('power', 17)}</span><span class="txt"><span class="ttl">${i18n.autostartLabel}</span><span class="desc">${i18n.autostartHint}</span></span><input type="checkbox" class="switch" id="as"></label>
         <label class="item"><span class="ico">${uiIcon('bell', 17)}</span><span class="txt"><span class="ttl">${i18n.bgNotifLabel}</span><span class="desc">${i18n.bgNotifHint}</span></span><input type="checkbox" class="switch" id="bn"></label>
+        ${isWayland ? `<label class="item"><span class="ico">${uiIcon('warn', 17)}</span><span class="txt"><span class="ttl">${i18n.x11Label}</span><span class="desc">${i18n.x11Hint}</span></span><input type="checkbox" class="switch" id="x11"></label>` : ''}
       </div>
       <div class="status" id="status-bg"></div>
     </section>
@@ -3184,6 +3193,8 @@ as.addEventListener('change', async () => {
   } finally { as.disabled = false; }
 });
 bn.addEventListener('change', () => api.setBgNotifications(bn.checked));
+const x11 = document.getElementById('x11');
+if (x11) x11.addEventListener('change', () => api.setForceX11(x11.checked));
 mic.addEventListener('change', async () => {
   const want = mic.checked;
   if (!isSnapInstall) {
@@ -3244,6 +3255,7 @@ Promise.resolve(${safeJson(settingsState())}).then(s => {
   mc.checked = !!s.minimizeOnClose;
   as.checked = !!s.autostart;
   bn.checked = !!s.bgNotifications;
+  if (x11) x11.checked = !!s.forceX11;
   mic.checked = !!s.microphoneEnabled;
   isSnapInstall = !!s.isSnap;
   if (s.isSnap) {
@@ -5564,6 +5576,7 @@ function settingsState() {
     hotkey: currentHotkey,
     clipboardHotkey: currentClipboardHotkey,
     bgNotifications: bgNotificationsEnabled,
+    forceX11,
     microphoneEnabled,
     isSnap,
     templates: promptTemplates.map(t => ({ id: t.id, name: t.name, prefix: t.prefix })),
@@ -5589,6 +5602,10 @@ ipcMain.handle('settings-clipboard-hotkey', (_, accel) => {
   const res = registerClipboardHotkey(value);
   if (res === 'ok') saveWindowState();
   return res;
+});
+ipcMain.on('settings-force-x11', (_, v) => {
+  forceX11 = v === true;
+  saveWindowState();
 });
 ipcMain.on('settings-bg-notifications', (_, v) => {
   bgNotificationsEnabled = v === true;

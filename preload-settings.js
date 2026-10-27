@@ -7,6 +7,7 @@ contextBridge.exposeInMainWorld('settingsAPI', {
   setClipboardHotkey: (a) => ipcRenderer.invoke('settings-clipboard-hotkey', typeof a === 'string' ? a : null),
   setAutostart: (v) => ipcRenderer.invoke('settings-autostart', v === true),
   setBgNotifications: (v) => ipcRenderer.send('settings-bg-notifications', v === true),
+  setForceX11: (v) => ipcRenderer.send('settings-force-x11', v === true),
   setMicrophone: (v) => ipcRenderer.send('settings-microphone', v === true),
   // Auf Snap erst Plug-Status pruefen + ggf. Consent-Dialog zeigen.
   // Returnt { applied: boolean, status: 'connected'|'disconnected'|'unknown' }.
