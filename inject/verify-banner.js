@@ -32,7 +32,7 @@
 
   function removeBanner() {
     var el = document.getElementById(BANNER_ID);
-    if (el && el.parentNode) el.parentNode.removeChild(el);
+    if (el) el.remove();
   }
 
   function showBanner() {

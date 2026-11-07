@@ -16,7 +16,7 @@ else
   IS_DE=false
 fi
 
-if [ -z "$APPIMAGE" ] || [ ! -f "$APPIMAGE" ]; then
+if [ -z "$APPIMAGE" ]; then
   if [ "$IS_DE" = true ]; then
     echo "Fehler: Claude-Desktop AppImage nicht gefunden."
   else
@@ -27,9 +27,5 @@ fi
 
 chmod +x "$APPIMAGE"
 
-# AppImages können die Chromium SUID-Sandbox nicht nutzen (chrome-sandbox
-# braucht root:4755, was im gemounteten AppImage nicht möglich ist).
-# --no-sandbox deaktiviert die OS-Level Prozess-Sandbox von Chromium ganz, auch
-# die der Renderer. Geblieben sind contextIsolation, kein nodeIntegration in
-# webPreferences und die CSP der App-Fenster.
-exec "$APPIMAGE" --no-sandbox "$@"
+# --no-sandbox setzt der Wrapper im AppImage (scripts/after-pack.js).
+exec "$APPIMAGE" "$@"

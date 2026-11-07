@@ -59,7 +59,7 @@
   // vom verwendeten Farbraum. Nur als Fallback genutzt (teurer als parseRGB), daher erst wenn die
   // schnelle Regex-Pruefung nichts findet.
   var _colorCtx = null;
-  var COLOR_SENTINEL = [1, 2, 3];
+  var COLOR_SENTINEL = [1, 2, 3], COLOR_SENTINEL_HEX = '#010203';
   // Moderne Farbfunktionen, die parseRGB (nur Hex/rgb/hsl) nicht kann und die den
   // Canvas-Fallback rechtfertigen. color-mix vor color, damit die Alternation greift.
   var CD_COLORFN = /^\s*(oklch|oklab|lab|lch|hwb|color-mix|color)\(/i;
@@ -70,18 +70,12 @@
       canvas.height = 1;
       _colorCtx = canvas.getContext('2d');
     }
-    _colorCtx.fillStyle = '#' + COLOR_SENTINEL.map(function (n) { return ('0' + n.toString(16)).slice(-2); }).join('');
+    _colorCtx.fillStyle = COLOR_SENTINEL_HEX;
     _colorCtx.fillStyle = v;
     _colorCtx.fillRect(0, 0, 1, 1);
     var d = _colorCtx.getImageData(0, 0, 1, 1).data;
     if (d[0] === COLOR_SENTINEL[0] && d[1] === COLOR_SENTINEL[1] && d[2] === COLOR_SENTINEL[2]) return null;
     return 'rgb(' + d[0] + ',' + d[1] + ',' + d[2] + ')';
-  }
-
-  function hexA(hex, alpha) {
-    var c = parseRGB(hex);
-    if (!c) return hex;
-    return 'rgba(' + c[0] + ',' + c[1] + ',' + c[2] + ',' + alpha + ')';
   }
 
   function isOrange(c) {
@@ -129,8 +123,6 @@
       sheet = document.createElement('style');
       sheet.id = id;
       (document.head || document.documentElement).appendChild(sheet);
-    } else if (!sheet.isConnected) {
-      (document.head || document.documentElement).appendChild(sheet);
     }
     // Identisches CSS nicht neu setzen: textContent-Rewrite reparst das Sheet und
     // erzwingt einen vollen Style-Recalc. Bei Reinject/SPA-Nav ist das Sheet meist
@@ -148,7 +140,7 @@
     // das geschwaerzte body und OLED schlaegt faelschlich auf helle Sub-Apps durch. Der
     // Controller uebernimmt ab hier per cd-theme-static (gleicher synchroner Lauf, kein Repaint).
     var pre = document.getElementById('cd-theme-preload');
-    if (pre && pre.parentNode) pre.parentNode.removeChild(pre);
+    if (pre) pre.remove();
     de.style.removeProperty('background-color');
     de.setAttribute('data-cd-surface', measureSurface());
     de.setAttribute('data-cd-theme', st.mode);
@@ -173,8 +165,7 @@
   // damit main.js dasselbe Sheet fuer den document-start-Preload erzeugen kann und beide
   // nicht auseinanderlaufen. main prependet theme-static.js vor diesem Script.
   function buildStaticCSS() {
-    return (window.cdThemeStatic && window.cdThemeStatic.buildStaticCSS)
-      ? window.cdThemeStatic.buildStaticCSS(st) : '';
+    return window.cdThemeStatic.buildStaticCSS(st);
   }
 
   // ---------- Dynamische CSS-Variablen-Remaps (gescoped) ----------
@@ -416,8 +407,7 @@
   // ---------- Anwenden / Umschalten ----------
 
   function idle(cb, ms) {
-    if (window.requestIdleCallback) return window.requestIdleCallback(cb, { timeout: ms || 200 });
-    return setTimeout(cb, 0);
+    return requestIdleCallback(cb, { timeout: ms });
   }
   // buildVarsCSS MUSS synchron laufen: gemessen kostet der Scan nur ~3ms, aber deferred
   // erscheint das Umfaerbe-Sheet erst ~1.5s nach dem Paint -> sichtbares Nachladen (Regression).
@@ -436,8 +426,8 @@
   // nicht, dann muss "off" gelten, sonst bleibt der Hintergrund leer (beim Kaltstart sichtbar).
   function ensureRain(an) {
     var el = document.getElementById('cd-rain');
-    if (!an) { if (el && el.parentNode) el.parentNode.removeChild(el); return false; }
-    if (el && el.isConnected) return true;
+    if (!an) { if (el) el.remove(); return false; }
+    if (el) return true;
     if (!document.body) return false;
     el = document.createElement('div');
     el.id = 'cd-rain';
@@ -510,7 +500,7 @@
         if (sheetsAdded) buildVarsCSS();
       }
       // unsere Artefakte wiederherstellen, falls claude.ai sie entfernt
-      if (!document.getElementById('cd-theme-static') || !document.getElementById('cd-theme-static').isConnected) setSheet('cd-theme-static', buildStaticCSS());
+      if (!document.getElementById('cd-theme-static')) setSheet('cd-theme-static', buildStaticCSS());
       // Gleiches fuer die Variablen: buildVarsCSS lief bisher nur bei neu hinzugekommenen Sheets.
       if (wantVars && !document.getElementById('cd-theme-vars')) { _varsKey = ''; buildVarsCSS(); }
       // In beide Richtungen: claude.ai baut den body beim Navigieren neu, dann fehlt die

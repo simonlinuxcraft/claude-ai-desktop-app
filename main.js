@@ -7,7 +7,7 @@ const { execFile, execFileSync, spawn } = require('child_process');
 const { version } = require('./package.json');
 const { getFilteredNotes, RELEASE_TITLES } = require('./release-notes');
 const { bugReportStrings } = require('./bug-report-strings');
-const { compareVersions, safeJson, escapeHtml, filterNotifications, scaleWindow, UI_SCALE_FLOOR, isClaudeAiOrigin, isPaymentFrameDomain, looksLikeOAuthUrl, validateAccelerator, THEME_MODES, resolveThemeMode, DESIGN_STYLES, resolveDesignStyle } = require('./utils/pure');
+const { safeJson, escapeHtml, filterNotifications, scaleWindow, UI_SCALE_FLOOR, isClaudeAiOrigin, isPaymentFrameDomain, looksLikeOAuthUrl, validateAccelerator, THEME_MODES, resolveThemeMode, DESIGN_STYLES, resolveDesignStyle } = require('./utils/pure');
 
 // Electron "Object has been destroyed" Error-Dialog abfangen
 const _origErrorBox = dialog.showErrorBox;
@@ -204,33 +204,9 @@ const sysLang = (() => {
   // Wie gettext: LANGUAGE (erster Eintrag), LC_ALL, LC_MESSAGES, LANG; "C"/"POSIX" zaehlt nicht als Sprache.
   const l = ([(process.env.LANGUAGE || '').split(':')[0], process.env.LC_ALL, process.env.LC_MESSAGES, process.env.LANG]
     .find(v => v && !/^(c|posix)(\.|$)/i.test(v)) || '').toLowerCase();
-  if (l.startsWith('de')) return 'de';
-  if (l.startsWith('fr')) return 'fr';
-  if (l.startsWith('es')) return 'es';
-  if (l.startsWith('pt')) return 'pt';
-  if (l.startsWith('it')) return 'it';
-  if (l.startsWith('nl')) return 'nl';
-  if (l.startsWith('pl')) return 'pl';
-  if (l.startsWith('ru')) return 'ru';
-  if (l.startsWith('ja')) return 'ja';
-  if (l.startsWith('ko')) return 'ko';
-  if (l.startsWith('zh')) return 'zh';
-  if (l.startsWith('tr')) return 'tr';
-  if (l.startsWith('ar')) return 'ar';
-  if (l.startsWith('sv')) return 'sv';
-  if (l.startsWith('da')) return 'da';
-  if (l.startsWith('no') || l.startsWith('nb') || l.startsWith('nn')) return 'no';
-  if (l.startsWith('fi')) return 'fi';
-  if (l.startsWith('cs')) return 'cs';
-  if (l.startsWith('uk')) return 'uk';
-  if (l.startsWith('hu')) return 'hu';
-  if (l.startsWith('ro')) return 'ro';
-  if (l.startsWith('el')) return 'el';
-  if (l.startsWith('hi')) return 'hi';
-  if (l.startsWith('th')) return 'th';
-  if (l.startsWith('vi')) return 'vi';
-  if (l.startsWith('id') || l.startsWith('ms')) return 'id';
-  return 'en';
+  const c = l.slice(0, 2);
+  const code = { nb: 'no', nn: 'no', ms: 'id' }[c] || c;
+  return Object.hasOwn(bugReportStrings, code) ? code : 'en';
 })();
 
 // Sprachwahl nach Systemsprache: de/fr/it wenn vorhanden, sonst Englisch-Fallback.
@@ -245,8 +221,6 @@ function t(de, en, fr, it) {
 // { de, en, fr?, it? } Objekt sein. localize() wählt nach Systemsprache und
 // fällt auf en (sonst de) zurück, wenn die passende Übersetzung fehlt.
 function localize(field) {
-  if (field == null) return '';
-  if (typeof field === 'string') return field;
   if (sysLang === 'de') return field.de || field.en || '';
   if (sysLang === 'fr') return field.fr || field.en || field.de || '';
   if (sysLang === 'it') return field.it || field.en || field.de || '';
@@ -294,9 +268,6 @@ let dismissedNotificationIds = [];                // persistiert in windowState
 
 // Zentrales Schema fuer alle persistierten State-Felder. Eine Stelle definiert
 // Default-Verhalten + Validierung. loadWindowState() liest, buildState() schreibt.
-// Felder mit `optional: true` werden nur gesetzt wenn sie im JSON definiert sind
-// (behalten sonst den Modul-Default), die anderen werden immer auf den
-// validierten Wert gezwungen.
 const persistableTabs = () => tabs.filter(tb => typeof tb.url === 'string' && isAllowedDomain(tb.url));
 const STATE_SCHEMA = [
   // Lesen laeuft ueber resolveDesignStyle (kennt auch den alten Boolean), set ist No-op.
@@ -310,9 +281,9 @@ const STATE_SCHEMA = [
   // ein Downgrade nicht im falschen Modus startet (midnight und matrix fallen dort auf oled zurueck).
   { key: 'isDarkMode', get: () => themeMode !== 'light', set: () => {} },
   { key: 'oledMode', get: () => themeMode === 'oled' || themeMode === 'midnight' || themeMode === 'matrix', set: () => {} },
-  { key: 'oledIntroSeen', optional: true, get: () => oledIntroSeen,
+  { key: 'oledIntroSeen', get: () => oledIntroSeen,
     set: v => { oledIntroSeen = v === true; } },
-  { key: 'officialAppSeen', optional: true, get: () => officialAppSeen,
+  { key: 'officialAppSeen', get: () => officialAppSeen,
     set: v => { officialAppSeen = v === true; } },
   { key: 'minimizeOnClose', get: () => minimizeOnClose,
     set: v => { minimizeOnClose = v === true; } },
@@ -341,10 +312,10 @@ const STATE_SCHEMA = [
   { key: 'forceX11', get: () => forceX11, set: v => { forceX11 = v === true; } },
   { key: 'contentZoom', get: () => contentZoom,
     set: v => { contentZoom = Number.isFinite(v) ? Math.max(-3, Math.min(5, v)) : 0; } },
-  { key: 'dismissedNotificationIds', get: () => dismissedNotificationIds.slice(0, 200),
+  { key: 'dismissedNotificationIds', get: () => dismissedNotificationIds,
     set: v => {
       dismissedNotificationIds = Array.isArray(v)
-        ? v.filter(id => typeof id === 'string').slice(0, 200)
+        ? v.filter(id => typeof id === 'string').slice(0, MAX_DISMISSED_IDS)
         : [];
     } },
   { key: 'lastSeenVersion', get: () => windowState.lastSeenVersion || null,
@@ -378,10 +349,7 @@ function loadWindowState() {
     try { fs.copyFileSync(stateFile, stateFile + '.bak'); } catch {}
   }
   if (!windowState || typeof windowState !== 'object' || Array.isArray(windowState)) windowState = {};
-  for (const f of STATE_SCHEMA) {
-    if (f.optional && windowState[f.key] === undefined) continue;
-    f.set(windowState[f.key]);
-  }
+  for (const f of STATE_SCHEMA) f.set(windowState[f.key]);
 
   themeMode = resolveThemeMode(windowState);
   designStyle = resolveDesignStyle(windowState);
@@ -395,7 +363,7 @@ function loadWindowState() {
     oledIntroSeen = true;
     // Sofort persistieren, damit ein Hard-Crash vor dem ersten Save den User
     // nicht beim Folge-Start nochmal zwangsweise in OLED schickt.
-    try { saveWindowStateSync(); } catch {}
+    saveWindowStateSync();
   }
 
   // Startgroesse: ohne gespeicherten Wert 1200x800 proportional zum Schirm (auf einem
@@ -557,7 +525,7 @@ const WARN = {
   matrix:   { rgb: '224,169,62', fg: '#e0a93e', title: '#e0a93e', k: 1 }
 };
 function warnColor() {
-  const w = WARN[currentThemeMode()] || WARN.dark;
+  const w = WARN[themeMode];
   return { fg: w.fg, title: w.title, a: v => `rgba(${w.rgb},${Math.round(v * w.k * 100) / 100})` };
 }
 
@@ -565,19 +533,8 @@ function warnColor() {
 const isBeta = process.env.CLAUDE_BETA === '1'
             || (process.env.APPIMAGE || '').toLowerCase().includes('beta');
 
-function currentThemeMode() {
-  return THEME[themeMode] ? themeMode : 'dark';
-}
-function theme()  { return THEME[currentThemeMode()]; }
-// Sub-Window-Theme: identisch mit theme(). Im OLED-Mode kommt die zusaetzliche
-// Lesbarkeit nicht ueber einen helleren bg, sondern ueber einen Brand-Glow-Overlay
-// (s. customTitlebarCSS), damit das Schwarz erhalten bleibt.
-function subTheme() {
-  return theme();
-}
-function accent() {
-  return ACCENT[designStyle] || ACCENT.modern;
-}
+function theme()  { return THEME[themeMode]; }
+function accent() { return ACCENT[designStyle]; }
 function icon()   {
   const modern = designStyle !== 'classic';
   if (isBeta) return path.join(__dirname, modern ? 'icon-beta.png' : 'icon-original-beta.png');
@@ -615,7 +572,7 @@ let _tabBarCache = '';
 let _tabBarKey = '';
 
 function getTabBarHTML() {
-  const key = `${currentThemeMode()}:${designStyle}:${officialAppSeen}`;
+  const key = `${themeMode}:${designStyle}:${officialAppSeen}`;
   if (key === _tabBarKey && _tabBarCache) return _tabBarCache;
   _tabBarKey = key;
   const th = theme();
@@ -764,13 +721,13 @@ ${REDUCED_MOTION_CSS}
   <div class="ctrl-btn" id="support-btn" title="${t('App unterstützen', 'Support the app', 'Soutenir l’app', 'Sostieni l’app')}">${uiIcon('heart', 16)}</div>
   <span class="tool-sep"></span>
   <div class="ctrl-btn" id="export-btn" title="${t('Konversation als Markdown exportieren', 'Export conversation as Markdown', 'Exporter la conversation en Markdown', 'Esporta la conversazione in Markdown')}">${uiIcon('export', 16)}</div>
-  <div class="ctrl-btn" id="bug-report" title="${(bugReportStrings[sysLang] || bugReportStrings.en).title}">${uiIcon('bug', 16)}</div>
+  <div class="ctrl-btn" id="bug-report" title="${bugReportStrings[sysLang].title}">${uiIcon('bug', 16)}</div>
   <div class="ctrl-btn" id="reset-verify" title="${t('claude.ai-Verifizierung zurücksetzen (bei hängender Sicherheitsprüfung)', 'Reset claude.ai verification (when the security check is stuck)', 'Réinitialiser la vérification claude.ai (si la vérification est bloquée)', 'Reimposta la verifica claude.ai (se il controllo è bloccato)')}">${uiIcon('shieldReset', 16)}</div>
   <div class="ctrl-btn" id="theme-toggle" title="${t('Theme wechseln', 'Toggle theme', 'Changer de thème', 'Cambia tema')}">
-    <svg id="theme-icon-dark" viewBox="0 0 24 24"${currentThemeMode() === 'dark' ? '' : ' style="display:none"'}><path d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>
-    <svg id="theme-icon-light" viewBox="0 0 24 24"${currentThemeMode() === 'light' ? '' : ' style="display:none"'}><circle cx="12" cy="12" r="5" stroke="currentColor" stroke-width="2" fill="none"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"/></svg>
-    <svg id="theme-icon-oled" viewBox="0 0 24 24"${currentThemeMode() === 'oled' ? '' : ' style="display:none"'}><path d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79z" fill="currentColor"/></svg>
-    <svg id="theme-icon-midnight" viewBox="0 0 24 24"${currentThemeMode() === 'midnight' ? '' : ' style="display:none"'}><path d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79z" fill="currentColor" opacity=".5"/><path d="M5.6 3l.75 2.05L8.4 5.8l-2.05.75L5.6 8.6l-.75-2.05L2.8 5.8l2.05-.75z" fill="currentColor"/></svg>
+    <svg id="theme-icon-dark" viewBox="0 0 24 24"${themeMode === 'dark' ? '' : ' style="display:none"'}><path d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>
+    <svg id="theme-icon-light" viewBox="0 0 24 24"${themeMode === 'light' ? '' : ' style="display:none"'}><circle cx="12" cy="12" r="5" stroke="currentColor" stroke-width="2" fill="none"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"/></svg>
+    <svg id="theme-icon-oled" viewBox="0 0 24 24"${themeMode === 'oled' ? '' : ' style="display:none"'}><path d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79z" fill="currentColor"/></svg>
+    <svg id="theme-icon-midnight" viewBox="0 0 24 24"${themeMode === 'midnight' ? '' : ' style="display:none"'}><path d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79z" fill="currentColor" opacity=".5"/><path d="M5.6 3l.75 2.05L8.4 5.8l-2.05.75L5.6 8.6l-.75-2.05L2.8 5.8l2.05-.75z" fill="currentColor"/></svg>
   </div>
 </div>
 <div class="win-controls">
@@ -876,7 +833,6 @@ window.tabAPI.onThemeUpdate(u=>{
   // eigenen mit). Ohne das bliebe beim Moduswechsel der alte Ton in Plus-Button und Hover.
   if(u.from)r.setProperty('--ac-from',u.from);
   if(u.to)r.setProperty('--ac-to',u.to);
-  document.body.style.background='';
   for(const k of Object.keys(THEME_VARS)){
     const el=document.getElementById('theme-icon-'+k);
     if(el)el.style.display=m===k?'':'none';
@@ -935,7 +891,7 @@ const sendTabsUpdate = throttle(() => {
 function sendThemeUpdate() {
   if (!mainWindow || mainWindow.isDestroyed()) return;
   const ac = accent();
-  mainWindow.webContents.send('theme-update', { mode: currentThemeMode(), from: ac.from, to: ac.to });
+  mainWindow.webContents.send('theme-update', { mode: themeMode, from: ac.from, to: ac.to });
 }
 
 function sendDesignUpdate() {
@@ -966,7 +922,7 @@ function themeState() {
   // Auf der Seite ist der Akzent nur Deko (Composer-Rand, Fokus-Ring, Sterne), da darf
   // das Neon-Paar ran. mid faerbt claude.ais eigenes Orange um und muss zum Theme passen.
   return {
-    mode: currentThemeMode(),
+    mode: themeMode,
     design: designStyle === 'classic' ? 'classic' : 'modern',
     accent: { from: ac.neonFrom || ac.from, to: ac.neonTo || ac.to, mid: ac.neonFrom || '#E8524F', brandHsl: ac.brandHsl || null },
     rain: matrixRain
@@ -1613,7 +1569,7 @@ function updateTitle() {
 // hier durch. Der Pool wird geleert, weil die vorgeladenen Views ihre Hintergrundfarbe beim
 // Erzeugen bekommen und sonst im alten Modus stehenbleiben.
 function setThemeMode(mode) {
-  if (!THEME_MODES.includes(mode) || mode === currentThemeMode()) return;
+  if (!THEME_MODES.includes(mode) || mode === themeMode) return;
   themeMode = mode;
   applyThemeToAllViews();
 
@@ -1739,11 +1695,8 @@ async function copyDiagnosticsInfo() {
   lines.push(`Surface-Repairs: ${surfaceRepairs}  Stufe: ${repairStep}`);
 
   try {
-    const features = app.getGPUFeatureStatus ? app.getGPUFeatureStatus() : null;
-    if (features && typeof features === 'object') {
-      const fmt = Object.keys(features).sort().map(k => `${k}=${features[k]}`).join(', ');
-      lines.push(`GPU-Features: ${fmt}`);
-    }
+    const features = app.getGPUFeatureStatus();
+    lines.push(`GPU-Features: ${Object.keys(features).sort().map(k => `${k}=${features[k]}`).join(', ')}`);
   } catch (e) {
     lines.push(`GPU-Features: error (${e && e.message || e})`);
   }
@@ -1866,18 +1819,15 @@ function showBugReportDialog() {
     return;
   }
   const s = { ...bugReportStrings.en, ...(bugReportStrings[sysLang] || {}) };
-  const th = subTheme();
+  const th = theme();
   const ac = accent();
-  const dark = currentThemeMode() !== 'light';
   const w = warnColor();
   const bg = th.bg;
   const fg = th.textActive;
   const sub = th.text;
   const inputBg = th.bgHover;
   const inputBorder = th.border;
-  const inputFocus = ac.from;
   const btnBg = ac.from;
-  const btnHover = ac.to;
   const btnDisabled = th.bgActive;
   const successColor = '#3da66a';
 
@@ -2133,8 +2083,7 @@ ${customTitlebarHTML(s.title)}
   const syncSend = () => { sendBtn.disabled = !desc.value.trim(); };
   desc.addEventListener('input', syncSend);
 
-  const tbClose = $('cd-titlebar-close');
-  if (tbClose) tbClose.addEventListener('click', () => window.close());
+  $('cd-titlebar-close').addEventListener('click', () => window.close());
 
   const openSupport = (e) => { if (e) e.preventDefault(); try { window.bugAPI.openSupport(); } catch {} };
   $('acc-btn').addEventListener('click', openSupport);
@@ -2145,14 +2094,14 @@ ${customTitlebarHTML(s.title)}
   // Wenn die Beschreibung trotz Weiche nach Account/Login/Bezahlung klingt, dezent auf den
   // Anthropic-Support hinweisen.
   const supportNudge = $('support-nudge');
-  const NUDGE_KW = ['log in','login','logg','einlogg','anmeld','sign in','signin',
+  const NUDGE_KW = ['log in','login','logg','anmeld','sign in','signin',
     'password','passwort','kennwort','mot de passe','contrase',
     'account','konto','cuenta','compte',
-    'subscription','abonn','abbonamento','suscrip','abo-','abo kündig','abo kundig',
-    'billing','rechnung','facturac','factura','fatturaz','invoice',
+    'subscription','abonn','abbonamento','suscrip','abo-',
+    'billing','rechnung','factura','fatturaz','invoice',
     'payment','paiement','bezahl','zahlung','pagamento',
     'refund','erstattung','remboursement','reembolso','rimborso','chargeback',
-    'cancel','kündig','kundig','annuler','cancelar','cancellare','disdire',
+    'cancel','kündig','kundig','annuler','disdire',
     'credit card','kreditkarte','carte bancaire','tarjeta','carta di credito',
     'upgrade','downgrade'];
   const checkNudge = () => {
@@ -2200,14 +2149,12 @@ ${customTitlebarHTML(s.title)}
     if (userEmail) payload.email = userEmail;
 
     // Ohne Zeitlimit stuende "Wird gesendet" bei haengender Verbindung fuer immer da.
-    const ctrl = new AbortController();
-    const abortTimer = setTimeout(() => ctrl.abort(), 20000);
     try {
       const res = await fetch(cfg.submitUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
         body: JSON.stringify(payload),
-        signal: ctrl.signal
+        signal: AbortSignal.timeout(20000)
       });
       const data = await res.json().catch(() => ({}));
       if (res.ok && data.success) {
@@ -2223,7 +2170,6 @@ ${customTitlebarHTML(s.title)}
       det.hidden = !det.textContent;
       showView('error');
     } finally {
-      clearTimeout(abortTimer);
       sendBtn.textContent = cfg.strings.sendBtn;
       syncSend();
     }
@@ -2483,7 +2429,7 @@ html::after{content:'';position:fixed;inset:-1px;border-radius:${CORNER_RADIUS +
 }
 
 function customTitlebarCSS() {
-  const th = subTheme();
+  const th = theme();
   const ac = accent();
   // Sub-Fenster nutzen pro Theme nur ihre flache Theme-Farbe (kein Brand-Glow mehr).
   // Soft-Depth-Fensterrahmen (oben heller, unten dunkler) gleich wie Hauptfenster, gemeinsam fuer
@@ -2564,10 +2510,8 @@ function oauthPopupSize() {
 // App-Menue liess sich der Hamburger dadurch mal oeffnen und mal nicht. Alle Aufrufer rufen
 // applyUiScale vor loadURL, das Event kommt also in jedem Fall noch.
 function applyUiScale(win, scale) {
-  if (!win || win.isDestroyed()) return;
-  const factor = Number.isFinite(scale) && scale > 0 ? scale : 1;
   win.webContents.on('did-finish-load', () => {
-    try { if (!win.isDestroyed()) win.webContents.setZoomFactor(factor); } catch {}
+    try { if (!win.isDestroyed()) win.webContents.setZoomFactor(scale); } catch {}
   });
 }
 
@@ -2611,7 +2555,7 @@ function createDialogWindow(opts) {
     modal: !!parentWin,
     resizable: false, minimizable: false, maximizable: false,
     title: opts.title || '',
-    backgroundColor: subTheme().bg,
+    backgroundColor: theme().bg,
     icon: icon(),
     autoHideMenuBar: true,
     webPreferences: {
@@ -2633,7 +2577,7 @@ function openSubWindow(width, height, title, preload, getHTML) {
     width: size.width, height: size.height, ...centerOnMainWindow(size.width, size.height),
     parent: mainWindow && !mainWindow.isDestroyed() ? mainWindow : undefined,
     modal: false, resizable: false, minimizable: false, maximizable: false,
-    title, backgroundColor: subTheme().bg, show: false,
+    title, backgroundColor: theme().bg, show: false,
     icon: icon(),
     autoHideMenuBar: true,
     frame: false, roundedCorners: windowsRounded,
@@ -2713,8 +2657,8 @@ function swapShortcut(prev, accel, handler) {
 }
 
 function registerHotkey(accel) {
-  if (typeof accel === 'string' && accel.length > 0 && accel === currentClipboardHotkey) return 'conflict';
-  const r = swapShortcut(currentHotkey, typeof accel === 'string' ? accel : null, openQuickPrompt);
+  if (accel && accel === currentClipboardHotkey) return 'conflict';
+  const r = swapShortcut(currentHotkey, accel || null, openQuickPrompt);
   currentHotkey = r.current;
   return r.res;
 }
@@ -2746,13 +2690,13 @@ async function openClipboardChat() {
     });
     return;
   }
-  if (text.length > MAX_PROMPT_CHARS) text = text.slice(0, MAX_PROMPT_CHARS);
+  text = text.slice(0, MAX_PROMPT_CHARS);
   submitQuickPrompt(text);
 }
 
 function registerClipboardHotkey(accel) {
-  if (typeof accel === 'string' && accel.length > 0 && accel === currentHotkey) return 'conflict';
-  const r = swapShortcut(currentClipboardHotkey, typeof accel === 'string' ? accel : null, openClipboardChat);
+  if (accel && accel === currentHotkey) return 'conflict';
+  const r = swapShortcut(currentClipboardHotkey, accel || null, openClipboardChat);
   currentClipboardHotkey = r.current;
   return r.res;
 }
@@ -2776,7 +2720,6 @@ async function exportActiveConversation() {
     payload = await wc.executeJavaScript(`(function(){
       function clean(s){ return (s||'').replace(/\\u00a0/g,' ').replace(/[ \\t]+\\n/g,'\\n').replace(/\\n{3,}/g,'\\n\\n').trim(); }
       function nodeToMarkdown(root){
-        if(!root) return '';
         const walk = (node) => {
           if(node.nodeType === 3) return node.textContent;
           if(node.nodeType !== 1) return '';
@@ -2797,10 +2740,7 @@ async function exportActiveConversation() {
           }
           if(tag === 'li') return '- ' + inner.trim() + '\\n';
           if(tag === 'ul' || tag === 'ol') return '\\n' + inner + '\\n';
-          if(tag === 'h1') return '\\n# ' + inner + '\\n\\n';
-          if(tag === 'h2') return '\\n## ' + inner + '\\n\\n';
-          if(tag === 'h3') return '\\n### ' + inner + '\\n\\n';
-          if(tag === 'h4') return '\\n#### ' + inner + '\\n\\n';
+          if(/^h[1-4]$/.test(tag)) return '\\n' + '#'.repeat(+tag[1]) + ' ' + inner + '\\n\\n';
           if(tag === 'blockquote') return inner.split('\\n').map(l=>'> '+l).join('\\n') + '\\n\\n';
           if(tag === 'p' || tag === 'div') return inner + '\\n\\n';
           return inner;
@@ -2825,11 +2765,11 @@ async function exportActiveConversation() {
       }
       const parts = Array.from(found.values()).sort((a,b) => {
         const ar = a.getBoundingClientRect(), br = b.getBoundingClientRect();
-        return (ar.top + window.scrollY) - (br.top + window.scrollY);
+        return ar.top - br.top;
       });
       const blocks = [];
       for(const el of parts){
-        const isUser = !!(el.matches('[data-testid="user-message"]') || el.closest('[data-testid="user-message"]') || el.classList.contains('font-user-message'));
+        const isUser = !!(el.closest('[data-testid="user-message"]') || el.classList.contains('font-user-message'));
         const role = isUser ? 'User' : 'Claude';
         const md = nodeToMarkdown(el);
         if(md) blocks.push({ role, md });
@@ -2883,7 +2823,7 @@ async function exportActiveConversation() {
 
 
 function getSettingsHTML() {
-  const th = subTheme();
+  const th = theme();
   const ac = accent();
   const i18n = {
     secBackground: t('Hintergrund', 'Background', 'Arri\u00e8re-plan', 'Background'),
@@ -3088,7 +3028,7 @@ const micReset = document.getElementById('mic-reset');
 const micSnapHint = document.getElementById('mic-snap-hint');
 const micSnapActions = document.getElementById('mic-snap-actions');
 const micSnapStatusPill = document.getElementById('mic-snap-status');
-const micSnapStatusText = micSnapStatusPill ? micSnapStatusPill.querySelector('.text') : null;
+const micSnapStatusText = micSnapStatusPill.querySelector('.text');
 const micSnapOpen = document.getElementById('mic-snap-open');
 const micSnapCopy = document.getElementById('mic-snap-copy');
 let micSnapCopyTimer = null;
@@ -3185,8 +3125,7 @@ function onKeydown(e, key) {
 }
 
 function applyHotkey(key, accel) {
-  const fn = key === 'qp' ? api.setHotkey : key === 'clip' ? api.setClipboardHotkey : null;
-  if (!fn) return Promise.resolve('failed');
+  const fn = key === 'qp' ? api.setHotkey : api.setClipboardHotkey;
   return fn(accel).then(res => {
     if (res === 'ok') display[key] = accel;
     return res;
@@ -3239,7 +3178,6 @@ mic.addEventListener('change', async () => {
 });
 
 function updateSnapStatus(status) {
-  if (!micSnapStatusPill || !micSnapStatusText) return;
   micSnapStatusPill.dataset.status = status;
   if (status === 'connected') micSnapStatusText.textContent = I.micSnapStatusConnected;
   else if (status === 'disconnected') micSnapStatusText.textContent = I.micSnapStatusDisconnected;
@@ -3280,7 +3218,7 @@ Promise.resolve(${safeJson(settingsState())}).then(s => {
   if (s.isSnap) {
     micSnapHint.style.display = '';
     micSnapActions.style.display = '';
-    if (micSnapStatusPill) micSnapStatusPill.style.display = '';
+    micSnapStatusPill.style.display = '';
     refreshSnapStatus();
     micSnapPollHandle = setInterval(refreshSnapStatus, 3000);
     window.addEventListener('beforeunload', () => {
@@ -3338,8 +3276,7 @@ tplAdd.addEventListener('click', () => {
 });
 
 closeBtn.addEventListener('click', () => api.close());
-const titlebarClose = document.getElementById('cd-titlebar-close');
-if (titlebarClose) titlebarClose.addEventListener('click', () => api.close());
+document.getElementById('cd-titlebar-close').addEventListener('click', () => api.close());
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape' && !listeningKey && document.activeElement.tagName !== 'TEXTAREA' && document.activeElement.tagName !== 'INPUT') api.close();
 });
@@ -3348,7 +3285,7 @@ document.addEventListener('keydown', (e) => {
 }
 
 function getWhatsNewHTML() {
-  const th = subTheme();
+  const th = theme();
   const ac = accent();
   // Neon und Matrix haben ein helles Deko-Paar, das hier Lichtschein, Ringe und Logo faerbt.
   const glow = ac.neonFrom || ac.from;
@@ -3493,7 +3430,7 @@ ${customTitlebarHTML(t('Was ist neu', 'What’s new', 'Nouveautés', 'Novità'))
     // Auf einem fokussierten Knopf loest Enter schon selbst einen Klick aus.
     else if(e.key==='Enter'&&!(a&&a.tagName==='BUTTON')){advance();}
   });
-  var tc=document.getElementById('cd-titlebar-close'); if(tc) tc.addEventListener('click',function(){window.whatsNewAPI.close();});
+  document.getElementById('cd-titlebar-close').addEventListener('click',function(){window.whatsNewAPI.close();});
   if(total<=1) document.querySelector('.dots').style.visibility='hidden';
   show(0);
 })();
@@ -3510,7 +3447,7 @@ function openWhatsNewWindow() {
 // About / Info-Fenster
 
 function getAboutHTML() {
-  const th = subTheme();
+  const th = theme();
   const ac = accent();
   const glow = ac.neonFrom || ac.from;
   const glow2 = ac.neonTo || ac.to;
@@ -3605,7 +3542,7 @@ ${customTitlebarHTML(t('Über Desktop for Claude', 'About Desktop for Claude', '
 <script>
 const api = window.aboutAPI;
 document.getElementById('close').addEventListener('click', () => api.close());
-document.getElementById('cd-titlebar-close')?.addEventListener('click', () => api.close());
+document.getElementById('cd-titlebar-close').addEventListener('click', () => api.close());
 document.getElementById('whatsnew-btn').addEventListener('click', () => api.openWhatsNew());
 document.querySelectorAll('a[data-href]').forEach(a => {
   a.tabIndex = 0;
@@ -3645,12 +3582,12 @@ const PREVIEW_SURFACE = {
 };
 
 function getDesignHTML() {
-  const th = subTheme();
+  const th = theme();
   const ac = accent();
   // Themes ohne eigenen Akzent zeigen in der Vorschau den Ton des gewaehlten Stils. NICHT
   // accent(): das liefert im Mitternachtsblau-Modus dessen Blau und faerbte alle vier Karten.
-  const styleAccent = ACCENT[designStyle] || ACCENT.modern;
-  const mode = currentThemeMode();
+  const styleAccent = ACCENT[designStyle];
+  const mode = themeMode;
   const i18n = {
     secTheme: t('Farbthema', 'Colour theme', 'Thème de couleur', 'Tema colore'),
     secStyle: t('Stil', 'Style', 'Style', 'Stile'),
@@ -3908,7 +3845,7 @@ async function showOfficialAppInfo() {
 // Gemeinsames Geruest von Official-App- und Support-Dialog: Kreis-Symbol, Pillen, zwei Knoepfe.
 const CHECK_SVG = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
 function cardDialogCSS() {
-  const th = subTheme();
+  const th = theme();
   const ac = accent();
   return `${sharedDialogCSS()}
   body { overflow: hidden; }
@@ -3937,7 +3874,7 @@ function cardDialogScript(channel) {
 }
 
 function getOfficialAppHTML(channel) {
-  const th = subTheme();
+  const th = theme();
   const pills = ['Ubuntu 22.04+', 'Debian 12+', 'amd64 / arm64'].map(p => `<span class="pill">${CHECK_SVG}${escapeHtml(p)}</span>`).join('');
   return `<!DOCTYPE html>
 <html>
@@ -4008,7 +3945,7 @@ async function showSupportInfo() {
 }
 
 function getSupportHTML(channel) {
-  const th = subTheme();
+  const th = theme();
   const pills = [
     t('Kostenlos', 'Free', 'Gratuit', 'Gratuita'),
     t('Ohne Werbung', 'No ads', 'Sans publicité', 'Senza pubblicità'),
@@ -4081,7 +4018,6 @@ const UI_ICONS = {
     theme:   '<circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 010 18z" fill="currentColor"/>',
     rain:    '<path d="M7 4v5M12 3v9M17 5v4M7 13v7M12 15v6M17 12v6"/>',
     corner:  '<path d="M4 20v-9a7 7 0 017-7h9"/>',
-    link:    '<path d="M10 14a4 4 0 005.66 0l3-3a4 4 0 00-5.66-5.66l-1 1"/><path d="M14 10a4 4 0 00-5.66 0l-3 3a4 4 0 005.66 5.66l1-1"/>',
     terminal:'<path d="M4 17l6-5-6-5M12 19h8"/>',
     mail:    '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/>',
     user:    '<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0116 0"/>',
@@ -4114,7 +4050,7 @@ function getAppMenuItems() {
     { type: 'item', action: 'settings', label: t('App-Einstellungen', 'App Settings', 'Paramètres de l\'application', 'Impostazioni dell\'app'), accel: 'Ctrl+,', icon: 'cog' },
     { type: 'sep' },
     { type: 'item', action: 'check-updates', label: t('Nach Updates suchen', 'Check for Updates', 'Rechercher des mises à jour', 'Controlla aggiornamenti'), icon: 'refresh' },
-    { type: 'item', action: 'bug-report', label: (bugReportStrings[sysLang] || bugReportStrings.en).title, icon: 'bug' },
+    { type: 'item', action: 'bug-report', label: bugReportStrings[sysLang].title, icon: 'bug' },
     { type: 'item', action: 'copy-diagnostics', label: t('Diagnose-Info kopieren', 'Copy diagnostics info', 'Copier les infos de diagnostic', 'Copia informazioni di diagnostica'), icon: 'info' },
     { type: 'item', action: 'reset-verification', label: t('claude.ai-Verifizierung zurücksetzen', 'Reset claude.ai verification', 'Réinitialiser la vérification claude.ai', 'Reimposta la verifica claude.ai'), icon: 'shieldReset' },
     { type: 'sep' },
@@ -4128,17 +4064,17 @@ function getAppMenuItems() {
 }
 
 function getAppMenuHTML(left, top) {
-  const th = subTheme();
+  const th = theme();
   const ac = accent();
-  const dark = currentThemeMode() !== 'light';
+  const dark = themeMode !== 'light';
   const items = getAppMenuItems();
   const ICONS = UI_ICONS;
 
-  const renderItem = (it, idx) => {
+  const renderItem = (it) => {
     if (it.type === 'sep') return '<div class="sep"></div>';
     const icon = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${ICONS[it.icon] || ''}</svg>`;
     const accel = it.accel ? `<span class="accel">${it.accel}</span>` : '';
-    return `<button class="item" data-action="${it.action}" data-idx="${idx}"><span class="icon">${icon}</span><span class="label">${it.label}</span>${accel}</button>`;
+    return `<button class="item" data-action="${it.action}"><span class="icon">${icon}</span><span class="label">${it.label}</span>${accel}</button>`;
   };
 
   return `<!DOCTYPE html><html><head>
@@ -4331,7 +4267,7 @@ function showCustomMessageBox(opts) {
 // Aufbau wie der Ko-fi-Dialog: farbiges Rund oben, Ueberschrift, Text, Knoepfe untereinander.
 // heading fehlt bei aelteren Aufrufen, dann wird message zur Ueberschrift und detail zum Text.
 function getMessageBoxHTML({ type, heading, message, detail, buttons, defaultId, cancelId, danger, channel, title }) {
-  const th = subTheme();
+  const th = theme();
   const ac = accent();
   const w = warnColor();
   // Gefahr-Knopf: Modern/Classic behalten das Rotorange, Neon und Matrix folgen ihrem Stil.
@@ -4448,7 +4384,7 @@ function buildAppMenu() {
       { type: 'separator' },
       { label: t('App-Theme', 'App Theme', 'Thème de l’app', 'Tema dell’app') + '\u2026', click: () => openDesignWindow() },
       { label: t('Nach Updates suchen\u2026', 'Check for Updates\u2026', 'Rechercher des mises à jour…', 'Controlla aggiornamenti…'), click: () => triggerManualUpdateCheck() },
-      { label: (bugReportStrings[sysLang] || bugReportStrings.en).title, click: showBugReportDialog },
+      { label: bugReportStrings[sysLang].title, click: showBugReportDialog },
       { type: 'separator' },
       { role: 'quit', label: t('Beenden', 'Quit', 'Quitter', 'Esci') }
     ]},
@@ -4737,7 +4673,7 @@ function triggerManualUpdateCheck() {
     return;
   }
   manualUpdateCheck = true;
-  Promise.resolve(updater().checkForUpdates()).then(r => { if (!r) manualUpdateCheck = false; }).catch(() => { manualUpdateCheck = false; });
+  updater().checkForUpdates().then(r => { if (!r) manualUpdateCheck = false; }).catch(() => { manualUpdateCheck = false; });
 }
 
 function setupAutoUpdater() {
@@ -4805,7 +4741,6 @@ function setupAutoUpdater() {
 
   updater().on('error', (err) => {
     failures++;
-    if (isDev) console.error(`Update-Fehler (${failures}x):`, err.message);
     if (updateState && updateState.state === 'downloading') {
       setUpdateState(null);
       if (mainWindow && !mainWindow.isDestroyed()) { mainWindow.setProgressBar(-1); updateTitle(); }
@@ -4875,7 +4810,7 @@ function checkSnapAudioRecordStatus(cb) {
   if (!isSnap) return cb('connected');
   execFile('snapctl', ['is-connected', 'audio-record'], { timeout: 1500 }, (err) => {
     if (!err) return cb('connected');
-    if (err && typeof err.code === 'number') return cb('disconnected');
+    if (typeof err.code === 'number') return cb('disconnected');
     cb('unknown');
   });
 }
@@ -4888,7 +4823,7 @@ function checkSnapAudioRecordStatus(cb) {
 const REDUCED_MOTION_CSS = '@media (prefers-reduced-motion:reduce){*,::before,::after{animation:none!important;transition:none!important}}';
 
 function sharedDialogCSS() {
-  const th = subTheme();
+  const th = theme();
   const ac = accent();
   return `
     *{box-sizing:border-box}
@@ -4923,9 +4858,6 @@ async function requestMicrophoneConsent() {
   const respondChannel = `msgbox-respond-${id}`;
   const snapOpenChannel = `mic-consent-open-snap-${id}`;
   const statusChannel = `mic-consent-status-${id}`;
-  const snapNeeded = isSnap;
-  const showSnapPanel = snapNeeded;
-  const initialStatus = snapNeeded ? 'unknown' : 'connected';
 
   const copyCmdChannel = `mic-consent-copy-cmd-${id}`;
 
@@ -4946,7 +4878,7 @@ async function requestMicrophoneConsent() {
 
     const win = createDialogWindow({
       width: 420,
-      height: showSnapPanel ? 560 : 330,
+      height: isSnap ? 560 : 330,
       title: t('Mikrofon-Zugriff', 'Microphone access', 'Accès au microphone', 'Accesso al microfono'),
       waitFit: true
     });
@@ -4970,7 +4902,7 @@ async function requestMicrophoneConsent() {
       try { win.webContents.send(statusChannel, s); } catch {}
     };
 
-    if (showSnapPanel) {
+    if (isSnap) {
       // Sofort einmal asynchron prüfen, dann alle 1.5s pollen.
       checkSnapAudioRecordStatus(sendStatus);
       pollHandle = setInterval(() => {
@@ -4981,14 +4913,14 @@ async function requestMicrophoneConsent() {
 
     const html = getMicConsentHTML({
       respondChannel, snapOpenChannel, statusChannel, copyCmdChannel,
-      showSnapPanel, initialStatus
+      showSnapPanel: isSnap
     });
     win.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(html));
   });
 }
 
-function getMicConsentHTML({ respondChannel, snapOpenChannel, statusChannel, copyCmdChannel, showSnapPanel, initialStatus }) {
-  const th = subTheme();
+function getMicConsentHTML({ respondChannel, snapOpenChannel, statusChannel, copyCmdChannel, showSnapPanel }) {
+  const th = theme();
   const ac = accent();
   const i18n = {
     title: t('Mikrofon-Zugriff', 'Microphone access', 'Accès au microphone', 'Accesso al microfono'),
@@ -5024,7 +4956,7 @@ function getMicConsentHTML({ respondChannel, snapOpenChannel, statusChannel, cop
     deny: t('Ablehnen', 'Deny', 'Refuser', 'Rifiuta')
   };
   const snapPanel = showSnapPanel ? `
-  <div class="snap" id="snap-panel" data-status="${escapeHtml(initialStatus)}">
+  <div class="snap" id="snap-panel" data-status="unknown">
     <div class="snap-head"><span class="dot"></span><span class="snap-title">${i18n.snapTitle}</span><span class="snap-status" id="snap-status-text"></span></div>
     <div class="snap-body">
       <button class="btn-snap" id="open-snap">${uiIcon('external', 14)}${i18n.snapButton}</button>
@@ -5096,7 +5028,7 @@ ${customTitlebarHTML(escapeHtml(i18n.title))}
   const respondChannel = ${safeJson(respondChannel)};
   const snapOpenChannel = ${safeJson(snapOpenChannel)};
   const statusChannel = ${safeJson(statusChannel)};
-  const copyCmdChannel = ${safeJson(copyCmdChannel || '')};
+  const copyCmdChannel = ${safeJson(copyCmdChannel)};
   const respond = (i) => { try { window.msgboxAPI.respond(respondChannel, i); } catch {} };
   document.getElementById('cd-titlebar-close').addEventListener('click', () => respond(1));
   let lastFit = 0;
@@ -5123,7 +5055,7 @@ ${customTitlebarHTML(escapeHtml(i18n.title))}
   if (snapPanel) {
     const statusText = document.getElementById('snap-status-text');
     const labels = ${safeJson({ connected: i18n.snapConnected, disconnected: i18n.snapDisconnected, unknown: i18n.snapUnknown })};
-    let lastStatus = snapPanel.dataset.status || 'unknown';
+    let lastStatus = snapPanel.dataset.status;
     let pulseTimer = null;
     const apply = (s) => {
       snapPanel.dataset.status = s;
@@ -5144,15 +5076,13 @@ ${customTitlebarHTML(escapeHtml(i18n.title))}
     const copyBtn = document.getElementById('snap-cmd-copy');
     const copyLabels = ${safeJson({ idle: i18n.snapCmdCopy, done: i18n.snapCmdCopied })};
     let copyResetTimer = null;
-    if (copyBtn && copyCmdChannel) {
-      copyBtn.addEventListener('click', () => {
-        try { window.msgboxAPI.copySnapCmd(copyCmdChannel); } catch {}
-        copyBtn.textContent = copyLabels.done;
-        clearTimeout(copyResetTimer);
-        copyResetTimer = setTimeout(() => { copyBtn.textContent = copyLabels.idle; }, 1800);
-      });
-    }
-    if (window.msgboxAPI.onStatusUpdate) window.msgboxAPI.onStatusUpdate(statusChannel, (s) => apply(s));
+    copyBtn.addEventListener('click', () => {
+      try { window.msgboxAPI.copySnapCmd(copyCmdChannel); } catch {}
+      copyBtn.textContent = copyLabels.done;
+      clearTimeout(copyResetTimer);
+      copyResetTimer = setTimeout(() => { copyBtn.textContent = copyLabels.idle; }, 1800);
+    });
+    window.msgboxAPI.onStatusUpdate(statusChannel, (s) => apply(s));
   }
   fit();
 })();
@@ -5220,18 +5150,12 @@ function pushNotificationsToTabBar() {
 }
 
 function getNotificationBarHeight() {
-  if (!activeNotifications || activeNotifications.length === 0) return 0;
   return NOTIFICATION_BANNER_HEIGHT * Math.min(activeNotifications.length, MAX_NOTIFICATIONS_VISIBLE);
 }
 
 async function refreshNotifications() {
   const override = getNotificationsOverridePath();
-  let payload = null;
-  if (override) {
-    payload = loadNotificationsLocal(override);
-  } else {
-    payload = await fetchNotificationsRemote();
-  }
+  const payload = override ? loadNotificationsLocal(override) : await fetchNotificationsRemote();
   // Ein Netzfehler loescht keine sichtbaren Hinweise, sie bleiben bis zum naechsten erfolgreichen Abruf.
   notificationsFetchFailed = !payload;
   if (!payload) return;
@@ -5357,7 +5281,7 @@ function getAutostart() {
   if (process.platform !== 'linux') {
     try { return !!app.getLoginItemSettings().openAtLogin; } catch { return false; }
   }
-  try { return fs.existsSync(AUTOSTART_FILE); } catch { return false; }
+  return fs.existsSync(AUTOSTART_FILE);
 }
 
 // Liefert eine der Konstanten:
@@ -5553,10 +5477,7 @@ ipcMain.handle('settings-microphone-with-consent', async (_, v) => {
   return { applied: microphoneEnabled, status: newStatus };
 });
 
-ipcMain.handle('settings-mic-snap-status', () => {
-  if (!isSnap) return Promise.resolve('connected');
-  return new Promise(resolve => checkSnapAudioRecordStatus(resolve));
-});
+ipcMain.handle('settings-mic-snap-status', () => new Promise(resolve => checkSnapAudioRecordStatus(resolve)));
 
 ipcMain.on('settings-microphone-reset', () => {
   microphoneEnabled = false;
@@ -5773,10 +5694,10 @@ ipcMain.on('update-install', (event) => {
 
 ipcMain.on('tab-new', () => createTab());
 ipcMain.on('tab-switch', (_, i) => {
-  if (typeof i === 'number' && Number.isInteger(i) && i >= 0 && i < tabs.length) switchToTab(i);
+  if (Number.isInteger(i) && i >= 0 && i < tabs.length) switchToTab(i);
 });
 ipcMain.on('tab-close', (_, i) => {
-  if (typeof i === 'number' && Number.isInteger(i) && i >= 0 && i < tabs.length) closeTab(i);
+  if (Number.isInteger(i) && i >= 0 && i < tabs.length) closeTab(i);
 });
 // Die (ausgeblendete) Pille in der Tab-Leiste schaltet weiter im Kreis.
 ipcMain.on('design-toggle', () => {
@@ -5818,7 +5739,7 @@ ipcMain.on('appmenu-close', (event) => {
   if (appMenuView && event.sender === appMenuView.webContents) closeAppMenu();
 });
 ipcMain.on('theme-toggle', () => {
-  const i = THEME_MODES.indexOf(currentThemeMode());
+  const i = THEME_MODES.indexOf(themeMode);
   setThemeMode(THEME_MODES[(i + 1) % THEME_MODES.length]);
 });
 
@@ -5873,10 +5794,8 @@ function createWindow() {
   // settleActiveView haengt sie wieder an. Auf 'move' noetig, weil das Ziehen auf einen
   // anderen Monitor kein resize ausloest, solange die Fenstergroesse gleich bleibt.
   mainWindow.on('move', () => { saveWindowState(); settleActiveView(); });
-  mainWindow.on('maximize', () => { saveWindowState(); lastViewBounds = ''; resizeActiveView(); sendWindowState(); });
-  mainWindow.on('unmaximize', () => { saveWindowState(); lastViewBounds = ''; resizeActiveView(); sendWindowState(); });
-  mainWindow.on('enter-full-screen', () => { lastViewBounds = ''; resizeActiveView(); });
-  mainWindow.on('leave-full-screen', () => { lastViewBounds = ''; resizeActiveView(); });
+  for (const ev of ['maximize', 'unmaximize']) mainWindow.on(ev, () => { saveWindowState(); lastViewBounds = ''; resizeActiveView(); sendWindowState(); });
+  for (const ev of ['enter-full-screen', 'leave-full-screen']) mainWindow.on(ev, () => { lastViewBounds = ''; resizeActiveView(); });
   // settleActiveView auch hier: nach Restore/Show haelt die Compositor-Surface auf X11
   // gern veralteten Inhalt fest, und resizeActiveView allein ist bei gleicher Fenstergroesse
   // ein No-op. Debounced, kostet also nichts.
@@ -6009,11 +5928,8 @@ app.whenReady().then(() => {
   // Gleiche Ursache wie der 'move'-Handler: Monitorwechsel, geaenderte Skalierung und ein
   // aufgewachter Bildschirm (DPMS/Sperrbildschirm) lassen die Surface leer zurueck, ohne
   // dass ein Fenster-Event feuert. Einmalig registriert, createWindow kann wiederkehren.
-  screen.on('display-metrics-changed', () => settleActiveView());
-  screen.on('display-added', () => settleActiveView());
-  screen.on('display-removed', () => settleActiveView());
-  powerMonitor.on('resume', () => settleActiveView());
-  powerMonitor.on('unlock-screen', () => settleActiveView());
+  for (const ev of ['display-metrics-changed', 'display-added', 'display-removed']) screen.on(ev, () => settleActiveView());
+  for (const ev of ['resume', 'unlock-screen']) powerMonitor.on(ev, () => settleActiveView());
   startSurfaceWatchdog();
   buildAppMenu();
   setupDownloadManager();
@@ -6035,7 +5951,7 @@ app.whenReady().then(() => {
   if (windowState.lastSeenVersion !== version) syncDesktopIcons();
 
   // Das Fenster zeigt nur die Notes der aktuellen Version, also auch nur danach entscheiden.
-  if (mainWindow && windowState.lastSeenVersion !== version && getFilteredNotes(version, isSnap).length > 0) {
+  if (windowState.lastSeenVersion !== version && getFilteredNotes(version, isSnap).length > 0) {
     const showWhatsNew = () => {
       if (!mainWindow || mainWindow.isDestroyed()) return;
       openWhatsNewWindow();

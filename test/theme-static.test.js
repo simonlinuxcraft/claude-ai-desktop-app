@@ -11,7 +11,6 @@
 // Ohne einen solchen Anlass wird die Baseline nicht angefasst.
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
-const path = require('path');
 
 const CUR = require('../inject/theme-static.js');
 const base = require('./fixtures/theme-static.baseline.js');

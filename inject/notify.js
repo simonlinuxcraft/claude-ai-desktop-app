@@ -1,7 +1,6 @@
 (function() {
   if (window._cdNotify) return;
   window._cdNotify = true;
-  if (window._cdNotifyInterval) { clearInterval(window._cdNotifyInterval); window._cdNotifyInterval = null; }
 
   // Heuristik: claude.ai zeigt waehrend Generation einen Stop-Button und tauscht ihn
   // gegen einen Send-Button, sobald Claude fertig ist. Wir beobachten den Stop-Button
@@ -97,7 +96,6 @@
         var msgs = document.querySelectorAll(selectors[s]);
         if (msgs.length === 0) continue;
         var last = msgs[msgs.length - 1];
-        if (!last) continue;
         var text = (last.innerText || '').replace(/\s+/g, ' ').trim();
         if (text) return text.slice(0, 200);
       }

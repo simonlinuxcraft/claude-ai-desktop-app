@@ -2,7 +2,7 @@
 const { contextBridge, ipcRenderer } = require('electron');
 
 function validIndex(i) {
-  return typeof i === 'number' && Number.isInteger(i) && i >= 0;
+  return Number.isInteger(i) && i >= 0;
 }
 
 function validId(s) {
@@ -33,8 +33,8 @@ contextBridge.exposeInMainWorld('tabAPI', {
   resetVerification: () => ipcRenderer.send('tabbar-reset-verification'),
   exportConversation: () => ipcRenderer.send('export-conversation'),
   openAppMenu: (x, y) => {
-    const px = typeof x === 'number' && Number.isFinite(x) ? x : 0;
-    const py = typeof y === 'number' && Number.isFinite(y) ? y : 0;
+    const px = Number.isFinite(x) ? x : 0;
+    const py = Number.isFinite(y) ? y : 0;
     ipcRenderer.send('app-menu-popup', px, py);
   },
   dismissNotification: (id) => { if (validId(id)) ipcRenderer.send('notification-dismiss', id); },
