@@ -1645,7 +1645,6 @@ function syncDesktopIcons() {
   refreshTrayImage();
   if (process.env.SNAP) return;
 
-  try { fs.copyFileSync(icon(), path.join(app.getPath('home'), 'Apps', 'desktop-for-claude-icon.png')); } catch {}
   if (process.platform !== 'linux') return;
 
   // Der Dateiname MUSS von Anthropics claude-desktop.png abweichen: das User-Icon-Theme
@@ -1909,7 +1908,7 @@ function showBugReportDialog() {
   bugReportWindow = win;
   applyUiScale(win, brSize.scale);
   revealWhenReady(win, true);
-  win.setMenuBarVisibility(false);
+  win.setMenu(null);
   win.on('closed', () => { bugReportWindow = null; });
 
   const cfg = safeJson({
@@ -3938,7 +3937,7 @@ function openDesignWindow() {
     designWindow.focus();
     return;
   }
-  const size = fitToWorkArea(720, 650);
+  const size = fitToWorkArea(720, 660);
   designWindow = new BrowserWindow({
     width: size.width, height: size.height,
     ...centerOnMainWindow(size.width, size.height),

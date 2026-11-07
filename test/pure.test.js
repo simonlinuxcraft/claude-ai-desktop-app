@@ -364,11 +364,11 @@ const SCHIRME = {
   ultrawide:  { width: 3440, height: 1400 },
   uhd:        { width: 3840, height: 2100 }
 };
-// Die im Code verwendeten Design-Massen, Stand nach der Proportions-Anpassung.
+// Die Startmasse aus main.js (fitToWorkArea/createDialogWindow). Bei Aenderungen dort mitziehen.
 const DIALOGE = [
-  ['Bug-Report', 720, 910], ['Settings', 660, 740], ['What\u2019s New', 700, 720],
-  ['About', 600, 620], ['Design', 640, 700], ['MessageBox', 480, 260],
-  ['Mic-Consent', 520, 480], ['Quick-Prompt', 600, 160], ['Hauptfenster', 1200, 800]
+  ['Bug-Report', 600, 380], ['Settings', 820, 780], ['What\u2019s New', 700, 720],
+  ['About', 560, 610], ['Design', 720, 660], ['MessageBox', 400, 300],
+  ['Mic-Consent', 420, 560], ['Quick-Prompt', 612, 168], ['Hauptfenster', 1200, 800]
 ];
 
 test('scaleWindow: kein Dialog laeuft je ueber die Arbeitsflaeche', () => {
@@ -436,10 +436,9 @@ test('scaleWindow: kaputte oder fehlende workArea faellt auf die Referenz zuruec
 });
 
 // Die grossen Dialoge sollen quadratisch bis leicht hochkant sein, nicht schmal und lang.
-// Bug-Report und Einstellungen lagen vorher bei 0.66 bzw. mussten ueber 500px scrollen.
-// Ausgenommen: das Hauptfenster (Browserfenster fuer claude.ai, gehoert quer), die
-// MessageBox (breiter Standarddialog) und das Quick-Prompt-Overlay (schmaler Balken).
-const INHALTSDIALOGE = ['Bug-Report', 'Settings', 'What\u2019s New', 'About', 'Design'];
+// Ausgenommen: das Hauptfenster (gehoert quer), MessageBox und Mic-Consent (Standarddialoge),
+// das Quick-Prompt-Overlay (Balken) und der Bug-Report (misst sich nach dem Laden selbst aus).
+const INHALTSDIALOGE = ['Settings', 'What\u2019s New', 'About', 'Design'];
 test('Dialogmasse: Seitenverhaeltnis zwischen 0.75 und 1.1', () => {
   const gross = DIALOGE.filter(([n]) => INHALTSDIALOGE.includes(n));
   assert.equal(gross.length, INHALTSDIALOGE.length, 'ein Inhaltsdialog fehlt in DIALOGE');
