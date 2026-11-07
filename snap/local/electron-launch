@@ -1,11 +1,8 @@
 #!/bin/bash
-# Unter Wayland laeuft die App nativ, mit --ozone-platform=x11 ueber XWayland.
 # GTK_USE_PORTAL=1: Open/Save-Dialoge und der HTML-File-Picker laufen ueber
 # xdg-desktop-portal. Unter strict confinement gibt das Document-Portal Zugriff
 # auf gewaehlte Dateien auch ausserhalb von $HOME (per FD), statt nur den
 # home-Plug-Pfad zu zeigen. Behebt das "kann Datei nicht anhaengen/speichern".
-# Einstellung "X11 statt Wayland" aus der App. Vor "$@", damit ein eigenes --ozone-platform gewinnt.
-X11=()
-grep -qs '"forceX11":true' "${XDG_CONFIG_HOME:-$HOME/.config}/claude-desktop/window-state.json" && X11=(--ozone-platform=x11)
+# --no-sandbox und die Einstellung "X11 statt Wayland" setzt der Wrapper aus scripts/after-pack.js.
 exec env XDG_CURRENT_DESKTOP=Unity GTK_USE_PORTAL=1 "$SNAP/app/desktop-for-claude" \
-  --no-sandbox --use-gl=angle --use-angle=gl "${X11[@]}" "$@"
+  --use-gl=angle --use-angle=gl "$@"

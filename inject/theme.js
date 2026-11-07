@@ -89,53 +89,24 @@
       && c[2] >= 40 && c[2] <= 105 && c[0] - c[1] >= 55 && c[0] - c[2] >= 85;
   }
 
-  function mapDark(c) {
-    if (!c) return null;
-    var sum = c[0] + c[1] + c[2];
-    if (sum < 30) return '#030203';
-    if (sum < 150) return '#050306';
-    if (sum < 200) return '#120f12';
-    if (sum < 260) return '#1c181b';
-    if (sum < 330) return '#252023';
-    if (sum < 400) return '#2c2528';
-    return null;
-  }
-
-  // Gleiche Treppe wie mapDark, nur in Blau: dunkle Variablen der Seite auf die
-  // Mitternachtsblau-Stufen ziehen, damit Tokens die das statische Sheet nicht erwischt
-  // (Schatten, Raender, Inline-Flaechen) nicht als graue Inseln stehenbleiben.
-  function mapMidnight(c) {
-    if (!c) return null;
-    var sum = c[0] + c[1] + c[2];
-    if (sum < 30) return '#04070f';
-    if (sum < 150) return '#070c18';
-    if (sum < 200) return '#0d1526';
-    if (sum < 260) return '#151f36';
-    if (sum < 330) return '#1c2844';
-    if (sum < 400) return '#233052';
-    return null;
-  }
-
-  // Modi mit eigener Flaechenpalette. dark und light bekommen null: dark laeuft auf
-  // claude.ais nativer Palette, light auf dem Invert-Filter, beide brauchen kein Remap.
-  // Gleiche Treppe, in Gruen: das Matrix-Theme sitzt auf gruenstichigem Fast-Schwarz.
-  function mapMatrix(c) {
-    if (!c) return null;
-    var sum = c[0] + c[1] + c[2];
-    if (sum < 30) return '#020403';
-    if (sum < 150) return '#040806';
-    if (sum < 200) return '#0b1610';
-    if (sum < 260) return '#122017';
-    if (sum < 330) return '#18291d';
-    if (sum < 400) return '#1f3325';
-    return null;
-  }
+  // Dunkle Variablen der Seite nach Helligkeitssumme auf die Flaechenstufen des Modus ziehen,
+  // damit Tokens die das statische Sheet nicht erwischt nicht als graue Inseln stehenbleiben.
+  // dark und light fehlen: dark laeuft auf claude.ais Palette, light auf dem Invert-Filter.
+  var SURFACE_STEPS = [30, 150, 200, 260, 330, 400];
+  var SURFACE_PALETTE = {
+    oled:     ['#030203', '#050306', '#120f12', '#1c181b', '#252023', '#2c2528'],
+    midnight: ['#04070f', '#070c18', '#0d1526', '#151f36', '#1c2844', '#233052'],
+    matrix:   ['#020403', '#040806', '#0b1610', '#122017', '#18291d', '#1f3325']
+  };
 
   function surfaceMap(mode) {
-    if (mode === 'oled') return mapDark;
-    if (mode === 'midnight') return mapMidnight;
-    if (mode === 'matrix') return mapMatrix;
-    return null;
+    var pal = SURFACE_PALETTE[mode];
+    if (!pal) return null;
+    return function (c) {
+      var sum = c[0] + c[1] + c[2];
+      for (var i = 0; i < SURFACE_STEPS.length; i++) if (sum < SURFACE_STEPS[i]) return pal[i];
+      return null;
+    };
   }
 
   // ---------- Surface-Luminanz (gegen Durchschlagen auf helle Sub-Apps) ----------
@@ -491,12 +462,7 @@
       window._cdTheme = next;
     }
     if (changed) clearRecolor();
-    applyAttrs();
-    setSheet('cd-theme-static', buildStaticCSS());
-    buildVarsCSS();
-    tagComposer();
-    updateModalFlag();
-    deferHeavy();
+    applyAll();
   }
 
   function startObserver() {

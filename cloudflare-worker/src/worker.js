@@ -104,15 +104,19 @@ function sanitize(v, max, multiline) {
   return out.trim();
 }
 
+const CORS_HEADERS = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type, X-App-Secret'
+};
+
 function jsonResponse(body, status) {
   return new Response(JSON.stringify(body), {
     status,
     headers: {
       'Content-Type': 'application/json',
       'Cache-Control': 'no-store',
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'POST, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, X-App-Secret'
+      ...CORS_HEADERS
     }
   });
 }
@@ -121,9 +125,7 @@ function corsPreflight() {
   return new Response(null, {
     status: 204,
     headers: {
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'POST, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, X-App-Secret',
+      ...CORS_HEADERS,
       'Access-Control-Max-Age': '86400'
     }
   });

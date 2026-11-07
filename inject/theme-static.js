@@ -7,9 +7,10 @@
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   if (typeof window !== 'undefined') window.cdThemeStatic = api;
 })(this, function () {
-  function sparkUse(x, y, sc, op) {
-    return "<use href='#s' transform='translate(" + x + "," + y + ") scale(" + sc + ")' opacity='" + op + "'/>";
+  function svgUse(id, x, y, sc, op) {
+    return "<use href='#" + id + "' transform='translate(" + x + "," + y + ") scale(" + sc + ")' opacity='" + op + "'/>";
   }
+  function sparkUse(x, y, sc, op) { return svgUse('s', x, y, sc, op); }
   function sparkleBg(st) {
     var ac = (st && st.accent) || {}, f = ac.from || '#F26A3F', t = ac.to || '#E83B6E';
     var svg = "<svg xmlns='http://www.w3.org/2000/svg' width='620' height='620' viewBox='0 0 620 620'>"
@@ -40,9 +41,7 @@
     return d;
   }
 
-  function waveUse(x, y, sc, op) {
-    return "<use href='#w' transform='translate(" + x + "," + y + ") scale(" + sc + ")' opacity='" + op + "'/>";
-  }
+  function waveUse(x, y, sc, op) { return svgUse('w', x, y, sc, op); }
   // Zeichenregen fuer das Matrix-Theme. Spalten mit hellem Kopf, nach unten in den
   // dunkleren Ton auslaufend. Feste Koordinaten (kein Zufall), damit das Sheet
   // deterministisch bleibt. Kurze Spalten statt durchgehender Bahnen: eine Bahn ueber die
@@ -140,6 +139,46 @@
       }).join(',') + '{background-color:' + color + ' !important}';
     }
 
+    // Gemeinsamer Aufbau von Mitternachtsblau und Matrix: gleiche Token-Gruppen auf drei
+    // eigenen Stufen, Trennung ueber Hairlines. html- und body-Regel setzt der Aufrufer.
+    function tintedRegeln(S, BG0, HI, TOP, EDGE, HAIR, FOCUS, composerBg) {
+      return [
+        S + '[data-cd-modal] body{background-image:none !important}',
+        S + ' #__next,' + S + ' #root,' + S + ' main,' + S + ' [role="main"]{background-color:transparent !important;background-image:none !important}',
+        S + ' nav,' + S + ' aside,' + S + ' header,' + S + ' [class*="sidebar" i],' + S + ' [class*="Sidebar"],' + S + ' [class*="topbar" i],' + S + ' [class*="TopBar"]{background-color:' + BG0 + ' !important;background-image:none !important}',
+        S + ' nav,' + S + ' aside,' + S + ' [class*="sidebar" i],' + S + ' [class*="Sidebar"]{border-right:1px solid ' + HAIR + ' !important}',
+        safeBg(S, ['bg-bg-000', 'bg-bg-100', 'bg-bg-200'], BG0),
+        safeBg(S, ['bg-bg-300', 'bg-bg-400'], HI),
+        safeBg(S, ['bg-bg-500', 'bg-bg-600'], TOP),
+        safeBg(S, ['bg-surface-0', 'bg-surface-1'], BG0),
+        safeBg(S, ['bg-surface-2', 'bg-surface-3'], HI),
+        safeBg(S, ['bg-black', 'bg-neutral-900', 'bg-neutral-950', 'bg-zinc-900', 'bg-zinc-950', 'bg-gray-900', 'bg-gray-950', 'bg-stone-900', 'bg-stone-950', 'bg-slate-900', 'bg-slate-950'], BG0),
+        // Das Design-Feature bringt eigene Controls mit fest verdrahtetem Grau mit (gemessen
+        // rgb(107,107,107) am Auswahlfeld), die keiner der Surface-Tokens erwischt.
+        S + ' [class*="om-dc-select"],' + S + ' [class*="om-tray-composer-shell"]{background-color:' + HI + ' !important}',
+        S + ' [class*="from-bg-"],' + S + ' [class*="to-bg-"],' + S + ' [class*="via-bg-"]{background-image:none !important}',
+        // claude.ai legt eine dekorative Vollbild-Flaeche ueber die Seite (gemessen: inset-0,
+        // 1438x704). Von den Surface-Tokens oben wird sie deckend eingefaerbt und schneidet die
+        // Wellen ab. pointer-events-none grenzt sie gegen echte Modal-Backdrops ab, die klickbar
+        // sind und deckend bleiben muessen. Steht nach safeBg, sonst gewinnt die Reihenfolge nicht.
+        S + ' [class*="pointer-events-none"][class*="inset-0"]{background-color:transparent !important;background-image:none !important}',
+        S + ' header[class*="bg-"]{background-color:' + BG0 + ' !important;background-image:none !important}',
+        // Scrims faden den Inhalt in die Seitenfarbe. Ueber einem Muster koennen sie das nicht
+        // leisten: als Verlauf in der Basisfarbe schneiden sie die Wellen sichtbar durch. Hier
+        // also ganz weg, statt claude.ais Grau (das als Balken stehenbleibt) nachzumalen.
+        S + ' [class*="top-scrim"],' + S + ' [class*="bottom-scrim"]{background-image:none !important}',
+        S + ' nav a,' + S + ' nav button,' + S + ' aside a,' + S + ' aside button,' + S + ' [class*="sidebar" i] a,' + S + ' [class*="sidebar" i] button,' + S + ' [class*="Sidebar"] a,' + S + ' [class*="Sidebar"] button{background-color:transparent !important;border-color:transparent !important;box-shadow:none !important}',
+        S + ' nav a:hover,' + S + ' nav button:hover,' + S + ' aside a:hover,' + S + ' aside button:hover,' + S + ' [class*="sidebar" i] a:hover,' + S + ' [class*="sidebar" i] button:hover{background-color:' + HI + ' !important}',
+        S + ' nav [aria-current="page"],' + S + ' nav [data-state="active"],' + S + ' nav [aria-selected="true"],' + S + ' aside [aria-current="page"],' + S + ' aside [data-state="active"],' + S + ' aside [aria-selected="true"]{background-color:' + TOP + ' !important}',
+        S + ' [role="menu"],' + S + ' [role="dialog"],' + S + ' [role="listbox"],' + S + ' [role="tooltip"],' + S + ' [class*="opover"],' + S + ' [class*="ropdown"],' + S + ' [class*="enuContent"],' + S + ' [data-radix-popper-content-wrapper]>*{background-color:' + HI + ' !important;background-image:none !important;border:1px solid ' + EDGE + ' !important;box-shadow:0 8px 28px rgba(0,0,0,0.6) !important}',
+        S + ' [role="menu"] [role="menuitem"],' + S + ' [role="menu"] button,' + S + ' [role="menu"] a,' + S + ' [role="listbox"] [role="option"]{background-color:transparent !important;border-color:transparent !important}',
+        S + ' [role="menu"] [role="menuitem"]:hover,' + S + ' [role="menu"] button:hover,' + S + ' [role="menu"] a:hover,' + S + ' [role="listbox"] [role="option"]:hover,' + S + ' [role="menuitem"][data-highlighted]{background-color:' + TOP + ' !important}',
+        S + ' input:focus,' + S + ' textarea:focus,' + S + ' [role="searchbox"]:focus,' + S + ' [role="combobox"]:focus{outline:1.5px solid ' + FOCUS + ' !important;outline-offset:2px !important}',
+        S + ' .cd-composer{position:relative;border-color:transparent !important;overflow:visible !important;background-color:' + composerBg + ' !important}',
+        S + ' .cd-composer::before' + RING
+      ];
+    }
+
     // Vorab-Override fuer claude.ais Brand-Ton. Der volle Variablen-Scan in theme.js laeuft
     // erst bei DOMContentLoaded; bis dahin zeigt das Spark-Logo im Chat sein Original-Orange,
     // gemessen 1.2s nach einem Reload und auf langsamen Geraeten laenger. --cds-clay ist die
@@ -166,30 +205,7 @@
       // bestehende Sheet Byte-gleich bleibt (siehe test/theme-static.test.js).
       X + '{background-color:' + XBG + ' !important;--cd-rain-img:' + RAIN + '}',
       X + ' body{background-color:' + XBG + ' !important;background-image:var(--cd-rain-img) !important;background-size:620px 620px}',
-      X + '[data-cd-modal] body{background-image:none !important}',
-      X + ' #__next,' + X + ' #root,' + X + ' main,' + X + ' [role="main"]{background-color:transparent !important;background-image:none !important}',
-      X + ' nav,' + X + ' aside,' + X + ' header,' + X + ' [class*="sidebar" i],' + X + ' [class*="Sidebar"],' + X + ' [class*="topbar" i],' + X + ' [class*="TopBar"]{background-color:' + XBG + ' !important;background-image:none !important}',
-      X + ' nav,' + X + ' aside,' + X + ' [class*="sidebar" i],' + X + ' [class*="Sidebar"]{border-right:1px solid ' + X_HAIR + ' !important}',
-      safeBg(X, ['bg-bg-000', 'bg-bg-100', 'bg-bg-200'], XBG),
-      safeBg(X, ['bg-bg-300', 'bg-bg-400'], XBG_HI),
-      safeBg(X, ['bg-bg-500', 'bg-bg-600'], XBG_TOP),
-      safeBg(X, ['bg-surface-0', 'bg-surface-1'], XBG),
-      safeBg(X, ['bg-surface-2', 'bg-surface-3'], XBG_HI),
-      safeBg(X, ['bg-black', 'bg-neutral-900', 'bg-neutral-950', 'bg-zinc-900', 'bg-zinc-950', 'bg-gray-900', 'bg-gray-950', 'bg-stone-900', 'bg-stone-950', 'bg-slate-900', 'bg-slate-950'], XBG),
-      X + ' [class*="om-dc-select"],' + X + ' [class*="om-tray-composer-shell"]{background-color:' + XBG_HI + ' !important}',
-      X + ' [class*="from-bg-"],' + X + ' [class*="to-bg-"],' + X + ' [class*="via-bg-"]{background-image:none !important}',
-      X + ' [class*="pointer-events-none"][class*="inset-0"]{background-color:transparent !important;background-image:none !important}',
-      X + ' header[class*="bg-"]{background-color:' + XBG + ' !important;background-image:none !important}',
-      X + ' [class*="top-scrim"],' + X + ' [class*="bottom-scrim"]{background-image:none !important}',
-      X + ' nav a,' + X + ' nav button,' + X + ' aside a,' + X + ' aside button,' + X + ' [class*="sidebar" i] a,' + X + ' [class*="sidebar" i] button,' + X + ' [class*="Sidebar"] a,' + X + ' [class*="Sidebar"] button{background-color:transparent !important;border-color:transparent !important;box-shadow:none !important}',
-      X + ' nav a:hover,' + X + ' nav button:hover,' + X + ' aside a:hover,' + X + ' aside button:hover,' + X + ' [class*="sidebar" i] a:hover,' + X + ' [class*="sidebar" i] button:hover{background-color:' + XBG_HI + ' !important}',
-      X + ' nav [aria-current="page"],' + X + ' nav [data-state="active"],' + X + ' nav [aria-selected="true"],' + X + ' aside [aria-current="page"],' + X + ' aside [data-state="active"],' + X + ' aside [aria-selected="true"]{background-color:' + XBG_TOP + ' !important}',
-      X + ' [role="menu"],' + X + ' [role="dialog"],' + X + ' [role="listbox"],' + X + ' [role="tooltip"],' + X + ' [class*="opover"],' + X + ' [class*="ropdown"],' + X + ' [class*="enuContent"],' + X + ' [data-radix-popper-content-wrapper]>*{background-color:' + XBG_HI + ' !important;background-image:none !important;border:1px solid ' + X_EDGE + ' !important;box-shadow:0 8px 28px rgba(0,0,0,0.6) !important}',
-      X + ' [role="menu"] [role="menuitem"],' + X + ' [role="menu"] button,' + X + ' [role="menu"] a,' + X + ' [role="listbox"] [role="option"]{background-color:transparent !important;border-color:transparent !important}',
-      X + ' [role="menu"] [role="menuitem"]:hover,' + X + ' [role="menu"] button:hover,' + X + ' [role="menu"] a:hover,' + X + ' [role="listbox"] [role="option"]:hover,' + X + ' [role="menuitem"][data-highlighted]{background-color:' + XBG_TOP + ' !important}',
-      X + ' input:focus,' + X + ' textarea:focus,' + X + ' [role="searchbox"]:focus,' + X + ' [role="combobox"]:focus{outline:1.5px solid ' + X_FOCUS + ' !important;outline-offset:2px !important}',
-      X + ' .cd-composer{position:relative;border-color:transparent !important;overflow:visible !important;background-color:revert-layer !important}',
-      X + ' .cd-composer::before' + RING,
+      ...tintedRegeln(X, XBG, XBG_HI, XBG_TOP, X_EDGE, X_HAIR, X_FOCUS, 'revert-layer'),
       // Animierter Regen. Bewusst NICHT background-position animiert: das waere ein Repaint
       // ueber die volle Flaeche bei jedem Frame. Stattdessen eine eigene Ebene, die per
       // transform verschoben wird. Die Ebene ist eine Kachel hoeher als der Viewport und
@@ -286,39 +302,7 @@
       // Wie beim Sternenfeld kein background-attachment:fixed, das kostet den Compositor-Pfad
       // und macht Scrollen und Streamen zaeh.
       M + ' body{background-color:' + MBG + ' !important;background-image:' + WAVES + ' !important;background-size:620px 620px}',
-      M + '[data-cd-modal] body{background-image:none !important}',
-      M + ' #__next,' + M + ' #root,' + M + ' main,' + M + ' [role="main"]{background-color:transparent !important;background-image:none !important}',
-      M + ' nav,' + M + ' aside,' + M + ' header,' + M + ' [class*="sidebar" i],' + M + ' [class*="Sidebar"],' + M + ' [class*="topbar" i],' + M + ' [class*="TopBar"]{background-color:' + MBG + ' !important;background-image:none !important}',
-      M + ' nav,' + M + ' aside,' + M + ' [class*="sidebar" i],' + M + ' [class*="Sidebar"]{border-right:1px solid ' + M_HAIR + ' !important}',
-      safeBg(M, ['bg-bg-000', 'bg-bg-100', 'bg-bg-200'], MBG),
-      safeBg(M, ['bg-bg-300', 'bg-bg-400'], MBG_HI),
-      safeBg(M, ['bg-bg-500', 'bg-bg-600'], MBG_TOP),
-      safeBg(M, ['bg-surface-0', 'bg-surface-1'], MBG),
-      safeBg(M, ['bg-surface-2', 'bg-surface-3'], MBG_HI),
-      safeBg(M, ['bg-black', 'bg-neutral-900', 'bg-neutral-950', 'bg-zinc-900', 'bg-zinc-950', 'bg-gray-900', 'bg-gray-950', 'bg-stone-900', 'bg-stone-950', 'bg-slate-900', 'bg-slate-950'], MBG),
-      // Das Design-Feature bringt eigene Controls mit fest verdrahtetem Grau mit (gemessen
-      // rgb(107,107,107) am Auswahlfeld), die keiner der Surface-Tokens erwischt.
-      M + ' [class*="om-dc-select"],' + M + ' [class*="om-tray-composer-shell"]{background-color:' + MBG_HI + ' !important}',
-      M + ' [class*="from-bg-"],' + M + ' [class*="to-bg-"],' + M + ' [class*="via-bg-"]{background-image:none !important}',
-      // claude.ai legt eine dekorative Vollbild-Flaeche ueber die Seite (gemessen: inset-0,
-      // 1438x704). Von den Surface-Tokens oben wird sie deckend eingefaerbt und schneidet die
-      // Wellen ab. pointer-events-none grenzt sie gegen echte Modal-Backdrops ab, die klickbar
-      // sind und deckend bleiben muessen. Steht nach safeBg, sonst gewinnt die Reihenfolge nicht.
-      M + ' [class*="pointer-events-none"][class*="inset-0"]{background-color:transparent !important;background-image:none !important}',
-      M + ' header[class*="bg-"]{background-color:' + MBG + ' !important;background-image:none !important}',
-      // Scrims faden den Inhalt in die Seitenfarbe. Ueber einem Muster koennen sie das nicht
-      // leisten: als Verlauf in der Basisfarbe schneiden sie die Wellen sichtbar durch. Hier
-      // also ganz weg, statt claude.ais Grau (das als Balken stehenbleibt) nachzumalen.
-      M + ' [class*="top-scrim"],' + M + ' [class*="bottom-scrim"]{background-image:none !important}',
-      M + ' nav a,' + M + ' nav button,' + M + ' aside a,' + M + ' aside button,' + M + ' [class*="sidebar" i] a,' + M + ' [class*="sidebar" i] button,' + M + ' [class*="Sidebar"] a,' + M + ' [class*="Sidebar"] button{background-color:transparent !important;border-color:transparent !important;box-shadow:none !important}',
-      M + ' nav a:hover,' + M + ' nav button:hover,' + M + ' aside a:hover,' + M + ' aside button:hover,' + M + ' [class*="sidebar" i] a:hover,' + M + ' [class*="sidebar" i] button:hover{background-color:' + MBG_HI + ' !important}',
-      M + ' nav [aria-current="page"],' + M + ' nav [data-state="active"],' + M + ' nav [aria-selected="true"],' + M + ' aside [aria-current="page"],' + M + ' aside [data-state="active"],' + M + ' aside [aria-selected="true"]{background-color:' + MBG_TOP + ' !important}',
-      M + ' [role="menu"],' + M + ' [role="dialog"],' + M + ' [role="listbox"],' + M + ' [role="tooltip"],' + M + ' [class*="opover"],' + M + ' [class*="ropdown"],' + M + ' [class*="enuContent"],' + M + ' [data-radix-popper-content-wrapper]>*{background-color:' + MBG_HI + ' !important;background-image:none !important;border:1px solid ' + M_EDGE + ' !important;box-shadow:0 8px 28px rgba(0,0,0,0.6) !important}',
-      M + ' [role="menu"] [role="menuitem"],' + M + ' [role="menu"] button,' + M + ' [role="menu"] a,' + M + ' [role="listbox"] [role="option"]{background-color:transparent !important;border-color:transparent !important}',
-      M + ' [role="menu"] [role="menuitem"]:hover,' + M + ' [role="menu"] button:hover,' + M + ' [role="menu"] a:hover,' + M + ' [role="listbox"] [role="option"]:hover,' + M + ' [role="menuitem"][data-highlighted]{background-color:' + MBG_TOP + ' !important}',
-      M + ' input:focus,' + M + ' textarea:focus,' + M + ' [role="searchbox"]:focus,' + M + ' [role="combobox"]:focus{outline:1.5px solid ' + M_FOCUS + ' !important;outline-offset:2px !important}',
-      M + ' .cd-composer{position:relative;border-color:transparent !important;overflow:visible !important;background-color:' + MBG + ' !important}',
-      M + ' .cd-composer::before' + RING,
+      ...tintedRegeln(M, MBG, MBG_HI, MBG_TOP, M_EDGE, M_HAIR, M_FOCUS, MBG),
       // Scrims sind die Verlaufsstreifen, die den Inhalt oben und unten in die Seitenfarbe
       // faden. claude.ai haelt darin sein eigenes Grau (gemessen rgb(21,21,21)), das auf jedem
       // eigenen Grund als Balken stehenbleibt, in OLED genauso wie in Mitternachtsblau.

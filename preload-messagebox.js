@@ -10,18 +10,15 @@ const ALLOWED_PREFIXES = [
   'mic-consent-copy-cmd-'
 ];
 const isAllowed = (ch) => typeof ch === 'string' && ALLOWED_PREFIXES.some(p => ch.startsWith(p));
+const sendBare = (channel) => { if (isAllowed(channel)) ipcRenderer.send(channel); };
 
 contextBridge.exposeInMainWorld('msgboxAPI', {
   respond: (channel, index) => {
     if (isAllowed(channel)) ipcRenderer.send(channel, index);
   },
   fit: (h) => { if (Number.isFinite(h)) ipcRenderer.send('msgbox-fit', h); },
-  openSnapPermissions: (channel) => {
-    if (isAllowed(channel)) ipcRenderer.send(channel);
-  },
-  copySnapCmd: (channel) => {
-    if (isAllowed(channel)) ipcRenderer.send(channel);
-  },
+  openSnapPermissions: sendBare,
+  copySnapCmd: sendBare,
   onStatusUpdate: (channel, cb) => {
     if (!isAllowed(channel)) return () => {};
     const handler = (_, status) => { try { cb(status); } catch {} };

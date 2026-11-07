@@ -1,18 +1,9 @@
 'use strict';
 // Release-Notes fuer das "Was ist neu"-Fenster, pro Version eine Liste von Slides.
-// title/text sind entweder ein String (nur Deutsch, Legacy) oder ein {de,en,fr,it}-Objekt;
-// localize() in main.js waehlt daraus. Optionales `icon`, optionales `image` (Pfad relativ
+// title/text sind {de,en,fr,it}-Objekte, localize() in main.js waehlt daraus. Optionales `icon`, optionales `image` (Pfad relativ
 // zum App-Verzeichnis oder data:-URL), optionales `if: 'snap'|'appimage'`, optionales
 // `action: 'support'|'mixpilot'` fuer einen Link-Knopf unter dem Text (URLs in main.js).
 // Reine Daten, kein Electron-Zugriff.
-
-// Wenn die aktuelle Version in dieser Map steht, werden die hier gelisteten
-// älteren Versionen beim "Was ist neu"-Fenster zusätzlich gezeigt. Gedacht für
-// Hotfixes, in denen die Notes der Vorgängerversion in einer fehlerhaften Form
-// (z.B. falscher Sprache) angezeigt wurden und nachgereicht werden sollen.
-const RELEASE_NOTES_REVISIT = {
-  '1.4.1': ['1.4.0']
-};
 
 const RELEASE_NOTES = {
   '1.5.2': [
@@ -1598,40 +1589,10 @@ const RELEASE_TITLES = {
   '1.4.21': { de: 'Unterstützung und App-Theme', en: 'Support and App Theme', fr: 'Soutien et thème de l’app', it: 'Supporto e tema dell’app' }
 };
 
-module.exports = { RELEASE_NOTES, RELEASE_NOTES_REVISIT, RELEASE_TITLES };
-
-const { compareVersions } = require('./utils/pure');
-
 // isSnap kommt als Parameter statt aus dem Modul-Scope, damit die Funktion ohne
 // Electron testbar bleibt.
-function getFilteredNotes(currentVersion, lastSeenVersion, { isSnap = false, force = false } = {}) {
-  const all = Object.keys(RELEASE_NOTES);
-  let versionsToShow;
-  if (force || !lastSeenVersion) {
-    versionsToShow = all.includes(currentVersion) ? [currentVersion] : [];
-  } else {
-    versionsToShow = all
-      .filter(v => compareVersions(v, lastSeenVersion) > 0 && compareVersions(v, currentVersion) <= 0)
-      .sort(compareVersions);
-  }
-  // Revisit: wenn die aktuelle Version in unserer Map steht und auch tatsächlich
-  // angezeigt wird, ziehen wir die referenzierten älteren Versionen mit rein.
-  const revisit = RELEASE_NOTES_REVISIT[currentVersion];
-  if (Array.isArray(revisit) && versionsToShow.includes(currentVersion)) {
-    for (const r of revisit) {
-      if (!versionsToShow.includes(r) && RELEASE_NOTES[r]) versionsToShow.push(r);
-    }
-    versionsToShow.sort(compareVersions);
-  }
-  const notes = [];
-  for (const v of versionsToShow) {
-    for (const n of (RELEASE_NOTES[v] || [])) {
-      if (n.if === 'snap' && !isSnap) continue;
-      if (n.if === 'appimage' && isSnap) continue;
-      notes.push(n);
-    }
-  }
-  return notes;
+function getFilteredNotes(version, isSnap) {
+  return (RELEASE_NOTES[version] || []).filter(n => n.if !== (isSnap ? 'appimage' : 'snap'));
 }
 
-module.exports.getFilteredNotes = getFilteredNotes;
+module.exports = { RELEASE_NOTES, RELEASE_TITLES, getFilteredNotes };

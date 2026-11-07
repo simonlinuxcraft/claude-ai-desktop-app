@@ -297,6 +297,7 @@ let dismissedNotificationIds = [];                // persistiert in windowState
 // Felder mit `optional: true` werden nur gesetzt wenn sie im JSON definiert sind
 // (behalten sonst den Modul-Default), die anderen werden immer auf den
 // validierten Wert gezwungen.
+const persistableTabs = () => tabs.filter(tb => typeof tb.url === 'string' && isAllowedDomain(tb.url));
 const STATE_SCHEMA = [
   // Lesen laeuft ueber resolveDesignStyle (kennt auch den alten Boolean), set ist No-op.
   { key: 'designStyle', get: () => designStyle, set: () => {} },
@@ -354,7 +355,7 @@ const STATE_SCHEMA = [
   // Restore liest windowState.tabs direkt, darum ist set ein Passthrough-No-op.
   { key: 'tabs',
     get: () => (tabs.length
-      ? tabs.map(tb => tb.url).filter(u => typeof u === 'string' && isAllowedDomain(u))
+      ? persistableTabs().map(tb => tb.url)
       : (Array.isArray(windowState.tabs) ? windowState.tabs : [])).slice(0, MAX_TABS),
     set: () => { /* Restore laeuft in createWindow, hier nur passthrough */ } },
   // Index in derselben gefilterten Liste wie 'tabs'. Ohne ihn lud der Start immer den ersten
@@ -362,8 +363,7 @@ const STATE_SCHEMA = [
   { key: 'activeTab',
     get: () => {
       if (!tabs.length) return Number.isInteger(windowState.activeTab) ? windowState.activeTab : 0;
-      const kept = tabs.filter(tb => typeof tb.url === 'string' && isAllowedDomain(tb.url)).slice(0, MAX_TABS);
-      return Math.max(0, kept.indexOf(tabs[activeTabIndex]));
+      return Math.max(0, persistableTabs().slice(0, MAX_TABS).indexOf(tabs[activeTabIndex]));
     },
     set: () => { /* Restore liest windowState.activeTab direkt */ } }
 ];
@@ -1207,11 +1207,14 @@ function setupView(view) {
   wc.on('dom-ready', () => {
     if (alive(wc) && isAllowedDomain(wc.getURL())) wc.executeJavaScript(themeScript()).catch(() => {});
   });
+  const ownTab = () => tabs.find(tb => tb.view === view);
   // Restliche Skripte + Theme-Reassert bei vollem Load
   wc.on('did-finish-load', () => {
     updateTitle();
     injectScripts(wc);
     if (contentZoom) wc.setZoomLevel(contentZoom);
+    const tab = ownTab();
+    if (tab && !wc.getURL().startsWith('data:')) tab.offlineRetries = 0;
   });
   // Das Menue-Kuerzel CmdOrCtrl+Plus trifft auf Layouts ohne Shift-Plus (z.B. deutsch) nie,
   // darum hier per key statt keyCode. preventDefault unterdrueckt auch das Menue-Kuerzel.
@@ -1223,21 +1226,21 @@ function setupView(view) {
     zoomContent(step);
   });
 
-  // SPA-Navigation (Chat-Wechsel): Scripts re-injizieren
-  wc.on('did-navigate-in-page', (_e, _url, isMainFrame) => { if (isMainFrame) reinjectScripts(wc); });
-
   // Aktuelle URL am Tab mitfuehren, damit Offline-Restore und Session-Wiederherstellung
   // den echten Chat kennen. data: ausschliessen, sonst frisst die Offline-Seite die URL.
   const syncTabUrl = (url) => {
-    const tab = tabs.find(tb => tb.view === view);
+    const tab = ownTab();
     if (tab && url && !url.startsWith('data:') && tab.url !== url) { tab.url = url; saveWindowState(); }
   };
   wc.on('did-navigate', (_e, url) => syncTabUrl(url));
-  wc.on('did-navigate-in-page', (_e, url, isMainFrame) => { if (isMainFrame) syncTabUrl(url); });
+  // SPA-Navigation (Chat-Wechsel): Scripts re-injizieren
+  wc.on('did-navigate-in-page', (_e, url, isMainFrame) => {
+    if (isMainFrame) { reinjectScripts(wc); syncTabUrl(url); }
+  });
 
   // Neue Seite oder abgestuerzter Renderer: ein alter "antwortet"-Punkt wuerde sonst haengen.
   const clearBusy = () => {
-    const tab = tabs.find(tb => tb.view === view);
+    const tab = ownTab();
     if (tab && tab.busy) { tab.busy = false; sendTabsUpdate(); }
   };
   wc.on('did-start-navigation', (details) => { if (details.isMainFrame && !details.isSameDocument) clearBusy(); });
@@ -1246,7 +1249,7 @@ function setupView(view) {
   // Captive Portal liessen den Tab sonst leer stehen. Hier gibt es die Offline-Seite mit Neu-laden-Knopf.
   wc.on('did-fail-load', (_e, code, _desc, _url, isMainFrame) => {
     if (!isMainFrame || !NET_ERROR_CODES.has(code)) return;
-    const tab = tabs.find(tb => tb.view === view);
+    const tab = ownTab();
     if (!tab) return;
     showOfflinePage(tab);
     // Die Seite verspricht eine automatische Wiederverbindung. Ohne Netz uebernimmt das die
@@ -1257,10 +1260,6 @@ function setupView(view) {
     tab.offlineRetryTimer = setTimeout(() => {
       if (isOnline && alive(view) && view.webContents.getURL().startsWith('data:')) view.webContents.loadURL(tab.url || 'https://claude.ai');
     }, delay);
-  });
-  wc.on('did-finish-load', () => {
-    const tab = tabs.find(tb => tb.view === view);
-    if (tab && !wc.getURL().startsWith('data:')) tab.offlineRetries = 0;
   });
 
   // Ohne eigenes Menue tat ein Rechtsklick in claude.ai gar nichts. Seiten mit eigenem Kontextmenue
@@ -1289,7 +1288,7 @@ function setupView(view) {
   wc.on('render-process-gone', (_, details) => {
     if (details.reason === 'clean-exit' || wc.isDestroyed()) return;
     clearBusy();
-    const tab = tabs.find(tb => tb.view === view);
+    const tab = ownTab();
     if (!tab) return;
     // Gemeint ist ein Schutz gegen Crash-Schleifen. Ohne Zeitfenster summierte der Zaehler
     // ueber Tage und der Tab blieb beim vierten Crash endgueltig leer.
@@ -2516,15 +2515,16 @@ function customTitlebarHTML(titleText) {
   </div>`;
 }
 
+// Der Schirm, auf dem die App gerade laeuft.
+function currentDisplay() {
+  return (mainWindow && !mainWindow.isDestroyed())
+    ? screen.getDisplayMatching(mainWindow.getBounds())
+    : screen.getPrimaryDisplay();
+}
+
 function centerOnMainDisplay(width, height) {
   try {
-    let display;
-    if (mainWindow && !mainWindow.isDestroyed()) {
-      display = screen.getDisplayMatching(mainWindow.getBounds());
-    } else {
-      display = screen.getPrimaryDisplay();
-    }
-    const wa = display.workArea;
+    const wa = currentDisplay().workArea;
     return {
       x: Math.round(wa.x + (wa.width - width) / 2),
       y: Math.round(wa.y + (wa.height - height) / 2)
@@ -2540,10 +2540,7 @@ function centerOnMainDisplay(width, height) {
 // den Fensterinhalt, sonst waechst nur der Rahmen und der Text bleibt klein.
 function fitToWorkArea(width, height) {
   try {
-    const d = (mainWindow && !mainWindow.isDestroyed())
-      ? screen.getDisplayMatching(mainWindow.getBounds())
-      : screen.getPrimaryDisplay();
-    return scaleWindow(width, height, d.workArea);
+    return scaleWindow(width, height, currentDisplay().workArea);
   } catch {
     return { width, height, scale: 1 };
   }
@@ -2626,6 +2623,30 @@ function createDialogWindow(opts) {
   win.setMenu(null);
   applyUiScale(win, scale);
   revealWhenReady(win, opts.waitFit === true);
+  return win;
+}
+
+// Nicht-modale Nebenfenster (What's New, About, Einstellungen, Design).
+function openSubWindow(width, height, title, preload, getHTML) {
+  const size = fitToWorkArea(width, height);
+  const win = new BrowserWindow({
+    width: size.width, height: size.height, ...centerOnMainWindow(size.width, size.height),
+    parent: mainWindow && !mainWindow.isDestroyed() ? mainWindow : undefined,
+    modal: false, resizable: false, minimizable: false, maximizable: false,
+    title, backgroundColor: subTheme().bg, show: false,
+    icon: icon(),
+    autoHideMenuBar: true,
+    frame: false, roundedCorners: windowsRounded,
+    webPreferences: {
+      preload: path.join(__dirname, preload),
+      nodeIntegration: false, contextIsolation: true, sandbox: true,
+      spellcheck: false
+    }
+  });
+  revealWhenReady(win);
+  win.setMenu(null);
+  applyUiScale(win, size.scale);
+  win.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(getHTML()));
   return win;
 }
 
@@ -3334,7 +3355,7 @@ function getWhatsNewHTML() {
   const glow2 = ac.neonTo || ac.to;
   // Immer nur die Notes der aktuellen Version zeigen (alles seit dem letzten Release),
   // nie kumuliert ueber uebersprungene Versionen. force:true erzwingt versionsToShow=[version].
-  const notes = getFilteredNotes(version, windowState.lastSeenVersion, { isSnap, force: true });
+  const notes = getFilteredNotes(version, isSnap);
   // Aeltere Notes nennen das Zahnrad 'settings'; unbekannte Namen bekommen den Haken.
   const iconName = (n) => { const k = n.icon === 'settings' ? 'cog' : n.icon; return UI_ICONS[k] ? k : 'check'; };
   const relTitle = RELEASE_TITLES[version] ? localize(RELEASE_TITLES[version]) : '';
@@ -3481,33 +3502,8 @@ ${customTitlebarHTML(t('Was ist neu', 'What’s new', 'Nouveautés', 'Novità'))
 }
 
 function openWhatsNewWindow() {
-  if (whatsNewWindow && !whatsNewWindow.isDestroyed()) {
-    whatsNewWindow.focus();
-    return;
-  }
-  const size = fitToWorkArea(700, 720);
-  const wnBase = {
-    width: size.width, height: size.height,
-    parent: mainWindow && !mainWindow.isDestroyed() ? mainWindow : undefined,
-    modal: false, resizable: false, minimizable: false, maximizable: false,
-    title: t('Was ist neu', 'What\u2019s new', 'Nouveautés', 'Novità'),
-    backgroundColor: subTheme().bg,
-    icon: icon(),
-    autoHideMenuBar: true,
-    frame: false, roundedCorners: windowsRounded,
-    webPreferences: {
-      preload: path.join(__dirname, 'preload-whatsnew.js'),
-      nodeIntegration: false, contextIsolation: true, sandbox: true,
-      spellcheck: false
-    }
-  };
-  whatsNewWindow = new BrowserWindow({
-    ...wnBase, ...centerOnMainWindow(size.width, size.height), show: false
-  });
-  revealWhenReady(whatsNewWindow);
-  whatsNewWindow.setMenu(null);
-  applyUiScale(whatsNewWindow, size.scale);
-  whatsNewWindow.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(getWhatsNewHTML()));
+  if (whatsNewWindow && !whatsNewWindow.isDestroyed()) return whatsNewWindow.focus();
+  whatsNewWindow = openSubWindow(700, 720, t('Was ist neu', 'What\u2019s new', 'Nouveautés', 'Novità'), 'preload-whatsnew.js', getWhatsNewHTML);
   whatsNewWindow.on('closed', () => { whatsNewWindow = null; });
 }
 
@@ -3623,64 +3619,14 @@ document.addEventListener('keydown', (e) => { if (e.key === 'Escape') api.close(
 }
 
 function openAboutWindow() {
-  if (aboutWindow && !aboutWindow.isDestroyed()) {
-    aboutWindow.focus();
-    return;
-  }
-  const size = fitToWorkArea(560, 610);
-  const base = {
-    width: size.width, height: size.height,
-    parent: mainWindow && !mainWindow.isDestroyed() ? mainWindow : undefined,
-    modal: false, resizable: false, minimizable: false, maximizable: false,
-    title: t('Über Desktop for Claude', 'About Desktop for Claude', 'À propos de Desktop for Claude', 'Informazioni su Desktop for Claude'),
-    backgroundColor: subTheme().bg,
-    icon: icon(),
-    autoHideMenuBar: true,
-    frame: false, roundedCorners: windowsRounded,
-    webPreferences: {
-      preload: path.join(__dirname, 'preload-about.js'),
-      nodeIntegration: false, contextIsolation: true, sandbox: true,
-      spellcheck: false
-    }
-  };
-  aboutWindow = new BrowserWindow({ ...base, ...centerOnMainWindow(size.width, size.height), show: false });
-  revealWhenReady(aboutWindow);
-  applyUiScale(aboutWindow, size.scale);
-  aboutWindow.setMenu(null);
-  aboutWindow.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(getAboutHTML()));
+  if (aboutWindow && !aboutWindow.isDestroyed()) return aboutWindow.focus();
+  aboutWindow = openSubWindow(560, 610, t('Über Desktop for Claude', 'About Desktop for Claude', 'À propos de Desktop for Claude', 'Informazioni su Desktop for Claude'), 'preload-about.js', getAboutHTML);
   aboutWindow.on('closed', () => { aboutWindow = null; });
 }
 
 function openSettingsWindow() {
-  if (settingsWindow && !settingsWindow.isDestroyed()) {
-    settingsWindow.focus();
-    return;
-  }
-  // Der Inhalt braucht gemessene 1007px. 960 laesst sichtbaren Rand und kuerzt das
-  // Scrollen von ueber 500px auf wenige Dutzend.
-  const swSize = fitToWorkArea(820, 780);
-  const swBase = {
-    width: swSize.width, height: swSize.height,
-    parent: mainWindow && !mainWindow.isDestroyed() ? mainWindow : undefined,
-    modal: false, resizable: false, minimizable: false, maximizable: false,
-    title: t('Desktop for Claude - Einstellungen', 'Desktop for Claude - Settings', 'Desktop for Claude - Paramètres', 'Desktop for Claude - Impostazioni'),
-    backgroundColor: subTheme().bg,
-    icon: icon(),
-    autoHideMenuBar: true,
-    frame: false, roundedCorners: windowsRounded,
-    webPreferences: {
-      preload: path.join(__dirname, 'preload-settings.js'),
-      nodeIntegration: false, contextIsolation: true, sandbox: true,
-      spellcheck: false
-    }
-  };
-  settingsWindow = new BrowserWindow({
-    ...swBase, ...centerOnMainWindow(swSize.width, swSize.height), show: false
-  });
-  revealWhenReady(settingsWindow);
-  settingsWindow.setMenu(null);
-  applyUiScale(settingsWindow, swSize.scale);
-  settingsWindow.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(getSettingsHTML()));
+  if (settingsWindow && !settingsWindow.isDestroyed()) return settingsWindow.focus();
+  settingsWindow = openSubWindow(820, 780, t('Desktop for Claude - Einstellungen', 'Desktop for Claude - Settings', 'Desktop for Claude - Paramètres', 'Desktop for Claude - Impostazioni'), 'preload-settings.js', getSettingsHTML);
   settingsWindow.on('closed', () => { settingsWindow = null; });
 }
 
@@ -3933,31 +3879,8 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape')window.designAPI.clo
 }
 
 function openDesignWindow() {
-  if (designWindow && !designWindow.isDestroyed()) {
-    designWindow.focus();
-    return;
-  }
-  const size = fitToWorkArea(720, 660);
-  designWindow = new BrowserWindow({
-    width: size.width, height: size.height,
-    ...centerOnMainWindow(size.width, size.height),
-    parent: mainWindow && !mainWindow.isDestroyed() ? mainWindow : undefined,
-    modal: false, resizable: false, minimizable: false, maximizable: false,
-    title: 'Desktop for Claude - ' + t('App-Theme', 'App Theme', 'Thème de l’app', 'Tema dell’app'),
-    backgroundColor: subTheme().bg, show: false,
-    icon: icon(),
-    autoHideMenuBar: true,
-    frame: false, roundedCorners: windowsRounded,
-    webPreferences: {
-      preload: path.join(__dirname, 'preload-design.js'),
-      nodeIntegration: false, contextIsolation: true, sandbox: true,
-      spellcheck: false
-    }
-  });
-  revealWhenReady(designWindow);
-  designWindow.setMenu(null);
-  applyUiScale(designWindow, size.scale);
-  designWindow.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(getDesignHTML()));
+  if (designWindow && !designWindow.isDestroyed()) return designWindow.focus();
+  designWindow = openSubWindow(720, 660, 'Desktop for Claude - ' + t('App-Theme', 'App Theme', 'Thème de l’app', 'Tema dell’app'), 'preload-design.js', getDesignHTML);
   designWindow.on('closed', () => { designWindow = null; });
 }
 
@@ -3982,12 +3905,40 @@ async function showOfficialAppInfo() {
   if (res.response === 0) openExternalSafe(OFFICIAL_APP_DOCS);
 }
 
-// Gleicher Aufbau wie der Unterstuetzen-Dialog: Symbol, Ueberschrift, Text, Chips, Knoepfe.
-function getOfficialAppHTML(channel) {
+// Gemeinsames Geruest von Official-App- und Support-Dialog: Kreis-Symbol, Pillen, zwei Knoepfe.
+const CHECK_SVG = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
+function cardDialogCSS() {
   const th = subTheme();
   const ac = accent();
-  const check = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
-  const pills = ['Ubuntu 22.04+', 'Debian 12+', 'amd64 / arm64'].map(p => `<span class="pill">${check}${escapeHtml(p)}</span>`).join('');
+  return `${sharedDialogCSS()}
+  body { overflow: hidden; }
+  .badge { width: 60px; height: 60px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+    background: linear-gradient(135deg, ${ac.from}, ${ac.to}); color: #fff; box-shadow: 0 6px 20px ${ac.from}55; margin-bottom: 18px; }
+  h1 { font-size: 19px; font-weight: 600; margin: 0 0 10px; letter-spacing: -.2px; }
+  .pill { display: inline-flex; align-items: center; gap: 5px; padding: 5px 11px; border-radius: 999px; font-size: 12px;
+    background: ${th.bgHover}; border: 1px solid ${th.border}; color: ${th.textActive}; }
+  .pill svg { color: ${ac.from}; }
+  .btn { width: 100%; padding: 10px 16px; font-size: 13.5px; border-radius: 8px; }
+  .btn.primary { display: flex; align-items: center; justify-content: center; gap: 8px; }
+  .btn.ghost { background: transparent; border-color: transparent; color: ${th.text}; }
+  .btn.ghost:hover { background: ${th.bgHover}; color: ${th.textActive}; }`;
+}
+function cardDialogScript(channel) {
+  return `<script>
+(function(){
+  const channel = ${JSON.stringify(channel)};
+  const respond = (i) => { try { window.msgboxAPI.respond(channel, i); } catch (e) {} };
+  document.querySelectorAll('.btn').forEach(b => b.addEventListener('click', () => respond(parseInt(b.dataset.idx, 10))));
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { e.preventDefault(); respond(1); } });
+  document.getElementById('cd-titlebar-close').addEventListener('click', () => respond(1));
+  setTimeout(() => document.querySelector('.btn.primary').focus(), 50);
+})();
+</script>`;
+}
+
+function getOfficialAppHTML(channel) {
+  const th = subTheme();
+  const pills = ['Ubuntu 22.04+', 'Debian 12+', 'amd64 / arm64'].map(p => `<span class="pill">${CHECK_SVG}${escapeHtml(p)}</span>`).join('');
   return `<!DOCTYPE html>
 <html>
 <head>
@@ -3995,25 +3946,14 @@ function getOfficialAppHTML(channel) {
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src data:;">
 <title>${escapeHtml(t('Offizielle Claude-App', 'Official Claude app', 'Application Claude officielle', 'App Claude ufficiale'))}</title>
 <style>
-  ${sharedDialogCSS()}
-  body { overflow: hidden; }
+  ${cardDialogCSS()}
   .wrap { flex: 1; min-height: 0; display: flex; flex-direction: column; align-items: center; text-align: center; padding: 28px 32px 22px; }
-  .badge { width: 60px; height: 60px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
-    background: linear-gradient(135deg, ${ac.from}, ${ac.to}); color: #fff; box-shadow: 0 6px 20px ${ac.from}55; margin-bottom: 18px; }
-  h1 { font-size: 19px; font-weight: 600; margin: 0 0 10px; letter-spacing: -.2px; }
   .lead { color: ${th.text}; font-size: 13.5px; line-height: 1.55; margin: 0 0 16px; }
   .pills { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; margin-bottom: 16px; }
-  .pill { display: inline-flex; align-items: center; gap: 5px; padding: 5px 11px; border-radius: 999px; font-size: 12px;
-    background: ${th.bgHover}; border: 1px solid ${th.border}; color: ${th.textActive}; }
-  .pill svg { color: ${ac.from}; }
   .card { width: 100%; text-align: left; background: ${th.bgHover}; border: 1px solid ${th.border}; border-radius: 10px;
     padding: 10px 13px; font-size: 12.5px; line-height: 1.5; color: ${th.text}; }
   .card b { color: ${th.textActive}; font-weight: 600; }
   .actions { margin-top: auto; width: 100%; display: flex; flex-direction: column; gap: 8px; padding-top: 18px; }
-  .btn { width: 100%; padding: 10px 16px; font-size: 13.5px; border-radius: 8px; }
-  .btn.primary { display: flex; align-items: center; justify-content: center; gap: 8px; }
-  .btn.ghost { background: transparent; border-color: transparent; color: ${th.text}; }
-  .btn.ghost:hover { background: ${th.bgHover}; color: ${th.textActive}; }
   .note { color: ${th.text}; font-size: 11.5px; opacity: .8; margin-top: 12px; line-height: 1.45; }
 </style>
 </head>
@@ -4046,16 +3986,7 @@ ${customTitlebarHTML(escapeHtml(t('Offizielle Claude-App', 'Official Claude app'
     'Si installa tramite il repository apt di Anthropic. Su Ubuntu 20.04 non funziona e non esiste uno snap ufficiale.'
   ))}</div>
 </div>
-<script>
-(function(){
-  const channel = ${JSON.stringify(channel)};
-  const respond = (i) => { try { window.msgboxAPI.respond(channel, i); } catch (e) {} };
-  document.querySelectorAll('.btn').forEach(b => b.addEventListener('click', () => respond(parseInt(b.dataset.idx, 10))));
-  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { e.preventDefault(); respond(1); } });
-  document.getElementById('cd-titlebar-close').addEventListener('click', () => respond(1));
-  setTimeout(() => document.querySelector('.btn.primary').focus(), 50);
-})();
-</script>
+${cardDialogScript(channel)}
 </body>
 </html>`;
 }
@@ -4078,13 +4009,11 @@ async function showSupportInfo() {
 
 function getSupportHTML(channel) {
   const th = subTheme();
-  const ac = accent();
-  const check = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
   const pills = [
     t('Kostenlos', 'Free', 'Gratuit', 'Gratuita'),
     t('Ohne Werbung', 'No ads', 'Sans publicité', 'Senza pubblicità'),
     t('Alle Funktionen', 'Every feature', 'Toutes les fonctions', 'Tutte le funzioni')
-  ].map(p => `<span class="pill">${check}${escapeHtml(p)}</span>`).join('');
+  ].map(p => `<span class="pill">${CHECK_SVG}${escapeHtml(p)}</span>`).join('');
   return `<!DOCTYPE html>
 <html>
 <head>
@@ -4092,29 +4021,18 @@ function getSupportHTML(channel) {
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src data:;">
 <title>${escapeHtml(t('App unterstützen', 'Support the app', 'Soutenir l’app', 'Sostieni l’app'))}</title>
 <style>
-  ${sharedDialogCSS()}
-  body { overflow: hidden; }
+  ${cardDialogCSS()}
   .wrap { flex: 1; min-height: 0; display: flex; flex-direction: column; align-items: center; text-align: center; padding: 30px 32px 24px; }
-  .heart { width: 60px; height: 60px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
-    background: linear-gradient(135deg, ${ac.from}, ${ac.to}); color: #fff; box-shadow: 0 6px 20px ${ac.from}55; margin-bottom: 18px; }
-  h1 { font-size: 19px; font-weight: 600; margin: 0 0 10px; letter-spacing: -.2px; }
   .lead { color: ${th.text}; font-size: 13.5px; line-height: 1.55; margin: 0 0 18px; }
   .pills { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; margin-bottom: 22px; }
-  .pill { display: inline-flex; align-items: center; gap: 5px; padding: 5px 11px; border-radius: 999px; font-size: 12px;
-    background: ${th.bgHover}; border: 1px solid ${th.border}; color: ${th.textActive}; }
-  .pill svg { color: ${ac.from}; }
   .actions { margin-top: auto; width: 100%; display: flex; flex-direction: column; gap: 8px; }
-  .btn { width: 100%; padding: 10px 16px; font-size: 13.5px; border-radius: 8px; }
-  .btn.primary { display: flex; align-items: center; justify-content: center; gap: 8px; }
-  .btn.ghost { background: transparent; border-color: transparent; color: ${th.text}; }
-  .btn.ghost:hover { background: ${th.bgHover}; color: ${th.textActive}; }
   .note { color: ${th.text}; font-size: 11.5px; opacity: .8; margin-top: 12px; }
 </style>
 </head>
 <body>
 ${customTitlebarHTML(escapeHtml(t('App unterstützen', 'Support the app', 'Soutenir l’app', 'Sostieni l’app')))}
 <div class="wrap">
-  <div class="heart"><svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg></div>
+  <div class="badge"><svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg></div>
   <h1>${escapeHtml(t('Desktop for Claude bleibt kostenlos', 'Desktop for Claude stays free', 'Desktop for Claude reste gratuit', 'Desktop for Claude resta gratuito'))}</h1>
   <p class="lead">${escapeHtml(t(
     'Die App entsteht in meiner Freizeit. Wenn sie dir hilft, kannst du die Entwicklungskosten mit einer freiwilligen Zahlung über Ko-fi unterstützen.',
@@ -4129,16 +4047,7 @@ ${customTitlebarHTML(escapeHtml(t('App unterstützen', 'Support the app', 'Soute
   </div>
   <div class="note">${escapeHtml(t('Freiwillig. An der App ändert sich dadurch nichts.', 'Entirely optional. Nothing about the app changes.', 'Entièrement facultatif. Rien ne change dans l’application.', 'Del tutto facoltativo. Nell’app non cambia nulla.'))}</div>
 </div>
-<script>
-(function(){
-  const channel = ${JSON.stringify(channel)};
-  const respond = (i) => { try { window.msgboxAPI.respond(channel, i); } catch (e) {} };
-  document.querySelectorAll('.btn').forEach(b => b.addEventListener('click', () => respond(parseInt(b.dataset.idx, 10))));
-  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { e.preventDefault(); respond(1); } });
-  document.getElementById('cd-titlebar-close').addEventListener('click', () => respond(1));
-  setTimeout(() => document.querySelector('.btn.primary').focus(), 50);
-})();
-</script>
+${cardDialogScript(channel)}
 </body>
 </html>`;
 }
@@ -5610,11 +5519,13 @@ ipcMain.on('settings-bg-notifications', (_, v) => {
   saveWindowState();
 });
 
-ipcMain.on('settings-microphone', (_, v) => {
-  microphoneEnabled = v === true;
+function setMicrophone(on) {
+  microphoneEnabled = on;
   microphoneConsentAsked = true;
   saveWindowState();
-});
+}
+
+ipcMain.on('settings-microphone', (_, v) => setMicrophone(v === true));
 
 // Snap-aware Mic-Toggle: bei ON auf Snap mit disconnected Plug zeigt
 // requestMicrophoneConsent() den Wizard. Bei !isSnap oder bereits connected
@@ -5622,23 +5533,13 @@ ipcMain.on('settings-microphone', (_, v) => {
 ipcMain.handle('settings-microphone-with-consent', async (_, v) => {
   const want = v === true;
   if (!want) {
-    microphoneEnabled = false;
-    microphoneConsentAsked = true;
-    saveWindowState();
+    setMicrophone(false);
     return { applied: false, status: 'connected' };
   }
-  if (!isSnap) {
-    microphoneEnabled = true;
-    microphoneConsentAsked = true;
-    saveWindowState();
-    return { applied: true, status: 'connected' };
-  }
-  // Snap: Plug-Status pruefen
+  // Ohne Snap meldet checkSnapAudioRecordStatus sofort 'connected'.
   const status = await new Promise(resolve => checkSnapAudioRecordStatus(resolve));
   if (status === 'connected') {
-    microphoneEnabled = true;
-    microphoneConsentAsked = true;
-    saveWindowState();
+    setMicrophone(true);
     return { applied: true, status };
   }
   // Plug nicht verbunden -> Consent-Dialog mit Snap-Wizard.
@@ -5695,32 +5596,32 @@ ipcMain.handle('settings-delete-template', (_, id) => {
 });
 
 ipcMain.on('design-set-mode', (event, mode) => {
-  if (!designWindow || designWindow.isDestroyed() || event.sender !== designWindow.webContents) return;
+  if (!fromWindow(designWindow, event)) return;
   setThemeMode(mode);
 });
 ipcMain.on('design-set-design', (event, style) => {
-  if (!designWindow || designWindow.isDestroyed() || event.sender !== designWindow.webContents) return;
+  if (!fromWindow(designWindow, event)) return;
   setDesignStyle(style);
 });
 ipcMain.on('design-set-matrix-rain', (event, on) => {
-  if (!designWindow || designWindow.isDestroyed() || event.sender !== designWindow.webContents) return;
+  if (!fromWindow(designWindow, event)) return;
   matrixRain = on === true;
   applyThemeToAllViews();
   saveWindowState();
 });
 ipcMain.on('design-set-tray-mono', (event, on) => {
-  if (!designWindow || designWindow.isDestroyed() || event.sender !== designWindow.webContents) return;
+  if (!fromWindow(designWindow, event)) return;
   trayMono = on === true;
   refreshTrayImage();
   saveWindowState();
 });
 ipcMain.on('design-set-rounded-corners', (event, on) => {
-  if (!designWindow || designWindow.isDestroyed() || event.sender !== designWindow.webContents) return;
+  if (!fromWindow(designWindow, event)) return;
   roundedCorners = on === true;
   saveWindowState();
 });
 ipcMain.on('design-close', (event) => {
-  if (designWindow && !designWindow.isDestroyed() && event.sender === designWindow.webContents) designWindow.close();
+  if (fromWindow(designWindow, event)) designWindow.close();
 });
 
 ipcMain.on('settings-close', () => {
@@ -5735,7 +5636,7 @@ function fromClaudePage(event) {
 
 ipcMain.on('claude-generating', (event, on) => {
   if (!fromClaudePage(event)) return;
-  const tab = tabs.find(tb => tb.view && tb.view.webContents === event.sender);
+  const tab = tabFromSender(event.sender);
   if (!tab || !!tab.busy === (on === true)) return;
   tab.busy = on === true;
   sendTabsUpdate();
@@ -5746,7 +5647,7 @@ ipcMain.on('claude-response-done', (event, payload) => {
   if (!fromClaudePage(event)) return;
   // Senderview ermitteln
   const senderWc = event.sender;
-  const idx = tabs.findIndex(tb => tb.view && tb.view.webContents === senderWc);
+  const idx = tabs.indexOf(tabFromSender(senderWc));
   if (idx < 0) return;
   if (idx !== activeTabIndex) { tabs[idx].unread = true; sendTabsUpdate(); }
   if (!bgNotificationsEnabled) return;
@@ -5773,7 +5674,7 @@ ipcMain.on('claude-response-done', (event, payload) => {
 ipcMain.on('cd-offline-retry', (event) => {
   // Zurueck auf den Chat dieses Tabs, nicht auf einen neuen. Sender-Lookup, weil der
   // Nutzer waehrend der Offline-Seite den Tab gewechselt haben kann.
-  const fromTab = tabs.find(tb => tb.view && tb.view.webContents === event.sender);
+  const fromTab = tabFromSender(event.sender);
   if (!fromTab || !alive(fromTab.view)) return;
   fromTab.view.webContents.loadURL(fromTab.url || 'https://claude.ai');
 });
@@ -5782,7 +5683,7 @@ ipcMain.on('claude-reset-verification', (event) => {
   if (!fromClaudePage(event)) return;
   // Nur aus einer echten Tab-View akzeptieren; den Reset auf genau diesen Tab anwenden,
   // nicht auf den aktiven (der Nutzer kann waehrend des Bestaetigungsdialogs wechseln).
-  const fromTab = tabs.find(tb => tb.view && tb.view.webContents === event.sender);
+  const fromTab = tabFromSender(event.sender);
   if (!fromTab) return;
   resetClaudeVerification(fromTab);
 });
@@ -5792,14 +5693,14 @@ ipcMain.on('claude-reset-verification', (event) => {
 ipcMain.on('tabbar-reset-verification', () => resetClaudeVerification());
 
 ipcMain.on('quickprompt-submit', (event, text) => {
-  if (!quickPromptWindow || quickPromptWindow.isDestroyed() || event.sender !== quickPromptWindow.webContents) return;
+  if (!fromWindow(quickPromptWindow, event)) return;
   // Erst das Hauptfenster holen, solange der Prompt noch den Fokus hat: unter Wayland darf eine
   // App nur nach vorne, wenn die Anfrage von einer eigenen Oberflaeche mit Fokus kommt.
   if (typeof text === 'string' && text.length <= MAX_PROMPT_CHARS) submitQuickPrompt(text);
   if (quickPromptWindow && !quickPromptWindow.isDestroyed()) quickPromptWindow.close();
 });
 ipcMain.on('quickprompt-cancel', (event) => {
-  if (!quickPromptWindow || quickPromptWindow.isDestroyed() || event.sender !== quickPromptWindow.webContents) return;
+  if (!fromWindow(quickPromptWindow, event)) return;
   quickPromptWindow.close();
 });
 
@@ -5839,8 +5740,14 @@ function sendWindowState() {
     mainWindow.webContents.send('win-state', { maximized: mainWindow.isMaximized() });
   } catch (_) {}
 }
+function fromWindow(win, event) {
+  return !!win && !win.isDestroyed() && event.sender === win.webContents;
+}
 function fromMainWindow(event) {
-  return mainWindow && !mainWindow.isDestroyed() && event.sender === mainWindow.webContents;
+  return fromWindow(mainWindow, event);
+}
+function tabFromSender(wc) {
+  return tabs.find(tb => tb.view && tb.view.webContents === wc);
 }
 ipcMain.on('win-minimize', (event) => { if (fromMainWindow(event)) mainWindow.minimize(); });
 ipcMain.on('win-toggle-maximize', (event) => {
@@ -6128,7 +6035,7 @@ app.whenReady().then(() => {
   if (windowState.lastSeenVersion !== version) syncDesktopIcons();
 
   // Das Fenster zeigt nur die Notes der aktuellen Version, also auch nur danach entscheiden.
-  if (mainWindow && windowState.lastSeenVersion !== version && getFilteredNotes(version, windowState.lastSeenVersion, { isSnap, force: true }).length > 0) {
+  if (mainWindow && windowState.lastSeenVersion !== version && getFilteredNotes(version, isSnap).length > 0) {
     const showWhatsNew = () => {
       if (!mainWindow || mainWindow.isDestroyed()) return;
       openWhatsNewWindow();
