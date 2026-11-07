@@ -96,7 +96,7 @@ function cdThemeState() {
     var PRE_BG = { oled: '#050306', midnight: '#070c18', matrix: '#040806', dark: '', light: '#000' };
     if (PRE_BG[st.mode] === undefined) return;
     var BG = PRE_BG[st.mode];
-    // Sternenfeld identisch zu theme.js sparkleBg(); muss mit theme.js synchron bleiben,
+    // Sternenfeld identisch zu sparkleBg() in theme-static.js; muss damit synchron bleiben,
     // damit beim Uebergang Preload -> Controller kein Sprung sichtbar ist.
     function spark() {
       var ac = st.accent || {}, f = ac.from || '#F26A3F', t = ac.to || '#E83B6E';

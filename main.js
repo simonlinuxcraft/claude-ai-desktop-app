@@ -28,15 +28,9 @@ process.on('unhandledRejection', (e) => { try { console.error('unhandledRejectio
 
 if (app.isPackaged) process.env.ELECTRON_DISABLE_SECURITY_WARNINGS = 'true';
 
-// Unter Wayland laeuft die App nativ, Electron waehlt das selbst. Ueber XWayland startet sie mit
-// --ozone-platform=x11; die Wrapper haengen Nutzer-Argumente hinten an, das letzte gewinnt.
-
 // Sandbox-Fallback
-// Belt-and-suspenders zum --no-sandbox-Flag im .desktop-File: greift wenn die App
-// ohne Argumente gestartet wird (z.B. nach Auto-Update durch quitAndInstall, oder
-// per Doppelklick aus dem Dateimanager). chrome-sandbox-Helper ist auf üblichen
-// Linux-Distributionen nicht setuid-konfiguriert, ohne diesen Switch crasht der
-// Renderer beim Start. Idempotent zum Wrapper-Flag; muss vor app.whenReady() stehen.
+// Falls die App ohne Wrapper startet (quitAndInstall, Doppelklick): chrome-sandbox ist meist
+// nicht setuid, ohne den Switch crasht der Renderer. Muss vor app.whenReady() stehen.
 app.commandLine.appendSwitch('no-sandbox');
 
 // Single Instance
@@ -104,8 +98,7 @@ const OFFLINE_GRACE_MS = 3000;
 const OFFLINE_RETRY_MS = [3000, 8000, 20000, 60000];
 const UPDATE_CHECK_MS = 3_600_000;
 const DOMAIN_CACHE_MAX = 50;
-// Nachfuellen des Tab-Pools: kurz nach einer Entnahme, laenger nach einem Theme-/Stilwechsel,
-// weil dort ohnehin schon neu geladen wird.
+// Nachfuellen des Tab-Pools: kurz nach einer Entnahme, laenger nach einem Theme-/Stilwechsel.
 const POOL_REFILL_MS = 1200;
 const POOL_REFILL_AFTER_SWITCH_MS = 3000;
 const POOL_REFILL_FIRST_TAB_MS = 2000;
@@ -166,8 +159,6 @@ function throttle(fn, ms) {
   };
 }
 
-// shell.openExternal liefert ein Promise, das unter Snap rejecten kann (Portal/
-// xdg-open nicht erreichbar). Ohne .catch wuerde daraus eine unhandled rejection.
 // Wartet hoechstens ms, damit ein haengender Renderer oder GPU-Prozess keinen Ablauf blockiert.
 function withTimeout(promise, ms) {
   let timer;
@@ -177,6 +168,8 @@ function withTimeout(promise, ms) {
 
 // Seitenskripte koennen window.open ohne Klick ausloesen: hoechstens 5 externe Oeffnungen je 10 s.
 let externalOpens = [];
+// shell.openExternal liefert ein Promise, das unter Snap rejecten kann (Portal/
+// xdg-open nicht erreichbar). Ohne .catch wuerde daraus eine unhandled rejection.
 function openExternalSafe(url) {
   const now = Date.now();
   externalOpens = externalOpens.filter(ts => now - ts < 10000);
@@ -217,9 +210,8 @@ function t(de, en, fr, it) {
   if (sysLang === 'it') return it != null ? it : en;
   return en;
 }
-// Release-Notes-Strings dürfen ein String (legacy: nur Deutsch) oder ein
-// { de, en, fr?, it? } Objekt sein. localize() wählt nach Systemsprache und
-// fällt auf en (sonst de) zurück, wenn die passende Übersetzung fehlt.
+// Release-Notes-Strings sind { de, en, fr?, it? }. localize() waehlt nach Systemsprache
+// und faellt auf en (sonst de) zurueck.
 function localize(field) {
   if (sysLang === 'de') return field.de || field.en || '';
   if (sysLang === 'fr') return field.fr || field.en || field.de || '';
@@ -829,8 +821,7 @@ window.tabAPI.onThemeUpdate(u=>{
   r.setProperty('--bg',v[0]);r.setProperty('--bgh',v[1]);r.setProperty('--bga',v[2]);
   r.setProperty('--t',v[3]);r.setProperty('--ta',v[4]);r.setProperty('--bd',v[5]);
   r.setProperty('--frame-hi',v[6]);r.setProperty('--frame-lo',v[7]);
-  // Der Akzent kommt mit, weil er am Theme haengen kann (Mitternachtsblau bringt einen
-  // eigenen mit). Ohne das bliebe beim Moduswechsel der alte Ton in Plus-Button und Hover.
+  // Der Akzent haengt am Stil, kommt aber mit, damit ein Stilwechsel Plus-Button und Hover umfaerbt.
   if(u.from)r.setProperty('--ac-from',u.from);
   if(u.to)r.setProperty('--ac-to',u.to);
   for(const k of Object.keys(THEME_VARS)){
@@ -1360,13 +1351,8 @@ function createTab(url = 'https://claude.ai', defer = false) {
 
 let lastViewBounds = '';
 
-// setBackgroundThrottling wird zur Laufzeit bewusst NICHT mehr angefasst. Gemessen mit
-// Electron 41.7.1: setBackgroundThrottling(false) setzt disable_hidden_ im RenderWidgetHost,
-// danach ignoriert der Renderer jedes Verstecken (View unsichtbar, rAF laeuft trotzdem
-// weiter). Der Renderer haelt sich fuer sichtbar, die native View ist es nicht - und beim
-// Wiederanzeigen faellt dann kein WasShown an, also auch kein neuer Frame: die Flaeche
-// bleibt auf der Hintergrundfarbe stehen, in OLED schwarz. Der Default aus webPreferences
-// (backgroundThrottling: true) drosselt versteckte Tabs ohnehin korrekt.
+// setBackgroundThrottling zur Laufzeit nicht anfassen: false pinnt disable_hidden_, der Renderer
+// bekommt beim Wiederanzeigen kein WasShown und die Flaeche bleibt schwarz (gemessen, Electron 41).
 
 // Beim Fenster-Fokus (z.B. Alt+Tab) landet der Tastaturfokus sonst im Tabbar
 // (Top-Level-WebContents) auf dem ersten Button (win-min) statt im Chat-Inhalt,
@@ -1566,8 +1552,7 @@ function updateTitle() {
 // Theme-Wechsel
 
 // Einziger Weg, den Farbmodus zu setzen: Tab-Leisten-Cycle und Design-Fenster laufen beide
-// hier durch. Der Pool wird geleert, weil die vorgeladenen Views ihre Hintergrundfarbe beim
-// Erzeugen bekommen und sonst im alten Modus stehenbleiben.
+// hier durch.
 function setThemeMode(mode) {
   if (!THEME_MODES.includes(mode) || mode === themeMode) return;
   themeMode = mode;
@@ -2431,9 +2416,7 @@ html::after{content:'';position:fixed;inset:-1px;border-radius:${CORNER_RADIUS +
 function customTitlebarCSS() {
   const th = theme();
   const ac = accent();
-  // Sub-Fenster nutzen pro Theme nur ihre flache Theme-Farbe (kein Brand-Glow mehr).
-  // Soft-Depth-Fensterrahmen (oben heller, unten dunkler) gleich wie Hauptfenster, gemeinsam fuer
-  // alle Dialoge die diese Titlebar einbinden (Bug-Report/Settings/What's-New/About).
+  // Fensterrahmen oben heller, unten dunkler, wie beim Hauptfenster.
   return `
 body{border:${WINDOW_BORDER}px solid ${th.frameLo};border-image:linear-gradient(180deg,${th.frameHi},${th.frameLo}) ${WINDOW_BORDER}}
 ${roundFrameCSS(th.frameHi, th.frameLo)}
@@ -2499,16 +2482,11 @@ function oauthPopupSize() {
   return { width, height };
 }
 
-// Den Zoom erst setzen, wenn die Seite steht: ein setZoomFactor vor dem ersten Laden
-// wird von Chromium wieder auf 1 zurueckgesetzt.
-//
-// Immer setzen, auch bei Faktor 1. Chromium merkt sich den Zoom pro Origin, und alle
-// Dialoge teilen sich die data:-Herkunft: wer die App einmal an einem 4K-Monitor
-// benutzt hat, saesse sonst am Laptop dauerhaft auf dem dort gespeicherten 1.6.
-// Ausschliesslich nach did-finish-load setzen. Ein setZoomFactor auf WebContents, die noch
-// nichts geladen haben, zerstoert das Fenster gelegentlich noch vor dem ersten Laden - beim
-// App-Menue liess sich der Hamburger dadurch mal oeffnen und mal nicht. Alle Aufrufer rufen
-// applyUiScale vor loadURL, das Event kommt also in jedem Fall noch.
+// Den Zoom erst nach did-finish-load setzen: vorher setzt Chromium ihn auf 1 zurueck oder
+// zerstoert das Fenster gelegentlich (App-Menue ging mal auf, mal nicht). Aufrufer rufen
+// das vor loadURL, das Event kommt also noch.
+// Immer setzen, auch bei 1: Chromium merkt sich den Zoom pro Origin, und alle Dialoge teilen
+// sich die data:-Herkunft. Sonst bliebe ein 1.6 vom 4K-Monitor am Laptop haengen.
 function applyUiScale(win, scale) {
   win.webContents.on('did-finish-load', () => {
     try { if (!win.isDestroyed()) win.webContents.setZoomFactor(scale); } catch {}
@@ -2530,9 +2508,6 @@ function centerOnMainWindow(width, height) {
   }
 }
 
-// Gemeinsamer BrowserWindow-Setup fuer Modal-Dialoge (showCustomMessageBox,
-// requestMicrophoneConsent). Zentriert auf das Main-Window, parent+modal wenn
-// mainWindow sichtbar ist, preload-messagebox.js + sandbox an.
 // Erst zeigen, wenn der Inhalt gezeichnet ist: sofort sichtbar erzeugt stand jedes Fenster
 // rund 90 ms als graue Flaeche da, Meldungen zusaetzlich in der Startgroesse. waitFit: das
 // Fenster misst sich selbst (msgbox-fit, bug-report-resize) und erscheint erst danach. Der
@@ -2544,6 +2519,8 @@ function revealWhenReady(win, waitFit = false) {
   setTimeout(win._cdReveal, waitFit ? 800 : 1500);
 }
 
+// Gemeinsamer Setup fuer Modal-Dialoge (showCustomMessageBox, requestMicrophoneConsent):
+// zentriert, parent+modal wenn das Hauptfenster sichtbar ist.
 function createDialogWindow(opts) {
   const { width, height, scale } = fitToWorkArea(opts.width, opts.height);
   const pos = centerOnMainWindow(width, height);
@@ -4516,9 +4493,8 @@ function showOfflinePage(tab = tabs[activeTabIndex]) {
 // Download-Manager
 
 function setupDownloadManager() {
-  // Echo-Schutz: claude.ai feuert manche Download-Links 2x. event.preventDefault()
-  // im will-download-Handler stoppt das Duplikat sauber, OHNE dass Chromiums
-  // Auto-Save-Dialog erscheint (item.cancel() würde den trotzdem öffnen).
+  // Echo-Schutz: claude.ai feuert manche Download-Links 2x. Das Duplikat bekommt einen
+  // Temp-Pfad und wird abgebrochen, ohne Pfad oeffnete cancel() trotzdem den Speichern-Dialog.
   const activeKeys = new Set();
   const cooldownUntil = new Map();
   const COOLDOWN_MS = 3000;
@@ -4768,7 +4744,7 @@ function setupAutoUpdater() {
   }, UPDATE_CHECK_MS);
 }
 
-// Session Security
+// Snap-Store und Mikrofon-Zugriff
 
 // Snap-Befehl, den der User im Terminal ausführen kann, falls keine GUI greift.
 const SNAP_CONNECT_CMD = 'sudo snap connect claude-ai-desktop:audio-record';
@@ -4815,8 +4791,6 @@ function checkSnapAudioRecordStatus(cb) {
   });
 }
 
-// Defensives JSON-Embedding für Inline-<script>-Blöcke: </script>-Sequenzen
-// in JSON-Strings escapen, damit der HTML-Parser sie nicht als Tag-Ende erkennt.
 // Gemeinsames CSS für Dialog-Fenster (showCustomMessageBox + requestMicrophoneConsent).
 // Ein gemeinsamer Satz fuer alle eigenen Oberflaechen. Vorher schalteten manche nur
 // Transitions ab, andere nur Animationen, manche gar nichts.
@@ -5254,7 +5228,7 @@ function setupSession() {
   ses.preconnect({ url: 'https://api.claude.ai', numSockets: 2 });
 }
 
-// IPC-Handler
+// Autostart
 
 // Linux Autostart: schreibt eine .desktop-Datei.
 // AppImage: ~/.config/autostart/claude-ai-desktop.desktop (echtes Home).
@@ -5320,19 +5294,15 @@ X-GNOME-Autostart-enabled=true
   }
 }
 
-// .desktop-Self-Heal: electron-updater ersetzt die AppImage durch eine mit neuer
-// Versionsnummer im Dateinamen (~/Apps/Claude-Desktop-1.3.X.AppImage). Die im
-// Installer geschriebene applications/.desktop-Datei zeigt aber weiter auf den
-// alten Pfad und der Menü-Eintrag startet nach jedem Auto-Update ins Leere.
-// Lösung: bei jedem Start prüfen, ob der Exec= im .desktop-File mit dem aktuellen
-// process.env.APPIMAGE übereinstimmt; wenn nicht, beide Files (Menü + Autostart,
-// falls aktiv) rewriten und update-desktop-database triggern.
 // Exec-Argument nach der Desktop-Entry-Spec: in Anfuehrungszeichen " ` $ \ escapen, % verdoppeln,
 // danach gilt fuer den Wert noch das String-Escaping (\ wird \\).
 function execQuote(p) {
   return ('"' + p.replace(/[\\"`$]/g, (m) => '\\' + m).replace(/%/g, '%%') + '"').replace(/\\/g, '\\\\');
 }
 
+// electron-updater legt das AppImage unter neuem Dateinamen ab, die .desktop-Dateien zeigen
+// danach ins Leere. Bei jedem Start Exec= gegen APPIMAGE pruefen und betroffene Starter
+// (Menue, Autostart, Fremd-Starter, Portal-ID) umschreiben.
 function selfHealDesktopFiles(appImagePath = process.env.APPIMAGE) {
   if (process.platform !== 'linux') return;
   if (isSnap) return;

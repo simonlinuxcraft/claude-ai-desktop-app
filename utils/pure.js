@@ -146,21 +146,10 @@ function filterNotifications(payload, { appVersion = '0.0.0', isSnap = false, di
   return out.slice(0, MAX_NOTIFICATIONS);
 }
 
-// Fenstergroessen proportional zur Arbeitsflaeche.
-//
-// Die Dialogmasse im Code sind gegen eine 1920x1080-Arbeitsflaeche entworfen. Vorher wurden
-// sie nur nach unten abgeschnitten: auf einem 1366x768-Laptop passte der Bug-Report-Dialog
-// (820 hoch) nicht und der Inhalt scrollte, auf einem 1440p- oder 4K-Schirm blieb derselbe
-// Dialog bei 540x820 stehen und wirkte verloren. Der Inhalt selbst skalierte nie mit.
-//
-// Hier faellt ein einziger Faktor, mit dem sowohl das Fenster als auch der Seiteninhalt
-// (webContents.setZoomFactor) skaliert werden. Weil beides denselben Faktor bekommt, bleibt
-// das Layout-Verhaeltnis exakt erhalten - der Dialog wird als Ganzes groesser oder kleiner,
-// statt dass Text und Rahmen auseinanderlaufen.
-//
-// Die Werte sind logische Pixel (DIP): hat der Nutzer sein 4K-Display auf 200% gestellt,
-// meldet Electron 1920x1080 und der Faktor bleibt 1. Systemskalierung wird also nicht
-// doppelt angewandt.
+// Fenstergroessen proportional zur Arbeitsflaeche. Die Dialogmasse sind gegen 1920x1080
+// entworfen; ein Faktor skaliert Fenster und Inhalt (setZoomFactor) gemeinsam, damit das
+// Layout erhalten bleibt. Werte in DIP: bei 200% Systemskalierung meldet ein 4K-Schirm
+// 1920x1080, der Faktor bleibt 1.
 const UI_REFERENCE = { width: 1920, height: 1080 };
 // Obergrenze: darueber wirkt der Dialog aufgeblasen, ohne mehr zu zeigen.
 const UI_SCALE_MAX = 1.6;

@@ -1,5 +1,5 @@
 (function () {
-  // Zentraler Theme-Controller. Loest brand.js + oled.js ab. Alle Theme-Regeln liegen
+  // Zentraler Theme-Controller. Alle Theme-Regeln liegen
   // gescoped in EINEM Stylesheet, gesteuert ueber data-cd-* Attribute am <html>.
   // Umschalten = Attribut wechseln (window._cdSetTheme), kein Disable/Re-Inject.
 
@@ -169,13 +169,13 @@
   }
 
   // ---------- Dynamische CSS-Variablen-Remaps (gescoped) ----------
-  // Modern: orange Variablen -> Brand-Mid. OLED: dunkle Variablen -> dunkler (mapDark).
+  // Modern: orange Variablen -> Brand-Mid. OLED/Mitternachtsblau/Matrix: dunkle Variablen -> Flaechenstufen (surfaceMap).
   var _varsKey = '';
   // Variablen, die claude.ai nicht als fertige Farbe konsumiert. Ein Hex-Wert macht dort
   // die Deklaration ungueltig, die Farbe faellt auf inherit zurueck und Brand-Icons
   // (z.B. der Stern im Greeting, .text-accent-brand + fill-current) werden grau statt
   // umgefaerbt. Gemessen: mit Override rgb(195,194,183), ohne rgb(217,119,87).
-  // Diese Variablen daher nicht anfassen, das Recoloring laeuft ueber ACCENT_CLASS_CSS.
+  // Diese Variablen daher nicht anfassen, das Recoloring laeuft ueber die .text-accent-brand-Regel in buildVarsCSS.
   var VAR_SKIP = { '--accent-brand': 1 };
 
   // Nummerierte Stufen einer Farbskala (--cds-red-350, --cds-orange-350, ...). Das
@@ -232,7 +232,7 @@
     // Ein Token kann mehrfach definiert sein, hell unter :root und dunkel unter
     // [data-theme="dark"]. Die dunkle Definition ist die, die unter OLED wirklich gilt,
     // also muss sie gewinnen. Wert und Rang getrennt merken, damit eine dark-Definition
-    // ein frueheres Mapping auch dann verdraengt, wenn mapDark sie gar nicht mappt.
+    // ein frueheres Mapping auch dann verdraengt, wenn surfaceMap sie gar nicht mappt.
     var oledVal = {}, oledRank = {};
     try {
       for (var i = 0; i < document.styleSheets.length; i++) {
@@ -344,7 +344,7 @@
   }
 
   // Ersetzt die frueheren body:has(...)-Regeln: ein einziges querySelector pro
-  // gedrosseltem Mutations-Batch (nur OLED) statt :has()-Auswertung bei jedem
+  // gedrosseltem Mutations-Batch (OLED, Mitternachtsblau, Matrix) statt :has()-Auswertung bei jedem
   // Style-Recalc. Setzt data-cd-modal am <html>, worauf das statische Sheet reagiert.
   function updateModalFlag() {
     var de = document.documentElement;
@@ -509,7 +509,7 @@
       // Modal-Flag direkt im Observer, NICHT im rAF: requestAnimationFrame pausiert bei
       // verdecktem/unsichtbarem Fenster, dann bliebe das Sternenfeld-Ausblenden aus. Der
       // MutationObserver laeuft dagegen auch dann. Frueher hielt die CSS-:has()-Regel das
-      // immer, jetzt uebernimmt das dieser Aufruf. Billig: ein querySelector pro Batch, nur OLED.
+      // immer, jetzt uebernimmt das dieser Aufruf. Billig: ein querySelector pro Batch.
       updateModalFlag();
       if (pending) return;
       pending = true;
