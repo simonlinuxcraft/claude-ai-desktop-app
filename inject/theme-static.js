@@ -338,7 +338,11 @@
       D + ' #static-composer-box{position:relative;overflow:visible !important;--cd-composer-radius:16px}',
       D + ' #static-composer-box::before' + RING,
       W + '[data-cd-design="modern"] #static-composer-box::before{filter:invert(1) hue-rotate(180deg)}'
-    ]).join('');
+    ]).concat([[O, BG], [M, MBG], [X, XBG]].map(function (p) {
+      // Claude Code (.dframe-root) faerbt Seite und Kacheln aus --df-bg-page-hsl, als relative
+      // Farbe "from #191919 h s l". Die erkennt der Variablen-Scan nicht, also hier ueberschreiben.
+      return p[0] + ' .dframe-root{--df-bg-page-hsl:from ' + p[1] + ' h s l !important}';
+    })).join('');
   }
 
   return { buildStaticCSS: buildStaticCSS, sparkleBg: sparkleBg };

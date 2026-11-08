@@ -16,10 +16,10 @@ const RELEASE_NOTES = {
         it: 'Piccole correzioni'
       },
       text: {
-        de: 'Das Fenster zum Melden von Fehlern reagiert nicht mehr auf die Tastenkürzel des Hauptfensters. Das App-Theme-Fenster ist etwas höher, damit alles hineinpasst.',
-        en: 'The bug report window no longer reacts to the main window\'s shortcuts. The app theme window is a little taller so everything fits.',
-        fr: 'La fenêtre de signalement de bug ne réagit plus aux raccourcis de la fenêtre principale. La fenêtre du thème de l’application est un peu plus haute pour que tout y tienne.',
-        it: 'La finestra per segnalare i bug non reagisce più alle scorciatoie della finestra principale. La finestra del tema dell’app è un po’ più alta, così tutto ci sta.'
+        de: 'Claude Code steht in OLED, Mitternachtsblau und Matrix jetzt komplett im Theme, die mittlere und rechte Fläche blieben vorher grau. Das Fenster zum Melden von Fehlern reagiert nicht mehr auf die Tastenkürzel des Hauptfensters. Das App-Theme-Fenster ist etwas höher, damit alles hineinpasst.',
+        en: 'Claude Code now follows OLED, Midnight Blue and Matrix everywhere, its middle and right panels stayed grey before. The bug report window no longer reacts to the main window\'s shortcuts. The app theme window is a little taller so everything fits.',
+        fr: 'Claude Code suit désormais entièrement OLED, Bleu nuit et Matrix, ses panneaux central et droit restaient gris. La fenêtre de signalement de bug ne réagit plus aux raccourcis de la fenêtre principale. La fenêtre du thème de l’application est un peu plus haute pour que tout y tienne.',
+        it: 'Claude Code ora segue OLED, Blu notte e Matrix ovunque, i pannelli centrale e destro prima restavano grigi. La finestra per segnalare i bug non reagisce più alle scorciatoie della finestra principale. La finestra del tema dell’app è un po’ più alta, così tutto ci sta.'
       }
     },
     {
