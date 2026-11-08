@@ -25,7 +25,7 @@
 
 ---
 
-> **v1.5.2** - Zoom and X11 Option. Zoom works again with `Ctrl++`, `Ctrl+-`, `Ctrl+0` and `Ctrl`+mouse wheel on any keyboard layout, the level is kept after a restart and the entries are in the app menu. A new setting runs the app through X11 instead of Wayland, for flicker, graphics glitches or a freezing monitor.
+> **v1.5.3** - Leaner Code. Around 370 lines less code with the same behaviour. The bug report window no longer reacts to the main window's shortcuts, and the app theme window is a little taller so its content fits.
 
 ---
 
@@ -108,7 +108,7 @@ cat > ~/.local/share/applications/claude-desktop.desktop << EOF
 [Desktop Entry]
 Name=Desktop for Claude
 Comment=Unofficial desktop app for Claude AI
-Exec=/path/to/Claude-Desktop-1.5.2.AppImage --no-sandbox
+Exec=/path/to/Claude-Desktop-1.5.3.AppImage --no-sandbox
 Icon=/path/to/icon.png
 Type=Application
 Categories=Utility;
@@ -159,7 +159,7 @@ The `--no-sandbox` flag is required for Electron AppImages on Linux because the 
 Since v1.5.0 the app runs natively on Wayland instead of through XWayland. If something does not work for you there, turn on "Use X11 instead of Wayland" in the app settings and restart the app. Since v1.5.2 that switch is the easy way; adding `--ozone-platform=x11` on the command line does the same:
 
 ```bash
-./Claude-Desktop-1.5.2.AppImage --no-sandbox --ozone-platform=x11
+./Claude-Desktop-1.5.3.AppImage --no-sandbox --ozone-platform=x11
 ```
 
 ```bash

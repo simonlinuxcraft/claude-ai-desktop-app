@@ -2,7 +2,7 @@ name: claude-ai-desktop
 # Der Store zeigt title statt name. Der Name bleibt, sonst verliert die Installbasis den
 # Update-Pfad; der angezeigte Titel verweist auf Claude statt sich so zu nennen.
 title: Desktop for Claude (Unofficial)
-version: '1.5.2'
+version: '1.5.3'
 summary: Desktop for Claude, an unofficial Claude AI app with tabs and tray
 description: |
   Desktop for Claude is an unofficial app that runs claude.ai on Linux
@@ -21,15 +21,17 @@ description: |
   the official app does not support, and here in the Snap Store, where there
   is no official package.
 
-  What's new in v1.5.2, zoom and X11 option:
+  What's new in v1.5.3, leaner code:
+
+  * Around 370 lines less code with the same behaviour, plus small fixes:
+    the bug report window no longer reacts to the main window's
+    shortcuts, and the app theme window no longer cuts off its content.
+
+  Highlights from v1.5.2, v1.5.1 and v1.5.0:
 
   * Zoom works with Ctrl++, Ctrl+-, Ctrl+0 and Ctrl+mouse wheel on any
-    keyboard layout, the level is kept after a restart, and the entries
-    are in the app menu.
-  * New setting "Use X11 instead of Wayland" for flicker, graphics
-    glitches or a freezing monitor.
-
-  Highlights from v1.5.1 and v1.5.0:
+    keyboard layout, and a new setting runs the app through X11 instead
+    of Wayland.
 
   * The window comes back on screen after a monitor is unplugged, and
     restarting after an update is more reliable.

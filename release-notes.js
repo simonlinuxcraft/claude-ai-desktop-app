@@ -6,6 +6,38 @@
 // Reine Daten, kein Electron-Zugriff.
 
 const RELEASE_NOTES = {
+  '1.5.3': [
+    {
+      icon: 'check',
+      title: {
+        de: 'Kleine Korrekturen',
+        en: 'Small fixes',
+        fr: 'Petites corrections',
+        it: 'Piccole correzioni'
+      },
+      text: {
+        de: 'Das Fenster zum Melden von Fehlern reagiert nicht mehr auf die Tastenkürzel des Hauptfensters. Das App-Theme-Fenster ist etwas höher, damit alles hineinpasst.',
+        en: 'The bug report window no longer reacts to the main window\'s shortcuts. The app theme window is a little taller so everything fits.',
+        fr: 'La fenêtre de signalement de bug ne réagit plus aux raccourcis de la fenêtre principale. La fenêtre du thème de l’application est un peu plus haute pour que tout y tienne.',
+        it: 'La finestra per segnalare i bug non reagisce più alle scorciatoie della finestra principale. La finestra del tema dell’app è un po’ più alta, così tutto ci sta.'
+      }
+    },
+    {
+      icon: 'package',
+      title: {
+        de: 'Schlankerer Code',
+        en: 'Leaner code',
+        fr: 'Code allégé',
+        it: 'Codice più snello'
+      },
+      text: {
+        de: 'Rund 370 Zeilen weniger Code bei gleichem Verhalten. Doppelte Teile sind zusammengelegt, ungenutzte entfernt.',
+        en: 'Around 370 lines less code with the same behaviour. Duplicated parts are merged and unused ones removed.',
+        fr: 'Environ 370 lignes de code en moins pour le même comportement. Les parties en double sont fusionnées et celles inutilisées supprimées.',
+        it: 'Circa 370 righe di codice in meno con lo stesso comportamento. Le parti duplicate sono state unite e quelle inutilizzate rimosse.'
+      }
+    }
+  ],
   '1.5.2': [
     {
       icon: 'zoomIn',
@@ -1583,6 +1615,7 @@ const RELEASE_NOTES = {
 
 // Optionaler Update-Titel pro Version, gross im Kopf des "Was ist neu"-Fensters.
 const RELEASE_TITLES = {
+  '1.5.3': { de: 'Schlankerer Code', en: 'Leaner Code', fr: 'Code allégé', it: 'Codice più snello' },
   '1.5.2': { de: 'Zoom und X11-Option', en: 'Zoom and X11 Option', fr: 'Zoom et option X11', it: 'Zoom e opzione X11' },
   '1.5.1': { de: 'Stabilität und Lizenzen', en: 'Stability and Licences', fr: 'Stabilité et licences', it: 'Stabilità e licenze' },
   '1.5.0': { de: 'Das Wayland-Update', en: 'The Wayland Update', fr: 'La mise à jour Wayland', it: 'L’aggiornamento Wayland' },

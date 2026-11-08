@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.5.3] - 2026-11-08 - Leaner Code
+
+### Fixed
+
+- The bug report window kept the app menu, so its shortcuts such as `Ctrl+W` could act on the main
+  window while the dialog was open.
+- The app theme window is 720x660 instead of 720x650, in line with the other dialogs.
+- The app no longer copies its icon to `~/Apps`, a leftover from a local setup.
+- The test for dialog proportions checked outdated sizes and now uses the real ones.
+
+### Changed
+
+- Around 370 lines less code with the same behaviour: the four settings-type windows share one
+  opener, Midnight Blue and Matrix share their stylesheet rules, dead code, unused strings and
+  checks that could never fail are gone, and outdated comments are fixed.
+- The Snap launcher no longer passes `--no-sandbox` and the X11 flag itself, the AppImage wrapper
+  it starts already does.
+
+---
+
 ## [1.5.2] - 2026-10-27 - Zoom and X11 Option
 
 ### Fixed
