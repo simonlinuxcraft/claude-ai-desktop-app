@@ -16,7 +16,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   sidebar. They come from `--df-bg-page-hsl` (a relative colour the variable scan did not pick up),
   `--epitaxy-transcript-surface` and translucent white in `--df-hover` / `--df-selected`.
 - At start claude.ai shows a grey loading skeleton until the page has hydrated (`#static-composer`,
-  `#static-sidebar-skeleton`). It now follows the theme too. It was most visible on the first start
+  `#static-sidebar-skeleton`). It now follows the theme too, and the focus outline no longer draws a
+  second frame inside the composer ring. It was most visible on the first start
   after an update, when the page takes longer to hydrate.
 - The bug report window kept the app menu, so its shortcuts such as `Ctrl+W` could act on the main
   window while the dialog was open.

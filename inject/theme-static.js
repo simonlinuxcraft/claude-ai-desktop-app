@@ -351,7 +351,9 @@
         + p[0] + ' #static-composer{--cds-surface-1:' + p[1] + ' !important}'
         + p[0] + ' #static-composer::before{background:transparent !important}'
         + p[0] + ' #static-composer-box{--cds-surface-3:' + p[4] + ' !important}'
-        + p[0] + ' #static-sidebar-skeleton{background-color:' + p[1] + ' !important}';
+        + p[0] + ' #static-sidebar-skeleton{background-color:' + p[1] + ' !important}'
+        // Das Geruest fokussiert sein textarea sofort, der Fokus-Umriss stand als zweiter Rahmen im Ring.
+        + p[0] + ' #static-composer-input:focus{outline:none !important}';
     })).join('');
   }
 
