@@ -16,10 +16,10 @@ const RELEASE_NOTES = {
         it: 'Piccole correzioni'
       },
       text: {
-        de: 'Claude Code steht in OLED, Mitternachtsblau und Matrix jetzt komplett im Theme. Vorher blieben einige Flächen und die Auswahl in der Seitenleiste grau. Das Fenster zum Melden von Fehlern reagiert nicht mehr auf die Tastenkürzel des Hauptfensters. Das App-Theme-Fenster ist etwas höher, damit alles hineinpasst.',
-        en: 'Claude Code now follows OLED, Midnight Blue and Matrix everywhere. Some panels and the sidebar selection stayed grey before. The bug report window no longer reacts to the main window\'s shortcuts. The app theme window is a little taller so everything fits.',
-        fr: 'Claude Code suit désormais entièrement OLED, Bleu nuit et Matrix. Certains panneaux et la sélection de la barre latérale restaient gris. La fenêtre de signalement de bug ne réagit plus aux raccourcis de la fenêtre principale. La fenêtre du thème de l’application est un peu plus haute pour que tout y tienne.',
-        it: 'Claude Code ora segue OLED, Blu notte e Matrix ovunque. Prima alcuni pannelli e la selezione nella barra laterale restavano grigi. La finestra per segnalare i bug non reagisce più alle scorciatoie della finestra principale. La finestra del tema dell’app è un po’ più alta, così tutto ci sta.'
+        de: 'Claude Code steht in OLED, Mitternachtsblau und Matrix jetzt komplett im Theme. Vorher blieben einige Flächen und die Auswahl in der Seitenleiste grau, und beim Start stand claude.ais graues Lade-Gerüst kurz sichtbar da. Das Fenster zum Melden von Fehlern reagiert nicht mehr auf die Tastenkürzel des Hauptfensters. Das App-Theme-Fenster ist etwas höher, damit alles hineinpasst.',
+        en: 'Claude Code now follows OLED, Midnight Blue and Matrix everywhere. Some panels and the sidebar selection stayed grey before, and claude.ai\'s grey loading skeleton showed briefly at start. The bug report window no longer reacts to the main window\'s shortcuts. The app theme window is a little taller so everything fits.',
+        fr: 'Claude Code suit désormais entièrement OLED, Bleu nuit et Matrix. Certains panneaux et la sélection de la barre latérale restaient gris, et le squelette de chargement gris de claude.ai apparaissait brièvement au démarrage. La fenêtre de signalement de bug ne réagit plus aux raccourcis de la fenêtre principale. La fenêtre du thème de l’application est un peu plus haute pour que tout y tienne.',
+        it: 'Claude Code ora segue OLED, Blu notte e Matrix ovunque. Prima alcuni pannelli e la selezione nella barra laterale restavano grigi, e all’avvio si vedeva per un attimo lo scheletro di caricamento grigio di claude.ai. La finestra per segnalare i bug non reagisce più alle scorciatoie della finestra principale. La finestra del tema dell’app è un po’ più alta, così tutto ci sta.'
       }
     },
     {

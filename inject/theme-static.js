@@ -338,14 +338,20 @@
       D + ' #static-composer-box{position:relative;overflow:visible !important;--cd-composer-radius:16px}',
       D + ' #static-composer-box::before' + RING,
       W + '[data-cd-design="modern"] #static-composer-box::before{filter:invert(1) hue-rotate(180deg)}'
-    ]).concat([[O, BG, '#181417', '#1c181b'], [M, MBG, MBG_HI, MBG_TOP], [X, XBG, XBG_HI, XBG_TOP]].map(function (p) {
+    ]).concat([[O, BG, '#181417', '#1c181b', BG_HI], [M, MBG, MBG_HI, MBG_TOP, MBG_HI], [X, XBG, XBG_HI, XBG_TOP, XBG_HI]].map(function (p) {
       // Das dframe-Layout faerbt Seite und Kacheln aus --df-bg-page-hsl, einer relativen Farbe
       // ("from #191919 h s l"), die der Variablen-Scan nicht erkennt. Hover und Auswahl in der
       // Seitenleiste sind halbtransparentes Weiss, das auf Schwarz neutral grau wird. Die Leiste
       // unter dem Code-Transcript faellt ohne gesetztes --epitaxy-transcript-surface auf surface-1.
       return p[0] + ' .dframe-root{--df-bg-page-hsl:from ' + p[1] + ' h s l !important}'
         + p[0] + ' .dframe-sidebar{--df-hover:' + p[2] + ' !important;--df-selected:' + p[3] + ' !important}'
-        + p[0] + ' [class*="epitaxy-transcript-surface"]{--epitaxy-transcript-surface:' + p[1] + ' !important}';
+        + p[0] + ' [class*="epitaxy-transcript-surface"]{--epitaxy-transcript-surface:' + p[1] + ' !important}'
+        // Lade-Geruest vor der Hydration (static-composer-style): eine Vollbild-Schicht in surface-1,
+        // eigene Seitenleiste und Eingabe. Beim ersten Start nach einem Update steht es sekundenlang.
+        + p[0] + ' #static-composer{--cds-surface-1:' + p[1] + ' !important}'
+        + p[0] + ' #static-composer::before{background:transparent !important}'
+        + p[0] + ' #static-composer-box{--cds-surface-3:' + p[4] + ' !important}'
+        + p[0] + ' #static-sidebar-skeleton{background-color:' + p[1] + ' !important}';
     })).join('');
   }
 
