@@ -11,8 +11,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- Claude Code stayed grey in its middle and right panels under OLED, Midnight Blue and Matrix. The new
-  layout colours them from `--df-bg-page-hsl`, a relative colour the variable scan did not pick up.
+- Parts of the new claude.ai layout stayed grey under OLED, Midnight Blue and Matrix: the middle and
+  right panels and the bar under the transcript in Claude Code, and hover and selection in the
+  sidebar. They come from `--df-bg-page-hsl` (a relative colour the variable scan did not pick up),
+  `--epitaxy-transcript-surface` and translucent white in `--df-hover` / `--df-selected`.
 - The bug report window kept the app menu, so its shortcuts such as `Ctrl+W` could act on the main
   window while the dialog was open.
 - The app theme window is 720x660 instead of 720x650, in line with the other dialogs.
