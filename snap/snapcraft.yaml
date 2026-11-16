@@ -2,7 +2,7 @@ name: claude-ai-desktop
 # Der Store zeigt title statt name. Der Name bleibt, sonst verliert die Installbasis den
 # Update-Pfad; der angezeigte Titel verweist auf Claude statt sich so zu nennen.
 title: Desktop for Claude (Unofficial)
-version: '1.5.3'
+version: '1.5.4'
 summary: Desktop for Claude, an unofficial Claude AI app with tabs and tray
 description: |
   Desktop for Claude is an unofficial app that runs claude.ai on Linux
@@ -21,13 +21,15 @@ description: |
   the official app does not support, and here in the Snap Store, where there
   is no official package.
 
-  What's new in v1.5.3, leaner code:
+  What's new in v1.5.4, sidebar theme fix:
 
-  * Around 370 lines less code with the same behaviour, plus small fixes:
-    the bug report window no longer reacts to the main window's
-    shortcuts, and the app theme window no longer cuts off its content.
+  * The sidebar no longer turns grey under OLED, Midnight Blue and
+    Matrix. When claude.ai ships surface colours the themes do not know
+    yet, the app catches them and keeps them in the theme.
 
-  Highlights from v1.5.2, v1.5.1 and v1.5.0:
+  Highlights from v1.5.3, v1.5.2, v1.5.1 and v1.5.0:
+
+  * Around 370 lines less code with the same behaviour.
 
   * Zoom works with Ctrl++, Ctrl+-, Ctrl+0 and Ctrl+mouse wheel on any
     keyboard layout, and a new setting runs the app through X11 instead

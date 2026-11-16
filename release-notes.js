@@ -6,6 +6,23 @@
 // Reine Daten, kein Electron-Zugriff.
 
 const RELEASE_NOTES = {
+  '1.5.4': [
+    {
+      icon: 'palette',
+      title: {
+        de: 'Seitenleiste bleibt im Theme',
+        en: 'Sidebar stays in the theme',
+        fr: 'La barre latérale reste dans le thème',
+        it: 'La barra laterale resta nel tema'
+      },
+      text: {
+        de: 'Die Seitenleiste wird in OLED, Mitternachtsblau und Matrix nicht mehr grau. claude.ai liefert manchmal neue Flächenfarben aus, die die Themes noch nicht kennen. Die App fängt solche Flächen jetzt ab und zieht sie ins Theme.',
+        en: 'The sidebar no longer turns grey in OLED, Midnight Blue and Matrix. claude.ai sometimes ships new surface colours the themes do not know yet. The app now catches such areas and pulls them into the theme.',
+        fr: 'La barre latérale ne devient plus grise en OLED, Bleu nuit et Matrix. claude.ai livre parfois de nouvelles couleurs de surface que les thèmes ne connaissent pas encore. L’application repère désormais ces zones et les ramène dans le thème.',
+        it: 'La barra laterale non diventa più grigia in OLED, Blu notte e Matrix. A volte claude.ai introduce nuovi colori di superficie che i temi non conoscono ancora. Ora l’app intercetta queste aree e le riporta nel tema.'
+      }
+    }
+  ],
   '1.5.3': [
     {
       icon: 'check',
@@ -1615,6 +1632,7 @@ const RELEASE_NOTES = {
 
 // Optionaler Update-Titel pro Version, gross im Kopf des "Was ist neu"-Fensters.
 const RELEASE_TITLES = {
+  '1.5.4': { de: 'Theme-Fix Seitenleiste', en: 'Sidebar Theme Fix', fr: 'Thème de la barre latérale', it: 'Tema della barra laterale' },
   '1.5.3': { de: 'Schlankerer Code', en: 'Leaner Code', fr: 'Code allégé', it: 'Codice più snello' },
   '1.5.2': { de: 'Zoom und X11-Option', en: 'Zoom and X11 Option', fr: 'Zoom et option X11', it: 'Zoom e opzione X11' },
   '1.5.1': { de: 'Stabilität und Lizenzen', en: 'Stability and Licences', fr: 'Stabilité et licences', it: 'Stabilità e licenze' },
