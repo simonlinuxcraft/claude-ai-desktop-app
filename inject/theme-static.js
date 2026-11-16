@@ -353,7 +353,16 @@
         + p[0] + ' #static-composer-box{--cds-surface-3:' + p[4] + ' !important}'
         + p[0] + ' #static-sidebar-skeleton{background-color:' + p[1] + ' !important}'
         // Das Geruest fokussiert sein textarea sofort, der Fokus-Umriss stand als zweiter Rahmen im Ring.
-        + p[0] + ' #static-composer-input:focus{outline:none !important}';
+        + p[0] + ' #static-composer-input:focus{outline:none !important}'
+        // Jedes .cds-root deklariert Palette und Surface-Tokens neu, darunter galt wieder Grau.
+        // Im Experiment data-cds-fizzy-lake kommen die Surfaces als feste Hexwerte (#191919,
+        // #1f1f1f, #303030), welche Flaechen das trifft, haengt an claude.ais Flags pro Laden.
+        + p[0] + ',' + p[0] + ' .cds-root{--cds-surface-1:' + p[1] + ' !important;--cds-surface-2:' + p[4]
+        + ' !important;--cds-surface-3:' + p[4] + ' !important;--cds-surface-popover:' + p[4]
+        + ' !important;--cds-fizzy-lake-color-sidebar:' + p[1] + ' !important}'
+        // Sicherheitsnetz aus theme.js (healGrey): graue Flaechen, die keine Regel erwischt hat.
+        + p[0] + ' [data-cd-heal="a"]{background-color:' + p[1] + ' !important}'
+        + p[0] + ' [data-cd-heal="b"]{background-color:' + p[4] + ' !important}';
     })).join('');
   }
 

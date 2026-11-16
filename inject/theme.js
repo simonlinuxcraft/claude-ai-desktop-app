@@ -354,6 +354,44 @@
     if (open) de.setAttribute('data-cd-modal', ''); else de.removeAttribute('data-cd-modal');
   }
 
+  // ---------- Sicherheitsnetz gegen graue Flaechen ----------
+  // claude.ai bringt mit Experimenten neue Flaechen-Tokens, die das Sheet noch nicht kennt;
+  // die stehen dann als neutrales Grau im dunklen Theme. Stichprobe ueber den Viewport, die
+  // oberste deckende Flaeche je Punkt, neutrales Grau ab Panelgroesse bekommt data-cd-heal
+  // und das Sheet zieht es auf die Theme-Stufe. scripts/theme-check.mjs meldet diese Treffer.
+  var HEAL_SKIP = { IMG: 1, VIDEO: 1, CANVAS: 1, IFRAME: 1, PICTURE: 1, svg: 1, HTML: 1, BODY: 1 };
+  var HEAL_KEEP = ':hover,[aria-selected="true"],[aria-current],[data-state="active"],[data-cd-heal]';
+  function healGrey() {
+    var cur = window._cdTheme || st, de = document.documentElement, w = innerWidth, h = innerHeight;
+    if (!surfaceMap(cur.mode) || de.getAttribute('data-cd-surface') !== 'dark'
+        || !document.getElementById('cd-theme-static') || !w || !h) return;
+    // ponytail: 8x6-Raster, ~4ms pro Lauf (gemessen 1521x840). Flaechen unter ~190x140 kann es verfehlen.
+    for (var y = 0.5; y < 6; y++) for (var x = 0.5; x < 8; x++) {
+      var stack = document.elementsFromPoint(x * w / 8, y * h / 6);
+      for (var i = 0; i < stack.length; i++) {
+        var el = stack[i];
+        if (HEAL_SKIP[el.tagName]) break;
+        var m = getComputedStyle(el).backgroundColor.match(/[\d.]+/g);
+        if (!m || m.length < 3 || (m.length > 3 && +m[3] < 0.9)) continue;
+        var r = +m[0], g = +m[1], b = +m[2], rc;
+        // Exakt neutral: die eigenen Stufen sind getoent (#120f12, #0d1526, #0b1610) und fallen raus.
+        if (Math.max(r, g, b) - Math.min(r, g, b) <= 2 && r >= 18 && r <= 90
+            && (rc = el.getBoundingClientRect()).width >= 120 && rc.height >= 60 && !el.matches(HEAL_KEEP)) {
+          el.setAttribute('data-cd-heal', r + g + b < 90 ? 'a' : 'b');
+          var log = window._cdHealLog = window._cdHealLog || [];
+          if (log.length < 50) log.push(el.tagName + '.' + String(el.className).split(' ').slice(0, 3).join('.') + ' rgb(' + r + ',' + g + ',' + b + ') ' + Math.round(rc.width) + 'x' + Math.round(rc.height));
+        }
+        break;
+      }
+    }
+  }
+  // Erst nach dem Anwenden des Sheets und gedrosselt: waehrend des Ladens ist noch alles grau.
+  function scheduleHeal() {
+    if (window._cdHealPending) return;
+    window._cdHealPending = true;
+    setTimeout(function () { idle(function () { window._cdHealPending = false; try { healGrey(); } catch (e) {} }, 1000); }, 3000);
+  }
+
   // ---------- Modern: orange SVGs recoloren ----------
 
   // Generation statt Boolean: clearRecolor zaehlt hoch und entwertet damit auch die Marke
@@ -443,6 +481,7 @@
     tagComposer();
     updateModalFlag();
     deferHeavy();
+    scheduleHeal();
   }
 
   function setTheme(next) {
@@ -511,6 +550,7 @@
       // MutationObserver laeuft dagegen auch dann. Frueher hielt die CSS-:has()-Regel das
       // immer, jetzt uebernimmt das dieser Aufruf. Billig: ein querySelector pro Batch.
       updateModalFlag();
+      if (surfaceMap(cur.mode)) scheduleHeal();
       if (pending) return;
       pending = true;
       requestAnimationFrame(function () { pending = false; tagComposer(); });

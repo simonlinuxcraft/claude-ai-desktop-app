@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [Unreleased]
+
+### Added
+
+- Fallback for grey surfaces under OLED, Midnight Blue and Matrix. When claude.ai ships a surface
+  the theme does not know yet, the theme controller samples the visible page (8x6 points, about
+  4 ms, at most every 3 s while the page changes) and pulls large neutral grey areas onto the
+  theme's surface colours. `scripts/theme-check.mjs` reports every area the fallback had to fix,
+  so gaps can be closed in the stylesheet before a release.
+
+### Fixed
+
+- The sidebar could stay grey under OLED, Midnight Blue and Matrix, depending on which claude.ai
+  experiments were active for that page load. claude.ai declares its surface tokens again on every
+  `.cds-root` container (as fixed hex values under `data-cds-fizzy-lake`), which hid the theme's
+  overrides on `<html>`. `--cds-surface-1/2/3`, `--cds-surface-popover` and
+  `--cds-fizzy-lake-color-sidebar` are now set on `.cds-root` as well.
+
 ## [1.5.3] - 2026-11-08 - Leaner Code
 
 ### Fixed
