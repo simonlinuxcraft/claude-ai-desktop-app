@@ -128,6 +128,8 @@
     var RAIN = rainBg();
     // Verlaufsring um die Composer-Karte, animiert. Selektor davor setzen.
     var D = 'html[data-cd-design="modern"]';
+    // Kein :hover: das gilt auch fuer alle Vorfahren, eine geheilte Seitenleiste wuerde unter der Maus grau.
+    var HEAL_IDLE = ':not([aria-selected="true"]):not([aria-current]):not([data-state="active"])';
     var RING = '{content:"";position:absolute;inset:-2px;border-radius:var(--cd-composer-radius,14px);padding:2px;background:linear-gradient(135deg,var(--cd-accent-from),var(--cd-accent-to),var(--cd-accent-from),var(--cd-accent-to));background-size:300% 300%;animation:cdGradShift 6s steps(30) infinite;-webkit-mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);-webkit-mask-composite:xor;mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);mask-composite:exclude;pointer-events:none;z-index:5}';
 
     // [class*="X"] matcht auch Tailwinds Opacity-Modifier "X/NN" (z.B. eine helle 5%-Toenung
@@ -361,8 +363,9 @@
         + ' !important;--cds-surface-3:' + p[4] + ' !important;--cds-surface-popover:' + p[4]
         + ' !important;--cds-fizzy-lake-color-sidebar:' + p[1] + ' !important}'
         // Sicherheitsnetz aus theme.js (healGrey): graue Flaechen, die keine Regel erwischt hat.
-        + p[0] + ' [data-cd-heal="a"]{background-color:' + p[1] + ' !important}'
-        + p[0] + ' [data-cd-heal="b"]{background-color:' + p[4] + ' !important}';
+        // Auswahl behaelt ihre eigene Farbe, die Markierung bleibt am Element stehen.
+        + p[0] + ' [data-cd-heal="a"]' + HEAL_IDLE + '{background-color:' + p[1] + ' !important}'
+        + p[0] + ' [data-cd-heal="b"]' + HEAL_IDLE + '{background-color:' + p[4] + ' !important}';
     })).join('');
   }
 

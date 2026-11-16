@@ -361,6 +361,15 @@
   // und das Sheet zieht es auf die Theme-Stufe. scripts/theme-check.mjs meldet diese Treffer.
   var HEAL_SKIP = { IMG: 1, VIDEO: 1, CANVAS: 1, IFRAME: 1, PICTURE: 1, svg: 1, HTML: 1, BODY: 1 };
   var HEAL_KEEP = ':hover,[aria-selected="true"],[aria-current],[data-state="active"],[data-cd-heal]';
+  // Deckende Hintergrundfarbe als [r,g,b], sonst null. Chromium liefert je nach Quelle rgb(),
+  // color(srgb 0..1) oder oklch() unveraendert; alles mit Alpha unter 1 gilt als durchsichtig.
+  function bgRGB(s) {
+    var m = s.match(/[\d.]+/g);
+    if (!m || m.length < 3 || (m.length > 3 && +m[3] < 1)) return null;
+    if (s.indexOf('rgb') === 0) return [+m[0], +m[1], +m[2]];
+    if (s.indexOf('color(srgb ') === 0) return [Math.round(m[0] * 255), Math.round(m[1] * 255), Math.round(m[2] * 255)];
+    return parseRGB(normalizeColor(s));
+  }
   function healGrey() {
     var cur = window._cdTheme || st, de = document.documentElement, w = innerWidth, h = innerHeight;
     if (!surfaceMap(cur.mode) || de.getAttribute('data-cd-surface') !== 'dark'
@@ -371,12 +380,14 @@
       for (var i = 0; i < stack.length; i++) {
         var el = stack[i];
         if (HEAL_SKIP[el.tagName]) break;
-        var m = getComputedStyle(el).backgroundColor.match(/[\d.]+/g);
-        if (!m || m.length < 3 || (m.length > 3 && +m[3] < 0.9)) continue;
-        var r = +m[0], g = +m[1], b = +m[2], rc;
+        var c = bgRGB(getComputedStyle(el).backgroundColor);
+        if (!c) continue;
+        var r = c[0], g = c[1], b = c[2], rc;
         // Exakt neutral: die eigenen Stufen sind getoent (#120f12, #0d1526, #0b1610) und fallen raus.
         if (Math.max(r, g, b) - Math.min(r, g, b) <= 2 && r >= 18 && r <= 90
-            && (rc = el.getBoundingClientRect()).width >= 120 && rc.height >= 60 && !el.matches(HEAL_KEEP)) {
+            && (rc = el.getBoundingClientRect()).width >= 120 && rc.height >= 60 && !el.matches(HEAL_KEEP)
+            // Mitten in einer Transition steht noch der alte Wert; in verdeckten Fenstern bleibt sie bei t=0 stehen.
+            && !el.getAnimations().length) {
           el.setAttribute('data-cd-heal', r + g + b < 90 ? 'a' : 'b');
           var log = window._cdHealLog = window._cdHealLog || [];
           if (log.length < 50) log.push(el.tagName + '.' + String(el.className).split(' ').slice(0, 3).join('.') + ' rgb(' + r + ',' + g + ',' + b + ') ' + Math.round(rc.width) + 'x' + Math.round(rc.height));
