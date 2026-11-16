@@ -16,10 +16,10 @@ const RELEASE_NOTES = {
         it: 'La barra laterale resta nel tema'
       },
       text: {
-        de: 'Die Seitenleiste wird in OLED, Mitternachtsblau und Matrix nicht mehr grau. claude.ai liefert manchmal neue Flächenfarben aus, die die Themes noch nicht kennen. Die App fängt solche Flächen jetzt ab und zieht sie ins Theme.',
-        en: 'The sidebar no longer turns grey in OLED, Midnight Blue and Matrix. claude.ai sometimes ships new surface colours the themes do not know yet. The app now catches such areas and pulls them into the theme.',
-        fr: 'La barre latérale ne devient plus grise en OLED, Bleu nuit et Matrix. claude.ai livre parfois de nouvelles couleurs de surface que les thèmes ne connaissent pas encore. L’application repère désormais ces zones et les ramène dans le thème.',
-        it: 'La barra laterale non diventa più grigia in OLED, Blu notte e Matrix. A volte claude.ai introduce nuovi colori di superficie che i temi non conoscono ancora. Ora l’app intercetta queste aree e le riporta nel tema.'
+        de: 'Die Seitenleiste wird in OLED, Mitternachtsblau und Matrix nicht mehr grau. claude.ai liefert manchmal neue Flächenfarben aus, die die Themes noch nicht kennen. Die App fängt solche Flächen jetzt ab und zieht sie ins Theme. Außerdem sind die feinen Linien neben den Symbolen der Seitenleiste und die Kästchen um die Symbol-Knöpfe weg.',
+        en: 'The sidebar no longer turns grey in OLED, Midnight Blue and Matrix. claude.ai sometimes ships new surface colours the themes do not know yet. The app now catches such areas and pulls them into the theme. The thin lines next to the sidebar icons and the boxes around icon buttons are gone as well.',
+        fr: 'La barre latérale ne devient plus grise en OLED, Bleu nuit et Matrix. claude.ai livre parfois de nouvelles couleurs de surface que les thèmes ne connaissent pas encore. L’application repère désormais ces zones et les ramène dans le thème. Les fines lignes à côté des icônes de la barre latérale et les cadres autour des boutons à icône ont aussi disparu.',
+        it: 'La barra laterale non diventa più grigia in OLED, Blu notte e Matrix. A volte claude.ai introduce nuovi colori di superficie che i temi non conoscono ancora. Ora l’app intercetta queste aree e le riporta nel tema. Sono sparite anche le linee sottili accanto alle icone della barra laterale e i riquadri attorno ai pulsanti a icona.'
       }
     }
   ],

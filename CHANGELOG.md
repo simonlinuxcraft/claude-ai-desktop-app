@@ -24,6 +24,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `.cds-root` container (as fixed hex values under `data-cds-fizzy-lake`), which hid the theme's
   overrides on `<html>`. `--cds-surface-1/2/3`, `--cds-surface-popover` and
   `--cds-fizzy-lake-color-sidebar` are now set on `.cds-root` as well.
+- Older rules of the dark themes select by class substring and also matched claude.ai's Tailwind
+  variant classes such as `[.dframe-sidebar_&]:text-primary`,
+  `not-in-data-[cds=SplitDropdownButton]:...` and `dock:bg-surface-1`. That drew thin lines next to
+  sidebar icons and labels, framed every icon button like a menu, and filled the header, the
+  composer area and the project cards over the background pattern. These elements now keep
+  claude.ai's own look; hover, selection and menus keep the theme's colours.
 
 ## [1.5.3] - 2026-11-08 - Leaner Code
 

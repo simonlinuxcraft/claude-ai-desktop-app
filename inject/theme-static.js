@@ -365,7 +365,25 @@
         // Sicherheitsnetz aus theme.js (healGrey): graue Flaechen, die keine Regel erwischt hat.
         // Auswahl behaelt ihre eigene Farbe, die Markierung bleibt am Element stehen.
         + p[0] + ' [data-cd-heal="a"]' + HEAL_IDLE + '{background-color:' + p[1] + ' !important}'
-        + p[0] + ' [data-cd-heal="b"]' + HEAL_IDLE + '{background-color:' + p[4] + ' !important}';
+        + p[0] + ' [data-cd-heal="b"]' + HEAL_IDLE + '{background-color:' + p[4] + ' !important}'
+        // Die Teilstring-Selektoren von oben treffen auch Tailwind-Varianten wie
+        // "[.dframe-sidebar_&]:text-primary", "not-in-data-[cds=SplitDropdownButton]:..." oder
+        // "dock:bg-surface-1". Gemessen: Haarlinien an Icons und Label-Zeilen der Seitenleiste,
+        // Menue-Rahmen und Schatten an jedem Button, deckende Flaeche um den nicht angedockten
+        // Composer und in der Kopfzeile. revert-layer gibt claude.ais eigenen Wert zurueck.
+        // Spezifitaet jeweils gleich der Regel, die korrigiert wird (gewinnt ueber die Reihenfolge),
+        // der Rest in :where(): Hover-, Auswahl- und Aktiv-Regeln liegen hoeher und behalten Vorrang.
+        + p[0] + ' .dframe-sidebar [class*="sidebar" i]{border-right:none !important}'
+        + p[0] + ' [class*="sidebar" i]:where(.dframe-sidebar :is([class*="sidebar_" i],[class*="sidebar)" i],[class*="sidebar," i])){background-color:revert-layer !important;background-image:revert-layer !important}'
+        + p[0] + ' [data-cds="Button"]:where([class*="ropdown"]){border:revert-layer !important;box-shadow:revert-layer !important}'
+        + p[0] + ' [data-cds="Button"]:where([class*="ropdown"]:not(:hover)){background-color:revert-layer !important;background-image:revert-layer !important}'
+        + p[0] + ' .dframe-root header{background-color:revert-layer !important;background-image:revert-layer !important}'
+        + p[0] + ' .dframe-root aside:not(.dframe-sidebar){border-right:revert-layer !important}'
+        // Varianten (":T" wie dock:/hover:, ".T" in Selektor-Varianten) ohne die Klasse selbst.
+        + ['bg-surface-0', 'bg-surface-1', 'bg-surface-2', 'bg-surface-3'].map(function (t) {
+          var ohne = ':not([class~="' + t + '"]):where(:not([class~="dark:' + t + '"]))';
+          return p[0] + ' [class*=":' + t + '"]' + ohne + ',' + p[0] + ' [class*=".' + t + '"]' + ohne;
+        }).join(',') + '{background-color:revert-layer !important}';
     })).join('');
   }
 

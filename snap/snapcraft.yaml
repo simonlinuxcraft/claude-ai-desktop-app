@@ -25,7 +25,8 @@ description: |
 
   * The sidebar no longer turns grey under OLED, Midnight Blue and
     Matrix. When claude.ai ships surface colours the themes do not know
-    yet, the app catches them and keeps them in the theme.
+    yet, the app catches them and keeps them in the theme. Thin lines
+    next to the sidebar icons and boxes around icon buttons are gone.
 
   Highlights from v1.5.3, v1.5.2, v1.5.1 and v1.5.0:
 
