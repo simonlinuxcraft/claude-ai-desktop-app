@@ -384,7 +384,11 @@
           var ohne = ':not([class~="' + t + '"]):where(:not([class~="dark:' + t + '"]))';
           return p[0] + ' [class*=":' + t + '"]' + ohne + ',' + p[0] + ' [class*=".' + t + '"]' + ohne;
         }).join(',') + '{background-color:revert-layer !important}';
-    })).join('');
+    })).concat(brandVorab.length ? [
+      // Der Ziehgriff am Rand der Seitenleiste blendet bei Hover und Fokus eine Linie in claude.ais
+      // blauem Akzent ein. Nur hier umfaerben: --cds-fill-accent steckt auch in Links, Checkboxen und Fokus.
+      D + ' .dframe-resize-handle{--cds-fill-accent:' + ((st.accent && st.accent.mid) || '#E8524F') + ' !important}'
+    ] : []).join('');
   }
 
   return { buildStaticCSS: buildStaticCSS, sparkleBg: sparkleBg };

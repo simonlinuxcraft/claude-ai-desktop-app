@@ -25,6 +25,7 @@ contextBridge.exposeInMainWorld('tabAPI', {
   newTab: () => ipcRenderer.send('tab-new'),
   switchTab: (i) => { if (validIndex(i)) ipcRenderer.send('tab-switch', i); },
   closeTab: (i) => { if (validIndex(i)) ipcRenderer.send('tab-close', i); },
+  moveTab: (from, to) => { if (validIndex(from) && validIndex(to)) ipcRenderer.send('tab-move', from, to); },
   toggleTheme: () => ipcRenderer.send('theme-toggle'),
   toggleDesign: () => ipcRenderer.send('design-toggle'),
   officialApp: () => ipcRenderer.send('official-app-info'),

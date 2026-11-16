@@ -625,6 +625,9 @@ ${roundFrameCSS('var(--frame-hi)', 'var(--frame-lo)')}
 .tab:hover{background:linear-gradient(180deg,transparent,var(--bgh));color:var(--ta)}
 .tab.active{background:var(--bga);color:var(--ta);
   box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--ac-from) 28%,transparent)}
+.tab.dragging{opacity:.55}
+.tab.drop-before{box-shadow:inset 2px 0 0 var(--ac-from)}
+.tab.drop-after{box-shadow:inset -2px 0 0 var(--ac-from)}
 .tab.active::after{content:'';position:absolute;bottom:0;left:10px;right:10px;height:2.5px;
   background:linear-gradient(90deg,var(--ac-from),var(--ac-to));border-radius:2px 2px 0 0;
   box-shadow:0 0 8px color-mix(in srgb,var(--ac-from) 45%,transparent)}
@@ -771,6 +774,20 @@ tabsEl.addEventListener('wheel',e=>{
   tabsEl.scrollLeft+=e.deltaY;e.preventDefault();
 },{passive:false});
 
+// Umsortieren mit Pointer-Events statt HTML5-Drag: bleibt im Renderer, kein Drag-Protokoll von Wayland oder X11.
+let drag=null,dragJustEnded=false;
+function dropIndex(x){let i=0;for(const t of tabEls){const r=t.getBoundingClientRect();if(x>r.left+r.width/2)i++;}return i;}
+function endDrag(x){
+  if(!drag)return;
+  const d=drag;drag=null;
+  tabEls.forEach(t=>t.classList.remove('dragging','drop-before','drop-after'));
+  if(!d.moved||x===null)return;
+  // Der Klick nach dem Loslassen soll nicht noch den Tab wechseln.
+  dragJustEnded=true;setTimeout(()=>{dragJustEnded=false;},0);
+  let to=dropIndex(x);if(to>d.from)to--;
+  if(to!==d.from)window.tabAPI.moveTab(d.from,to);
+}
+
 window.tabAPI.onTabsUpdate(data=>{
   const c=data.tabs.length;
   while(tabEls.length>c)tabsEl.removeChild(tabEls.pop());
@@ -780,14 +797,30 @@ window.tabAPI.onTabsUpdate(data=>{
       el=document.createElement('div');el.className='tab';
       el.innerHTML='<span class="tab-dot"></span><span class="tab-title"></span><span class="tab-close">&times;</span>';
       el.addEventListener('click',e=>{
+        if(dragJustEnded)return;
         const idx=tabEls.indexOf(el);
         if(e.target.classList.contains('tab-close'))window.tabAPI.closeTab(idx);
         else window.tabAPI.switchTab(idx);
       });
+      el.addEventListener('pointerdown',e=>{
+        if(e.button!==0||e.target.classList.contains('tab-close'))return;
+        drag={el,from:tabEls.indexOf(el),x:e.clientX,moved:false};
+        el.setPointerCapture(e.pointerId);
+      });
+      el.addEventListener('pointermove',e=>{
+        if(!drag||drag.el!==el)return;
+        if(!drag.moved&&Math.abs(e.clientX-drag.x)<6)return;
+        drag.moved=true;el.classList.add('dragging');
+        const to=dropIndex(e.clientX);
+        tabEls.forEach((t,j)=>{t.classList.toggle('drop-before',j===to);t.classList.toggle('drop-after',to===tabEls.length&&j===to-1);});
+      });
+      el.addEventListener('pointerup',e=>endDrag(e.clientX));
+      el.addEventListener('lostpointercapture',()=>endDrag(null));
       tabsEl.appendChild(el);tabEls.push(el);
     }
     const tab=data.tabs[i],ts=el.querySelector('.tab-title');
     if(ts.textContent!==tab.title)ts.textContent=tab.title;
+    if(el.title!==tab.title)el.title=tab.title;
     const a=i===data.activeIndex;
     if(el.classList.contains('active')!==a){
       el.classList.toggle('active',a);
@@ -1166,6 +1199,7 @@ function setupView(view) {
   // Das Menue-Kuerzel CmdOrCtrl+Plus trifft auf Layouts ohne Shift-Plus (z.B. deutsch) nie,
   // darum hier per key statt keyCode. preventDefault unterdrueckt auch das Menue-Kuerzel.
   wc.on('before-input-event', (e, input) => {
+    if (handleTabKeys(e, input)) return;
     if (input.type !== 'keyDown' || !input.control || input.alt || input.meta) return;
     const step = { '+': 0.5, '=': 0.5, '-': -0.5, '0': 0 }[input.key];
     if (step === undefined) return;
@@ -1539,6 +1573,29 @@ function closeTab(index) {
       tab.view.webContents.close();
     }
   });
+  sendTabsUpdate();
+  saveWindowState();
+}
+
+function cycleTab(step) {
+  if (tabs.length > 1) switchToTab((activeTabIndex + step + tabs.length) % tabs.length);
+}
+
+// Strg+Tab vor der Seite abfangen. Das Menue-Kuerzel greift nur, wenn die Seite die Taste nicht
+// selbst behandelt und das Fenster als aktiv gilt (gemessen). preventDefault unterdrueckt es.
+function handleTabKeys(e, input) {
+  if (input.type !== 'keyDown' || input.key !== 'Tab' || !input.control || input.alt || input.meta) return false;
+  e.preventDefault();
+  cycleTab(input.shift ? -1 : 1);
+  return true;
+}
+
+// Der Fenster-State speichert die Tabs in Array-Reihenfolge, die neue Ordnung bleibt also erhalten.
+function moveTab(from, to) {
+  if (from === to || ![from, to].every(i => Number.isInteger(i) && i >= 0 && i < tabs.length)) return;
+  const active = tabs[activeTabIndex];
+  tabs.splice(to, 0, tabs.splice(from, 1)[0]);
+  activeTabIndex = tabs.indexOf(active);
   sendTabsUpdate();
   saveWindowState();
 }
@@ -4390,8 +4447,8 @@ function buildAppMenu() {
       { label: t('Neuer Tab', 'New Tab', 'Nouvel onglet', 'Nuova scheda'), accelerator: 'CmdOrCtrl+T', click: () => createTab() },
       { label: t('Tab schlie\u00dfen', 'Close Tab', 'Fermer l’onglet', 'Chiudi scheda'), accelerator: 'CmdOrCtrl+W', click: () => closeTab(activeTabIndex) },
       { type: 'separator' },
-      { label: t('N\u00e4chster Tab', 'Next Tab', 'Onglet suivant', 'Scheda successiva'), accelerator: 'CmdOrCtrl+Tab', click: () => switchToTab((activeTabIndex + 1) % tabs.length) },
-      { label: t('Vorheriger Tab', 'Previous Tab', 'Onglet précédent', 'Scheda precedente'), accelerator: 'CmdOrCtrl+Shift+Tab', click: () => switchToTab((activeTabIndex - 1 + tabs.length) % tabs.length) },
+      { label: t('N\u00e4chster Tab', 'Next Tab', 'Onglet suivant', 'Scheda successiva'), accelerator: 'CmdOrCtrl+Tab', click: () => cycleTab(1) },
+      { label: t('Vorheriger Tab', 'Previous Tab', 'Onglet précédent', 'Scheda precedente'), accelerator: 'CmdOrCtrl+Shift+Tab', click: () => cycleTab(-1) },
       { type: 'separator' }, ...tabItems
     ]},
     { label: t('Fenster', 'Window', 'Fenêtre', 'Finestra'), submenu: [
@@ -5669,6 +5726,7 @@ ipcMain.on('tab-switch', (_, i) => {
 ipcMain.on('tab-close', (_, i) => {
   if (Number.isInteger(i) && i >= 0 && i < tabs.length) closeTab(i);
 });
+ipcMain.on('tab-move', (_, from, to) => moveTab(from, to));
 // Die (ausgeblendete) Pille in der Tab-Leiste schaltet weiter im Kreis.
 ipcMain.on('design-toggle', () => {
   const i = DESIGN_STYLES.indexOf(designStyle);
@@ -5799,6 +5857,7 @@ function createWindow() {
 
   // Stirbt der Renderer der Tab-Leiste (z.B. OOM-Kill), fehlen Tabs, Fensterknoepfe und Menue des
   // rahmenlosen Fensters. Neu laden und den Stand nachreichen; der Zeitstempel verhindert eine Schleife.
+  mainWindow.webContents.on('before-input-event', handleTabKeys);
   let lastTabBarCrash = 0;
   mainWindow.webContents.on('render-process-gone', (_e, details) => {
     const now = Date.now();

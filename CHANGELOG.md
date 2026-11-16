@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [Unreleased]
+
+### Added
+
+- Hovering a tab shows the full chat title as a tooltip, so long titles stay readable with many
+  tabs open.
+- Tabs can be reordered by dragging them left or right. The new order is saved with the session.
+  Dragging uses pointer events inside the tab bar, so it does not depend on the drag protocol of
+  Wayland or X11.
+
+### Fixed
+
+- Ctrl+Tab and Ctrl+Shift+Tab could stop switching tabs. The menu shortcut only fires when the page
+  does not handle the key itself and the window counts as active. Both shortcuts are now caught
+  before the page sees them, in the chat and in the tab bar.
+- The handle for resizing the sidebar showed a blue line on hover in the dark themes. It now uses
+  the style's accent colour; Classic and Light keep claude.ai's own look.
+
 ## [1.5.4] - 2026-11-16 - Sidebar Theme Fix
 
 ### Added
