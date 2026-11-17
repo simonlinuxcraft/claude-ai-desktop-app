@@ -781,15 +781,18 @@ function endDrag(x){
   if(!drag)return;
   const d=drag;drag=null;
   tabEls.forEach(t=>t.classList.remove('dragging','drop-before','drop-after'));
-  if(!d.moved||x===null)return;
+  if((!d.moved&&!d.dead)||x===null)return;
   // Der Klick nach dem Loslassen soll nicht noch den Tab wechseln.
   dragJustEnded=true;setTimeout(()=>{dragJustEnded=false;},0);
+  if(d.dead)return;
   let to=dropIndex(x);if(to>d.from)to--;
   if(to!==d.from)window.tabAPI.moveTab(d.from,to);
 }
 
 window.tabAPI.onTabsUpdate(data=>{
   const c=data.tabs.length;
+  // Die Elemente sind Positions-Slots: aendert sich die Anzahl, stimmt der gemerkte Start-Index nicht mehr.
+  if(drag&&c!==tabEls.length){drag.dead=true;tabEls.forEach(t=>t.classList.remove('dragging','drop-before','drop-after'));}
   while(tabEls.length>c)tabsEl.removeChild(tabEls.pop());
   for(let i=0;i<c;i++){
     let el=tabEls[i];
@@ -808,7 +811,7 @@ window.tabAPI.onTabsUpdate(data=>{
         el.setPointerCapture(e.pointerId);
       });
       el.addEventListener('pointermove',e=>{
-        if(!drag||drag.el!==el)return;
+        if(!drag||drag.el!==el||drag.dead)return;
         if(!drag.moved&&Math.abs(e.clientX-drag.x)<6)return;
         drag.moved=true;el.classList.add('dragging');
         const to=dropIndex(e.clientX);
@@ -1528,6 +1531,8 @@ function switchToTab(index) {
 
   if (index === activeTabIndex && target.view.getVisible()) {
     sendTabsUpdate();
+    // Der Klick auf den schon aktiven Tab liess den Tastaturfokus in der Tab-Leiste.
+    focusActiveView();
     return;
   }
 
@@ -1598,6 +1603,7 @@ function moveTab(from, to) {
   activeTabIndex = tabs.indexOf(active);
   sendTabsUpdate();
   saveWindowState();
+  focusActiveView();
 }
 
 function updateTitle() {

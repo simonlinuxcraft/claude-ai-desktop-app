@@ -22,6 +22,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Ctrl+Tab and Ctrl+Shift+Tab could stop switching tabs. The menu shortcut only fires when the page
   does not handle the key itself and the window counts as active. Both shortcuts are now caught
   before the page sees them, in the chat and in the tab bar.
+- Clicking the tab that is already active left the keyboard focus in the tab bar, so typing went
+  nowhere until the chat was clicked. The focus now returns to the chat.
 - The handle for resizing the sidebar showed a blue line on hover in the dark themes. It now uses
   the style's accent colour; Classic and Light keep claude.ai's own look.
 
