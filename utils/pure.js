@@ -228,7 +228,6 @@ function resolveDesignStyle(saved) {
   return 'modern';
 }
 
-// Sicherer Zugriff auf View oder webContents.
 function alive(viewOrWc) {
   if (!viewOrWc) return false;
   // Eine zerstoerte View hat kein webContents mehr (gemessen, Electron 44), darum nicht auf die View zurueckfallen.

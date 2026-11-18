@@ -801,7 +801,6 @@ window.tabAPI.onDesignUpdate(style=>{
   document.getElementById('design-toggle').textContent=STYLE_LABEL[style]||style;
 });
 
-// Suche im Chat. Das Feld sitzt in der Tab-Leiste, gesucht wird im Hauptprozess in der aktiven View.
 const findEl=document.getElementById('find'),findIn=document.getElementById('find-input'),findCount=document.getElementById('find-count');
 const findRun=(forward,follow)=>window.tabAPI.find(findIn.value,forward,follow);
 window.tabAPI.onFindOpen(()=>{findEl.hidden=false;findIn.focus();findIn.select();if(findIn.value)findRun(true,false);});
@@ -1236,7 +1235,8 @@ function setupView(view) {
   wc.once('destroyed', () => {
     if (!mainWindow || mainWindow.isDestroyed() || !tabs.some(tab => tab.view === view)) return;
     if (tabs.length === 1) createTab();
-    closeTab(tabs.findIndex(tab => tab.view === view));
+    // Nicht fuer Strg+Umschalt+T merken: die Seite hat sich absichtlich geschlossen.
+    closeTab(tabs.findIndex(tab => tab.view === view), false);
   });
 
   wc.on('found-in-page', (_e, r) => {
@@ -1471,13 +1471,17 @@ function preloadNextTab(left = PRELOAD_TABS) {
   if (!tab || !active || !alive(active.view) || !mainWindow || mainWindow.isDestroyed()) return;
   const url = tab.pendingUrl;
   tab.pendingUrl = null;
+  tab.preloadLeft = left;   // closeTab setzt die Kette fort, falls der Tab mitten im Laden geschlossen wird
   mainWindow.contentView.addChildView(tab.view, 0);
   tab.view.setBounds(active.view.getBounds());
   tab.view.setVisible(true);
-  tab.view.webContents.once('did-stop-loading', () => setTimeout(() => {
-    if (tabs[activeTabIndex] !== tab && alive(tab.view)) tab.view.setVisible(false);
-    preloadNextTab(left - 1);
-  }, PRELOAD_PAINT_MS));
+  tab.view.webContents.once('did-stop-loading', () => {
+    tab.preloadLeft = 0;   // ab hier traegt der Timer die Kette, er ueberlebt das Schliessen
+    setTimeout(() => {
+      if (tabs[activeTabIndex] !== tab && alive(tab.view)) tab.view.setVisible(false);
+      preloadNextTab(left - 1);
+    }, PRELOAD_PAINT_MS);
+  });
   tab.view.webContents.loadURL(url);
 }
 
@@ -1521,8 +1525,7 @@ const resizeActiveView = throttle(() => {
   const key = `${b.width}:${b.height}:${nh}`;
   if (key === lastViewBounds) return;
   lastViewBounds = key;
-  const rect = { x: bw, y: topInset, width: Math.max(0, b.width - 2 * bw), height: Math.max(0, b.height - topInset - bw) };
-  tabs[activeTabIndex].view.setBounds(rect);
+  tabs[activeTabIndex].view.setBounds({ x: bw, y: topInset, width: Math.max(0, b.width - 2 * bw), height: Math.max(0, b.height - topInset - bw) });
 }, 16);
 
 // Nach einem Resize-Burst (Tiling/Half-Screen) ein letztes autoritatives Relayout.
@@ -1628,13 +1631,14 @@ function startSurfaceWatchdog() {
   }, FRAME_CHECK_MS);
 }
 
-function switchToTab(index) {
+// force: der bisher aktive Tab ist schon weg (closeTab), der Kurzweg fuer "Klick auf den aktiven Tab" gilt dann nicht.
+function switchToTab(index, force = false) {
   if (index < 0 || index >= tabs.length || !mainWindow || mainWindow.isDestroyed()) return;
   closeFind();   // Treffer und Zaehler gehoeren zum bisherigen Tab
   const target = tabs[index];
   if (!alive(target.view)) return;
 
-  if (index === activeTabIndex && target.view.getVisible()) {
+  if (!force && index === activeTabIndex && target.view.getVisible()) {
     sendTabsUpdate();
     // Der Klick auf den schon aktiven Tab liess den Tastaturfokus in der Tab-Leiste.
     focusActiveView();
@@ -1662,11 +1666,11 @@ function switchToTab(index) {
   saveWindowState();
 }
 
-function closeTab(index) {
+function closeTab(index, remember = true) {
   if (tabs.length <= 1 || index < 0 || index >= tabs.length) return;
   const tab = tabs[index];
   clearTimeout(tab.offlineRetryTimer);
-  if (typeof tab.url === 'string' && isAllowedDomain(tab.url)) {
+  if (remember && typeof tab.url === 'string' && isAllowedDomain(tab.url)) {
     closedTabs.push(tab.url);
     if (closedTabs.length > 10) closedTabs.shift();
   }
@@ -1676,7 +1680,7 @@ function closeTab(index) {
     const newIdx = index > 0 ? index - 1 : 0;
     tabs.splice(index, 1);
     activeTabIndex = Math.min(newIdx, tabs.length - 1);
-    switchToTab(activeTabIndex);
+    switchToTab(activeTabIndex, true);
   } else {
     tabs.splice(index, 1);
     if (activeTabIndex > index) activeTabIndex--;
@@ -1691,6 +1695,7 @@ function closeTab(index) {
   });
   sendTabsUpdate();
   saveWindowState();
+  if (tab.preloadLeft) preloadNextTab(tab.preloadLeft - 1);
 }
 
 function cycleTab(step) {
@@ -4690,7 +4695,7 @@ function handleOnlineChange(online) {
 // Chromium-Netzfehler: Verbindung, DNS, Zeitueberschreitung, Proxy, Netzwechsel.
 const NET_ERROR_CODES = new Set([-21, -100, -101, -102, -104, -105, -106, -109, -118, -130, -137]);
 
-function showOfflinePage(tab = tabs[activeTabIndex]) {
+function showOfflinePage(tab) {
   if (!tab || !alive(tab.view)) return;
   const th = theme();
   const ac = accent();
@@ -6040,6 +6045,8 @@ function createWindow() {
   // Stirbt der Renderer der Tab-Leiste (z.B. OOM-Kill), fehlen Tabs, Fensterknoepfe und Menue des
   // rahmenlosen Fensters. Neu laden und den Stand nachreichen; der Zeitstempel verhindert eine Schleife.
   mainWindow.webContents.on('before-input-event', handleTabKeys);
+  // Eine neu geladene Tab-Leiste zeigt kein Suchfeld mehr; ohne Reset bliebe der Fokus fuer den Chat gesperrt.
+  mainWindow.webContents.on('did-finish-load', () => { findOpen = false; });
   let lastTabBarCrash = 0;
   mainWindow.webContents.on('render-process-gone', (_e, details) => {
     const now = Date.now();
