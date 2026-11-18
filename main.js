@@ -7,7 +7,7 @@ const { execFile, execFileSync, spawn } = require('child_process');
 const { version } = require('./package.json');
 const { getFilteredNotes, RELEASE_TITLES } = require('./release-notes');
 const { bugReportStrings } = require('./bug-report-strings');
-const { safeJson, escapeHtml, filterNotifications, scaleWindow, UI_SCALE_FLOOR, isClaudeAiOrigin, isPaymentFrameDomain, looksLikeOAuthUrl, validateAccelerator, THEME_MODES, resolveThemeMode, DESIGN_STYLES, resolveDesignStyle } = require('./utils/pure');
+const { alive, cleanTabTitle, safeJson, escapeHtml, filterNotifications, scaleWindow, UI_SCALE_FLOOR, isClaudeAiOrigin, isPaymentFrameDomain, looksLikeOAuthUrl, validateAccelerator, THEME_MODES, resolveThemeMode, DESIGN_STYLES, resolveDesignStyle } = require('./utils/pure');
 
 // Electron "Object has been destroyed" Error-Dialog abfangen
 const _origErrorBox = dialog.showErrorBox;
@@ -66,7 +66,9 @@ const isWayland = process.platform === 'linux'
 // "App info not found"). Der Snap behaelt seine Identitaet, dort haengt die Zuordnung der
 // Benachrichtigungen an CHROME_DESKTOP.
 const APP_ID = 'io.github.simonlinuxcraft.DesktopForClaude';
-if (!process.env.SNAP) app.setDesktopName(`${APP_ID}.desktop`);
+// Ein AppImage, das aus einem Snap-Terminal startet, erbt SNAP und SNAP_NAME. APPIMAGE setzt nur die AppImage-Laufzeit.
+const isSnap = !process.env.APPIMAGE && !!(process.env.SNAP_NAME || process.env.SNAP);
+if (!isSnap) app.setDesktopName(`${APP_ID}.desktop`);
 // Einstellung "X11 erzwingen" (Abhilfe bei Grafikfehlern unter nativem Wayland). Wirkt nur ueber
 // die Starter (electron-launch, AppImage-Wrapper): ein appendSwitch von hier erreicht nur die
 // Kindprozesse, der Hauptprozess steht dann schon auf Wayland und der GPU-Prozess stuerzt ab.
@@ -133,6 +135,11 @@ const { buildStaticCSS: cdBuildStaticCSS } = require(path.join(__dirname, 'injec
 
 let mainWindow = null;
 let tabs = [];
+// Die Tab-Leiste spricht Tabs ueber id an, nicht ueber die Position: die kann sich zwischen Klick und IPC aendern.
+let tabSeq = 0;
+let lastTabId = 0;
+const closedTabs = [];
+const liveNotifications = new Set();
 let activeTabIndex = 0;
 let isOnline = true;
 let themeMode = 'dark';        // aus THEME_MODES, Reihenfolge dort ist der Cycle der Tab-Leiste
@@ -182,13 +189,6 @@ function openExternalSafe(url) {
 // Callback oder Event-Handler waere sonst ein Uncaught-Exception-Crash.
 function notify(opts) {
   try { new Notification(opts).show(); } catch {}
-}
-
-// Sicherer WebContents-Zugriff
-function alive(viewOrWc) {
-  if (!viewOrWc) return false;
-  const wc = viewOrWc.webContents || viewOrWc;
-  return wc && !wc.isDestroyed();
 }
 
 // i18n (multi-language)
@@ -421,6 +421,10 @@ function buildState() {
 // und startet mit leerem State - der Nutzer verliert Hotkeys, Templates und Tabliste und
 // landet ueber oledIntroSeen zwangsweise wieder in OLED.
 const stateTmpFile = stateFile + '.tmp';
+// Der synchrone Weg braucht eine eigene tmp-Datei und entwertet laufende asynchrone Writes. Mit
+// gemeinsamer Datei schrieb der asynchrone Rest in die schon umbenannte Datei (gemessen: kaputtes JSON).
+const stateTmpFileSync = stateFile + '.tmp-sync';
+let stateGen = 0;
 
 const saveWindowState = debounce(() => {
   try {
@@ -430,9 +434,10 @@ const saveWindowState = debounce(() => {
     windowState = state;
     // Erst nach dem Rename merken: sonst gilt ein fehlgeschlagener Write als gespeichert
     // und der unveraenderte State wird nie wieder geschrieben.
+    const gen = stateGen;
     fs.writeFile(stateTmpFile, json, (err) => {
-      if (err) return;
-      fs.rename(stateTmpFile, stateFile, (renameErr) => { if (!renameErr) lastSavedState = json; });
+      if (err || gen !== stateGen) return;
+      try { fs.renameSync(stateTmpFile, stateFile); lastSavedState = json; } catch {}
     });
   } catch {}
 }, 500);
@@ -441,8 +446,9 @@ function saveWindowStateSync() {
   try {
     const state = buildState();
     windowState = state;
-    fs.writeFileSync(stateTmpFile, JSON.stringify(state));
-    fs.renameSync(stateTmpFile, stateFile);
+    stateGen++;
+    fs.writeFileSync(stateTmpFileSync, JSON.stringify(state));
+    fs.renameSync(stateTmpFileSync, stateFile);
   } catch {}
 }
 
@@ -781,18 +787,18 @@ function endDrag(x){
   if(!drag)return;
   const d=drag;drag=null;
   tabEls.forEach(t=>t.classList.remove('dragging','drop-before','drop-after'));
-  if((!d.moved&&!d.dead)||x===null)return;
+  if(!d.moved||x===null)return;
   // Der Klick nach dem Loslassen soll nicht noch den Tab wechseln.
   dragJustEnded=true;setTimeout(()=>{dragJustEnded=false;},0);
-  if(d.dead)return;
-  let to=dropIndex(x);if(to>d.from)to--;
-  if(to!==d.from)window.tabAPI.moveTab(d.from,to);
+  // Die Slots sind positionsgebunden, der gezogene Tab kann inzwischen woanders liegen oder weg sein.
+  const from=tabEls.findIndex(t=>t._id===d.id);
+  if(from<0)return;
+  let to=dropIndex(x);if(to>from)to--;
+  if(to!==from)window.tabAPI.moveTab(d.id,to);
 }
 
 window.tabAPI.onTabsUpdate(data=>{
   const c=data.tabs.length;
-  // Die Elemente sind Positions-Slots: aendert sich die Anzahl, stimmt der gemerkte Start-Index nicht mehr.
-  if(drag&&c!==tabEls.length){drag.dead=true;tabEls.forEach(t=>t.classList.remove('dragging','drop-before','drop-after'));}
   while(tabEls.length>c)tabsEl.removeChild(tabEls.pop());
   for(let i=0;i<c;i++){
     let el=tabEls[i];
@@ -801,20 +807,24 @@ window.tabAPI.onTabsUpdate(data=>{
       el.innerHTML='<span class="tab-dot"></span><span class="tab-title"></span><span class="tab-close">&times;</span>';
       el.addEventListener('click',e=>{
         if(dragJustEnded)return;
-        const idx=tabEls.indexOf(el);
-        if(e.target.classList.contains('tab-close'))window.tabAPI.closeTab(idx);
-        else window.tabAPI.switchTab(idx);
+        if(e.target.classList.contains('tab-close'))window.tabAPI.closeTab(el._id);
+        else window.tabAPI.switchTab(el._id);
       });
+      el.addEventListener('auxclick',e=>{if(e.button===1)window.tabAPI.closeTab(el._id);});
       el.addEventListener('pointerdown',e=>{
         if(e.button!==0||e.target.classList.contains('tab-close'))return;
-        drag={el,from:tabEls.indexOf(el),x:e.clientX,moved:false};
+        drag={el,id:el._id,x:e.clientX,moved:false};
         el.setPointerCapture(e.pointerId);
       });
       el.addEventListener('pointermove',e=>{
-        if(!drag||drag.el!==el||drag.dead)return;
+        if(!drag||drag.el!==el)return;
         if(!drag.moved&&Math.abs(e.clientX-drag.x)<6)return;
-        drag.moved=true;el.classList.add('dragging');
+        drag.moved=true;
+        // Am Rand mitscrollen, damit ein Tab auch ueber den sichtbaren Bereich hinaus wandern kann.
+        const box=tabsEl.getBoundingClientRect();
+        if(e.clientX<box.left+24)tabsEl.scrollLeft-=12;else if(e.clientX>box.right-24)tabsEl.scrollLeft+=12;
         const to=dropIndex(e.clientX);
+        tabEls.forEach(t=>t.classList.toggle('dragging',t._id===drag.id));
         tabEls.forEach((t,j)=>{t.classList.toggle('drop-before',j===to);t.classList.toggle('drop-after',to===tabEls.length&&j===to-1);});
       });
       el.addEventListener('pointerup',e=>endDrag(e.clientX));
@@ -822,6 +832,8 @@ window.tabAPI.onTabsUpdate(data=>{
       tabsEl.appendChild(el);tabEls.push(el);
     }
     const tab=data.tabs[i],ts=el.querySelector('.tab-title');
+    el._id=tab.id;
+    if(drag&&drag.moved)el.classList.toggle('dragging',tab.id===drag.id);
     if(ts.textContent!==tab.title)ts.textContent=tab.title;
     if(el.title!==tab.title)el.title=tab.title;
     const a=i===data.activeIndex;
@@ -910,7 +922,7 @@ window.tabAPI.requestUpdateState();
 const sendTabsUpdate = throttle(() => {
   if (!mainWindow || mainWindow.isDestroyed()) return;
   mainWindow.webContents.send('tabs-update', {
-    tabs: tabs.map((tab, i) => ({ title: tab.title || `Tab ${i + 1}`, busy: !!tab.busy, unread: !!tab.unread })),
+    tabs: tabs.map((tab, i) => ({ id: tab.id, title: tab.title || `Tab ${i + 1}`, busy: !!tab.busy, unread: !!tab.unread })),
     activeIndex: activeTabIndex
   });
 }, 100);
@@ -1174,13 +1186,21 @@ function setupView(view) {
     event.preventDefault();
   });
 
+  // Schliesst sich die Seite selbst (window.close() am Ende einer Anmeldung), bliebe ein toter Tab
+  // stehen. closeTab entfernt die Listener vorher, hier kommt also nur das ungewollte Ende an.
+  wc.once('destroyed', () => {
+    if (!mainWindow || mainWindow.isDestroyed() || !tabs.some(tab => tab.view === view)) return;
+    if (tabs.length === 1) createTab();
+    closeTab(tabs.findIndex(tab => tab.view === view));
+  });
+
   // Tab-Titel
   wc.on('page-title-updated', (e, title) => {
     e.preventDefault();
     if (mainWindow && !mainWindow.isDestroyed()) mainWindow.setTitle(`Desktop for Claude v${version}`);
     const idx = tabs.findIndex(tab => tab.view === view);
     if (idx >= 0) {
-      const clean = title.replace(/\s*[-\u2013]\s*Claude.*$/, '') || t('Neuer Chat', 'New Chat', 'Nouvelle conversation', 'Nuova chat');
+      const clean = cleanTabTitle(title) || t('Neuer Chat', 'New Chat', 'Nouvelle conversation', 'Nuova chat');
       if (tabs[idx].title !== clean) { tabs[idx].title = clean; sendTabsUpdate(); }
     }
   });
@@ -1368,7 +1388,8 @@ function getPooledView() {
 // Anklicken (pendingUrl in switchToTab). Fuer den Session-Restore, damit N Tabs nicht
 // gleichzeitig claude.ai anfragen.
 function createTab(url = 'https://claude.ai', defer = false) {
-  if (!mainWindow || mainWindow.isDestroyed() || tabs.length >= MAX_TABS) return null;
+  if (!mainWindow || mainWindow.isDestroyed()) return null;
+  if (tabs.length >= MAX_TABS) { if (!defer) notifyTabLimit(); return null; }
   closeAppMenu();   // sonst laege die neue View ueber dem offenen Menue (Strg+T)
 
   // Pool-Views laden https://claude.ai und landen damit ohnehin auf /new.
@@ -1380,10 +1401,18 @@ function createTab(url = 'https://claude.ai', defer = false) {
   }
 
   mainWindow.contentView.addChildView(view);
-  tabs.push({ view, title: t('Neuer Chat', 'New Chat', 'Nouvelle conversation', 'Nuova chat'), url, crashCount: 0, pendingUrl: defer ? url : null });
+  tabs.push({ id: ++tabSeq, view, title: t('Neuer Chat', 'New Chat', 'Nouvelle conversation', 'Nuova chat'), url, crashCount: 0, pendingUrl: defer ? url : null });
   if (!defer) switchToTab(tabs.length - 1);
   else sendTabsUpdate();
   return tabs[tabs.length - 1];
+}
+
+function notifyTabLimit() {
+  notify({ title: 'Desktop for Claude', body: t(
+    `Mehr als ${MAX_TABS} Tabs gehen nicht. Schließe zuerst einen Tab.`,
+    `No more than ${MAX_TABS} tabs. Close a tab first.`,
+    `Pas plus de ${MAX_TABS} onglets. Fermez d’abord un onglet.`,
+    `Non più di ${MAX_TABS} schede. Chiudi prima una scheda.`) });
 }
 
 let lastViewBounds = '';
@@ -1539,6 +1568,7 @@ function switchToTab(index) {
   // Alten Tab verstecken
   const prev = tabs[activeTabIndex];
   if (prev && alive(prev.view)) prev.view.setVisible(false);
+  if (prev && prev !== target) lastTabId = prev.id;
 
   activeTabIndex = index;
   target.unread = false;
@@ -1559,6 +1589,11 @@ function switchToTab(index) {
 function closeTab(index) {
   if (tabs.length <= 1 || index < 0 || index >= tabs.length) return;
   const tab = tabs[index];
+  clearTimeout(tab.offlineRetryTimer);
+  if (typeof tab.url === 'string' && isAllowedDomain(tab.url)) {
+    closedTabs.push(tab.url);
+    if (closedTabs.length > 10) closedTabs.shift();
+  }
   mainWindow.contentView.removeChildView(tab.view);
 
   if (activeTabIndex === index) {
@@ -1589,15 +1624,34 @@ function cycleTab(step) {
 // Strg+Tab vor der Seite abfangen. Das Menue-Kuerzel greift nur, wenn die Seite die Taste nicht
 // selbst behandelt und das Fenster als aktiv gilt (gemessen). preventDefault unterdrueckt es.
 function handleTabKeys(e, input) {
-  if (input.type !== 'keyDown' || input.key !== 'Tab' || !input.control || input.alt || input.meta) return false;
+  if (input.type !== 'keyDown' || !input.control || input.alt || input.meta) return false;
+  const key = input.key.toLowerCase();
+  if (key === 'tab') cycleTab(input.shift ? -1 : 1);
+  else if (input.shift && key === 't') reopenTab();
+  else if (input.shift && key === 'a') toggleLastTab();
+  else return false;
   e.preventDefault();
-  cycleTab(input.shift ? -1 : 1);
   return true;
 }
 
+function reopenTab() {
+  const url = closedTabs.pop();
+  if (url && !createTab(url)) closedTabs.push(url);
+}
+
+function toggleLastTab() {
+  const i = tabIndexById(lastTabId);
+  if (i >= 0) switchToTab(i);
+}
+
+function tabIndexById(id) {
+  return tabs.findIndex(tab => tab.id === id);
+}
+
 // Der Fenster-State speichert die Tabs in Array-Reihenfolge, die neue Ordnung bleibt also erhalten.
-function moveTab(from, to) {
-  if (from === to || ![from, to].every(i => Number.isInteger(i) && i >= 0 && i < tabs.length)) return;
+function moveTab(id, to) {
+  const from = tabIndexById(id);
+  if (from < 0 || from === to || !Number.isInteger(to) || to < 0 || to >= tabs.length) return;
   const active = tabs[activeTabIndex];
   tabs.splice(to, 0, tabs.splice(from, 1)[0]);
   activeTabIndex = tabs.indexOf(active);
@@ -1646,7 +1700,7 @@ function setThemeMode(mode) {
 function syncDesktopIcons() {
   if (mainWindow && !mainWindow.isDestroyed()) mainWindow.setIcon(icon());
   refreshTrayImage();
-  if (process.env.SNAP) return;
+  if (isSnap) return;
 
   if (process.platform !== 'linux') return;
 
@@ -1702,7 +1756,7 @@ const BUG_SUBMIT_URL = BUG_REPORT_PROXY || WEB3FORMS_ENDPOINT;
 
 function getAppMode() {
   if (process.env.APPIMAGE) return 'AppImage';
-  if (process.env.SNAP) return 'Snap';
+  if (isSnap) return 'Snap';
   if (!app.isPackaged) return 'Development';
   return 'Packaged';
 }
@@ -1712,14 +1766,15 @@ function getAppMode() {
 function hostSystemInfo() {
   let distro = '?';
   try {
-    if (process.env.SNAP) {
+    if (isSnap) {
       distro = fs.readFileSync('/proc/version', 'utf8').trim();
     } else {
       const m = fs.readFileSync('/etc/os-release', 'utf8').match(/^PRETTY_NAME="?([^"\n]*)/m);
       if (m) distro = m[1];
     }
   } catch {}
-  const desktop = process.env.XDG_CURRENT_DESKTOP || process.env.XDG_SESSION_DESKTOP || '?';
+  // Der Snap-Launcher setzt XDG_CURRENT_DESKTOP=Unity und reicht den echten Wert in CD_REAL_DESKTOP durch.
+  const desktop = process.env.CD_REAL_DESKTOP || process.env.XDG_CURRENT_DESKTOP || process.env.XDG_SESSION_DESKTOP || '?';
   let displays = '?';
   try {
     displays = screen.getAllDisplays().map(d => `${d.size.width}x${d.size.height}@${d.scaleFactor}`).join(', ');
@@ -2110,6 +2165,10 @@ ${customTitlebarHTML(s.title)}
   $('choose-acc').addEventListener('click', () => showView('acc'));
   backBtn.addEventListener('click', () => showView('choose'));
   cancelBtn.addEventListener('click', () => window.close());
+  // Esc schliesst nur, solange nichts getippt ist.
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && ![...form.elements].some(f => (f.type === 'text' || f.type === 'email' || f.type === 'textarea') && f.value.trim())) window.close();
+  });
   $('add-errors').addEventListener('click', (e) => {
     e.currentTarget.hidden = true;
     $('err-field').hidden = false;
@@ -2787,7 +2846,7 @@ async function exportActiveConversation() {
         };
         return clean(walk(root));
       }
-      const title = (document.title || 'Claude Chat').replace(/\\s*[-\\u2013]\\s*Claude.*$/, '').trim() || 'Claude Chat';
+      const title = (document.title || 'Claude Chat').replace(/\\s*[-\\u2013]\\s*Claude$/, '').trim() || 'Claude Chat';
       const sels = [
         '[data-testid="user-message"]',
         '[data-testid="assistant-message"]',
@@ -4078,6 +4137,7 @@ function getAppMenuItems() {
   return [
     { type: 'item', action: 'new-tab', label: t('Neuer Tab', 'New Tab', 'Nouvel onglet', 'Nuova scheda'), accel: 'Ctrl+T', icon: 'plus' },
     { type: 'item', action: 'close-tab', label: t('Tab schließen', 'Close Tab', 'Fermer l’onglet', 'Chiudi scheda'), accel: 'Ctrl+W', icon: 'x' },
+    { type: 'item', action: 'reopen-tab', label: t('Geschlossenen Tab wiederherstellen', 'Reopen Closed Tab', 'Rouvrir l’onglet fermé', 'Riapri scheda chiusa'), accel: 'Ctrl+Shift+T', icon: 'refresh' },
     { type: 'sep' },
     { type: 'item', action: 'export', label: t('Konversation exportieren', 'Export conversation', 'Exporter la conversation', 'Esporta la conversazione'), accel: 'Ctrl+Shift+E', icon: 'export' },
     { type: 'item', action: 'reload', label: t('Neu laden', 'Reload', 'Recharger', 'Ricarica'), accel: 'Ctrl+R', icon: 'refresh' },
@@ -4416,11 +4476,11 @@ function buildAppMenu() {
       { type: 'separator' }, ...tabItems, { type: 'separator' },
       { label: t('Konversation als Markdown exportieren\u2026', 'Export conversation as Markdown\u2026', 'Exporter la conversation en Markdown…', 'Esporta la conversazione in Markdown…'), accelerator: 'CmdOrCtrl+Shift+E', click: () => exportActiveConversation() },
       { type: 'separator' },
-      { label: t('Einstellungen', 'Settings', 'Paramètres', 'Impostazioni'), accelerator: 'CmdOrCtrl+,', click: () => {
+      { label: t('Einstellungen', 'Settings', 'Paramètres', 'Impostazioni'), click: () => {
         if (tabs[activeTabIndex] && alive(tabs[activeTabIndex].view))
           tabs[activeTabIndex].view.webContents.loadURL('https://claude.ai/settings');
       }},
-      { label: t('App-Einstellungen\u2026', 'App Settings\u2026', 'Paramètres de l’application…', 'Impostazioni dell’app…'), click: () => openSettingsWindow() },
+      { label: t('App-Einstellungen\u2026', 'App Settings\u2026', 'Paramètres de l’application…', 'Impostazioni dell’app…'), accelerator: 'CmdOrCtrl+,', click: () => openSettingsWindow() },
       { type: 'separator' },
       { label: t('App-Theme', 'App Theme', 'Thème de l’app', 'Tema dell’app') + '\u2026', click: () => openDesignWindow() },
       { label: t('Nach Updates suchen\u2026', 'Check for Updates\u2026', 'Rechercher des mises à jour…', 'Controlla aggiornamenti…'), click: () => triggerManualUpdateCheck() },
@@ -4452,7 +4512,9 @@ function buildAppMenu() {
     { label: 'Tabs', submenu: [
       { label: t('Neuer Tab', 'New Tab', 'Nouvel onglet', 'Nuova scheda'), accelerator: 'CmdOrCtrl+T', click: () => createTab() },
       { label: t('Tab schlie\u00dfen', 'Close Tab', 'Fermer l’onglet', 'Chiudi scheda'), accelerator: 'CmdOrCtrl+W', click: () => closeTab(activeTabIndex) },
+      { label: t('Geschlossenen Tab wiederherstellen', 'Reopen Closed Tab', 'Rouvrir l’onglet fermé', 'Riapri scheda chiusa'), accelerator: 'CmdOrCtrl+Shift+T', click: () => reopenTab() },
       { type: 'separator' },
+      { label: t('Zuletzt benutzter Tab', 'Last Used Tab', 'Dernier onglet utilisé', 'Ultima scheda usata'), accelerator: 'CmdOrCtrl+Shift+A', click: () => toggleLastTab() },
       { label: t('N\u00e4chster Tab', 'Next Tab', 'Onglet suivant', 'Scheda successiva'), accelerator: 'CmdOrCtrl+Tab', click: () => cycleTab(1) },
       { label: t('Vorheriger Tab', 'Previous Tab', 'Onglet précédent', 'Scheda precedente'), accelerator: 'CmdOrCtrl+Shift+Tab', click: () => cycleTab(-1) },
       { type: 'separator' }, ...tabItems
@@ -4506,13 +4568,13 @@ function handleOnlineChange(online) {
   isOnline = online;
   updateTitle();
   if (!online) {
-    showOfflinePage();
+    // Die geladene Seite bleibt stehen: sie zu ersetzen kostete nach einem kurzen Ausfall (Standby,
+    // WLAN-Wechsel) den getippten Entwurf. Scheitert ein Laden wirklich, zeigt did-fail-load die Offline-Seite.
     notify({ title: 'Desktop for Claude', body: t('Keine Internetverbindung.', 'No internet connection.', 'Pas de connexion Internet.', 'Nessuna connessione a Internet.') });
   } else {
     if (notificationsFetchFailed) refreshNotifications().catch(() => {});
     // Jeder Tab, der auf der Offline-Seite haengt, muss per loadURL zurueck auf seinen
-    // echten Chat. reload() wuerde nur die data:-Seite neu laden. Inaktive Tabs bleiben
-    // sonst dauerhaft dort haengen, weil showOfflinePage nur den aktiven Tab trifft.
+    // echten Chat. reload() wuerde nur die data:-Seite neu laden.
     // Tabs, die nie offline waren, bleiben stehen: ein reload() traf frueher den aktiven Tab
     // auch dann, wenn man waehrend des Ausfalls auf ihn gewechselt hatte, mitten in eine Antwort.
     for (const tab of tabs) {
@@ -4564,6 +4626,8 @@ function setupDownloadManager() {
   // Zwischendateien im privaten userData statt im geteilten /tmp (vorhersagbare Namen dort).
   const dlTmpDir = path.join(app.getPath('userData'), 'dl-tmp');
   try { fs.mkdirSync(dlTmpDir, { recursive: true, mode: 0o700 }); } catch {}
+  // Nach Absturz oder Stromausfall bleiben Zwischendateien liegen, im Snap wandern sie in jede Revision mit.
+  try { for (const f of fs.readdirSync(dlTmpDir)) if (f.startsWith('.cd-')) fs.unlinkSync(path.join(dlTmpDir, f)); } catch {}
 
   function dropKey(key) {
     activeKeys.delete(key);
@@ -5298,8 +5362,6 @@ function setupSession() {
 // Snap: $SNAP_USER_DATA/.config/autostart/claude-ai-desktop.desktop. snapd-userd
 // liest die Datei beim Login und startet die App über den command-wrapper aus
 // snapcraft.yaml (autostart-Direktive). Kein personal-files-Plug nötig.
-// Ein AppImage, das aus einem Snap-Terminal startet, erbt SNAP und SNAP_NAME. APPIMAGE setzt nur die AppImage-Laufzeit.
-const isSnap = !process.env.APPIMAGE && !!(process.env.SNAP_NAME || process.env.SNAP);
 // SNAP_USER_DATA fehlt in exotischen Confinement-Setups; ohne Fallback wirft path.join
 // schon beim Modul-Load und die App startet gar nicht erst.
 const AUTOSTART_BASE = isSnap
@@ -5615,7 +5677,11 @@ ipcMain.on('claude-response-done', (event, payload) => {
     : t('Antwort fertig', 'Response ready', 'Réponse prête', 'Risposta pronta');
   try {
     const n = new Notification({ title, body, silent: false });
+    // Ohne Referenz kann der GC das Objekt vor einem spaeten Klick abraeumen.
+    liveNotifications.add(n);
+    n.on('close', () => liveNotifications.delete(n));
     n.on('click', () => {
+      liveNotifications.delete(n);
       showMainWindow();
       // Den Tab selbst suchen: wurde inzwischen ein anderer geschlossen, zeigt idx daneben.
       const now = tabs.indexOf(tab);
@@ -5629,7 +5695,7 @@ ipcMain.on('cd-offline-retry', (event) => {
   // Zurueck auf den Chat dieses Tabs, nicht auf einen neuen. Sender-Lookup, weil der
   // Nutzer waehrend der Offline-Seite den Tab gewechselt haben kann.
   const fromTab = tabFromSender(event.sender);
-  if (!fromTab || !alive(fromTab.view)) return;
+  if (!fromTab || !alive(fromTab.view) || !fromTab.view.webContents.getURL().startsWith('data:')) return;
   fromTab.view.webContents.loadURL(fromTab.url || 'https://claude.ai');
 });
 
@@ -5650,6 +5716,8 @@ ipcMain.on('quickprompt-submit', (event, text) => {
   if (!fromWindow(quickPromptWindow, event)) return;
   // Erst das Hauptfenster holen, solange der Prompt noch den Fokus hat: unter Wayland darf eine
   // App nur nach vorne, wenn die Anfrage von einer eigenen Oberflaeche mit Fokus kommt.
+  // Bei voller Tab-Leiste bleibt der Prompt offen, sonst waere der Text weg.
+  if (tabs.length >= MAX_TABS) { notifyTabLimit(); return; }
   if (typeof text === 'string' && text.length <= MAX_PROMPT_CHARS) submitQuickPrompt(text);
   if (quickPromptWindow && !quickPromptWindow.isDestroyed()) quickPromptWindow.close();
 });
@@ -5726,13 +5794,9 @@ ipcMain.on('update-install', (event) => {
 });
 
 ipcMain.on('tab-new', () => createTab());
-ipcMain.on('tab-switch', (_, i) => {
-  if (Number.isInteger(i) && i >= 0 && i < tabs.length) switchToTab(i);
-});
-ipcMain.on('tab-close', (_, i) => {
-  if (Number.isInteger(i) && i >= 0 && i < tabs.length) closeTab(i);
-});
-ipcMain.on('tab-move', (_, from, to) => moveTab(from, to));
+ipcMain.on('tab-switch', (_, id) => switchToTab(tabIndexById(id)));
+ipcMain.on('tab-close', (_, id) => closeTab(tabIndexById(id)));
+ipcMain.on('tab-move', (_, id, to) => moveTab(id, to));
 // Die (ausgeblendete) Pille in der Tab-Leiste schaltet weiter im Kreis.
 ipcMain.on('design-toggle', () => {
   const i = DESIGN_STYLES.indexOf(designStyle);
@@ -5749,6 +5813,7 @@ ipcMain.on('appmenu-action', (event, name) => {
   switch (name) {
     case 'new-tab': createTab(); break;
     case 'close-tab': closeTab(activeTabIndex); break;
+    case 'reopen-tab': reopenTab(); break;
     case 'export': exportActiveConversation(); break;
     case 'reload': reloadActiveTab(); break;
     case 'zoom-in': zoomContent(0.5); break;

@@ -16,6 +16,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Tabs can be reordered by dragging them left or right. The new order is saved with the session.
   Dragging uses pointer events inside the tab bar, so it does not depend on the drag protocol of
   Wayland or X11.
+- Middle-clicking a tab closes it.
+- Ctrl+Shift+T reopens the tab that was closed last, up to ten in a row.
+- Ctrl+Shift+A jumps back to the tab used before the current one. Pressing it again switches back.
+- Opening a tab beyond the limit of 20 now shows a notification instead of doing nothing. The quick
+  prompt stays open in that case, so the typed text is not lost.
+- Esc closes the bug report dialog as long as nothing has been typed.
+
+### Changed
+
+- Ctrl+, opens the app settings, as the menu always claimed. It used to load claude.ai's settings in
+  the current tab and leave the chat.
+- A short network drop no longer replaces the open chat with the offline page. The page stays, a
+  notification reports the outage. The offline page still appears when a page really fails to load.
 
 ### Fixed
 
@@ -24,6 +37,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   before the page sees them, in the chat and in the tab bar.
 - Clicking the tab that is already active left the keyboard focus in the tab bar, so typing went
   nowhere until the chat was clicked. The focus now returns to the chat.
+- Closing a tab that was showing the offline page could raise "A JavaScript error occurred in the
+  main process" a few seconds later. A page that closed itself left a dead tab behind and repeated
+  the error every few seconds.
+- Closing the window right after a change could write a broken settings file. The next start then
+  came up with default settings and without the saved tabs.
+- Chat titles containing " - Claude" were cut off at that point in the tab and in the export file
+  name.
+- The "response ready" notification and the unread dot of a tab that had been in the background for
+  a few minutes could arrive up to a minute late. Chromium slows the timers of hidden pages down to
+  one per minute; the end of a response is now also detected from the page change itself.
+- Bug reports from the snap always named Unity as the desktop.
+- Leftover temporary download files are removed at startup.
+- Ctrl+mouse wheel zoom carried over the remainder of an earlier gesture.
 - The handle for resizing the sidebar showed a blue line on hover in the dark themes. It now uses
   the style's accent colour; Classic and Light keep claude.ai's own look.
 

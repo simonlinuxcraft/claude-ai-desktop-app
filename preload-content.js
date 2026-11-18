@@ -18,10 +18,13 @@ ipcRenderer.on('cd-frame-ping', () => {
 });
 
 // Strg+Mausrad zoomt. Touchpad-Pinch liefert viele kleine Deltas, darum erst ab 100 einen Schritt.
-let zoomWheel = 0;
+let zoomWheel = 0, zoomWheelAt = 0;
 window.addEventListener('wheel', (e) => {
   if (!e.ctrlKey) return;
   e.preventDefault();
+  // Reste einer alten Geste sollen die naechste nicht vorzeitig ausloesen.
+  if (e.timeStamp - zoomWheelAt > 300) zoomWheel = 0;
+  zoomWheelAt = e.timeStamp;
   zoomWheel += e.deltaY;
   if (Math.abs(zoomWheel) < 100) return;
   ipcRenderer.send('cd-zoom', zoomWheel < 0 ? 0.5 : -0.5);

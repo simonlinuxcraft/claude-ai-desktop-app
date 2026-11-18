@@ -3,6 +3,8 @@ const { test } = require('node:test');
 const assert = require('node:assert/strict');
 
 const {
+  alive,
+  cleanTabTitle,
   compareVersions,
   safeJson,
   escapeHtml,
@@ -457,4 +459,18 @@ test('filterNotifications: nimmt die Uebersetzung und faellt sonst auf Englisch 
   assert.equal(de.linkLabel, 'Mehr');
   assert.equal(filterNotifications(payload, { lang: 'fr' })[0].title, 'Hello');
   assert.equal(filterNotifications(payload, { lang: 'it' })[0].title, 'Hello');
+});
+
+test('alive: zerstoerte View ohne webContents wirft nicht', () => {
+  assert.equal(alive({ webContents: undefined }), false);
+  assert.equal(alive(null), false);
+  assert.equal(alive({ webContents: { isDestroyed: () => true } }), false);
+  assert.equal(alive({ webContents: { isDestroyed: () => false } }), true);
+  assert.equal(alive({ isDestroyed: () => false }), true);
+});
+
+test('cleanTabTitle: schneidet nur das Suffix ab', () => {
+  assert.equal(cleanTabTitle('Vergleich GPT - Claude vs Gemini - Claude'), 'Vergleich GPT - Claude vs Gemini');
+  assert.equal(cleanTabTitle('Plan \u2013 Claude'), 'Plan');
+  assert.equal(cleanTabTitle('Claude'), 'Claude');
 });

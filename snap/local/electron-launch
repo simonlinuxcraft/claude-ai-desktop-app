@@ -3,6 +3,7 @@
 # xdg-desktop-portal. Unter strict confinement gibt das Document-Portal Zugriff
 # auf gewaehlte Dateien auch ausserhalb von $HOME (per FD), statt nur den
 # home-Plug-Pfad zu zeigen. Behebt das "kann Datei nicht anhaengen/speichern".
+# CD_REAL_DESKTOP reicht den echten Desktop fuer die Diagnose durch, bevor Unity ihn ueberschreibt.
 # --no-sandbox und die Einstellung "X11 statt Wayland" setzt der Wrapper aus scripts/after-pack.js.
-exec env XDG_CURRENT_DESKTOP=Unity GTK_USE_PORTAL=1 "$SNAP/app/desktop-for-claude" \
+exec env CD_REAL_DESKTOP="$XDG_CURRENT_DESKTOP" XDG_CURRENT_DESKTOP=Unity GTK_USE_PORTAL=1 "$SNAP/app/desktop-for-claude" \
   --use-gl=angle --use-angle=gl "$@"

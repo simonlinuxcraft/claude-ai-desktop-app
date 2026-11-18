@@ -228,4 +228,17 @@ function resolveDesignStyle(saved) {
   return 'modern';
 }
 
-module.exports = { compareVersions, safeJson, escapeHtml, filterNotifications, scaleWindow, UI_SCALE_FLOOR, isClaudeAiOrigin, isPaymentFrameDomain, looksLikeOAuthUrl, validateAccelerator, THEME_MODES, resolveThemeMode, DESIGN_STYLES, resolveDesignStyle };
+// Sicherer Zugriff auf View oder webContents.
+function alive(viewOrWc) {
+  if (!viewOrWc) return false;
+  // Eine zerstoerte View hat kein webContents mehr (gemessen, Electron 44), darum nicht auf die View zurueckfallen.
+  const wc = 'webContents' in viewOrWc ? viewOrWc.webContents : viewOrWc;
+  return !!wc && typeof wc.isDestroyed === 'function' && !wc.isDestroyed();
+}
+
+// claude.ai haengt " - Claude" an den Chat-Titel. Nur das Ende abschneiden, der Titel selbst darf es enthalten.
+function cleanTabTitle(title) {
+  return title.replace(/\s*[-\u2013]\s*Claude$/, '');
+}
+
+module.exports = { alive, cleanTabTitle, compareVersions, safeJson, escapeHtml, filterNotifications, scaleWindow, UI_SCALE_FLOOR, isClaudeAiOrigin, isPaymentFrameDomain, looksLikeOAuthUrl, validateAccelerator, THEME_MODES, resolveThemeMode, DESIGN_STYLES, resolveDesignStyle };
