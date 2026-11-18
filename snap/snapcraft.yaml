@@ -23,6 +23,7 @@ description: |
 
   What's new in v1.5.5, tabs and stability:
 
+  * Ctrl+F searches inside the current chat.
   * Tabs can be dragged into a new order, closed with a middle click
     and reopened with Ctrl+Shift+T. Ctrl+Shift+A jumps back to the tab
     used before, and hovering a tab shows the full chat title.

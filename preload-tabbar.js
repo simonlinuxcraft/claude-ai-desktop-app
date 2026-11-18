@@ -33,6 +33,11 @@ contextBridge.exposeInMainWorld('tabAPI', {
   bugReport: () => ipcRenderer.send('bug-report'),
   resetVerification: () => ipcRenderer.send('tabbar-reset-verification'),
   exportConversation: () => ipcRenderer.send('export-conversation'),
+  find: (text, forward, follow) => { if (typeof text === 'string') ipcRenderer.send('find', text.slice(0, 200), forward !== false, follow === true); },
+  findClose: () => ipcRenderer.send('find-close'),
+  onFindOpen: (cb) => once('find-open', () => cb()),
+  onFindClose: (cb) => once('find-close', () => cb()),
+  onFindResult: (cb) => once('find-result', (_, r) => cb(r)),
   openAppMenu: (x, y) => {
     const px = Number.isFinite(x) ? x : 0;
     const py = Number.isFinite(y) ? y : 0;

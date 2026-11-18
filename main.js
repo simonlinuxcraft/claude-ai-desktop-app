@@ -82,6 +82,10 @@ if (nativeWayland) app.commandLine.appendSwitch('enable-features', 'GlobalShortc
 // Mit dem Wayland-Farbmanagement rechnet Chromium sRGB auf Gamma 2.2 um und hebt dunkle Toene an
 // (gemessen: #050306 -> rgb 13,11,14), OLED wirkte grau. Ohne bleibt es wie unter X11.
 if (nativeWayland) app.commandLine.appendSwitch('disable-features', 'WaylandWpColorManagerV1');
+// Chromium behandelt eine vollstaendig verdeckte View wie eine versteckte. Vorgeladene Tabs liegen
+// unter dem aktiven und erledigten ihre erste Arbeit deshalb erst beim ersten Klick (gemessen: 550
+// bis 700 ms Skript, mit dem Schalter rund 30 ms). Versteckte Tabs bleiben versteckt.
+app.commandLine.appendSwitch('disable-backgrounding-occluded-windows');
 
 const TAB_BAR_HEIGHT = 40;
 const WINDOW_BORDER = 1; // dezenter Fensterrahmen: 1px der Tab-Bar-Border scheint im View-Inset durch
@@ -140,6 +144,7 @@ let tabSeq = 0;
 let lastTabId = 0;
 const closedTabs = [];
 const liveNotifications = new Set();
+let findOpen = false;
 let activeTabIndex = 0;
 let isOnline = true;
 let themeMode = 'dark';        // aus THEME_MODES, Reihenfolge dort ist der Cycle der Tab-Leiste
@@ -321,6 +326,12 @@ const STATE_SCHEMA = [
       ? persistableTabs().map(tb => tb.url)
       : (Array.isArray(windowState.tabs) ? windowState.tabs : [])).slice(0, MAX_TABS),
     set: () => { /* Restore laeuft in createWindow, hier nur passthrough */ } },
+  // Parallel zu 'tabs'. Ohne die Titel hiess nach dem Start jeder noch nicht geladene Tab "Neuer Chat".
+  { key: 'tabTitles',
+    get: () => (tabs.length
+      ? persistableTabs().map(tb => tb.title)
+      : (Array.isArray(windowState.tabTitles) ? windowState.tabTitles : [])).slice(0, MAX_TABS),
+    set: () => {} },
   // Index in derselben gefilterten Liste wie 'tabs'. Ohne ihn lud der Start immer den ersten
   // Tab, der zuletzt benutzte stand dann leer und lud erst beim Anklicken.
   { key: 'activeTab',
@@ -655,6 +666,15 @@ ${REDUCED_MOTION_CSS}
 .ctrl-btn:hover{background:color-mix(in srgb,var(--ac-from) 12%,transparent);
   border-color:color-mix(in srgb,var(--ac-from) 35%,transparent);color:var(--ac-from);opacity:1}
 .ctrl-btn svg{width:16px;height:16px}
+#find{display:flex;align-items:center;gap:2px;height:30px;padding:0 3px 0 10px;margin-right:4px;border-radius:8px;
+  border:1px solid color-mix(in srgb,var(--ac-from) 35%,transparent);background:var(--bga)}
+#find[hidden]{display:none}
+#find input{width:170px;background:none;border:none;outline:none;color:var(--ta);font-family:inherit;font-size:12.5px}
+#find input::placeholder{color:var(--t);opacity:.7}
+#find-count{min-width:40px;padding-right:4px;text-align:right;font-size:11px;color:var(--t);white-space:nowrap}
+#find.none #find-count{color:#e05e3e}
+#find .ctrl-btn{width:24px;height:24px;border-radius:6px}
+#find .ctrl-btn svg{width:13px;height:13px}
 /* Theme-Cycle und Modern/Classic-Pille sind ausgeblendet, seit das Design-Fenster beides
    uebernimmt. Buttons und IPC bleiben verdrahtet: display:none entfernen holt sie zurueck. */
 #theme-toggle,#design-toggle{display:none}
@@ -713,6 +733,13 @@ ${REDUCED_MOTION_CSS}
 </div>
 <div class="spacer"></div>
 <div class="controls">
+  <div id="find" hidden>
+    <input id="find-input" type="text" spellcheck="false" maxlength="200" placeholder="${t('Im Chat suchen', 'Find in chat', 'Rechercher dans la conversation', 'Cerca nella chat')}">
+    <span id="find-count"></span>
+    <div class="ctrl-btn" id="find-prev" title="${t('Vorheriger Treffer', 'Previous match', 'Résultat précédent', 'Risultato precedente')} (Shift+Enter)"><svg viewBox="0 0 16 16"><path d="M4 10l4-4 4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg></div>
+    <div class="ctrl-btn" id="find-next" title="${t('Nächster Treffer', 'Next match', 'Résultat suivant', 'Risultato successivo')} (Enter)"><svg viewBox="0 0 16 16"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg></div>
+    <div class="ctrl-btn" id="find-close" title="${t('Suche schließen', 'Close search', 'Fermer la recherche', 'Chiudi ricerca')} (Esc)"><svg viewBox="0 0 16 16"><path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" fill="none"/></svg></div>
+  </div>
   <div id="upd" hidden><svg class="ring" viewBox="0 0 24 24"><circle class="ring-bg" cx="12" cy="12" r="11" fill="none" stroke-width="2"/><circle class="ring-fg" id="upd-ring" cx="12" cy="12" r="11" fill="none" stroke-width="2" stroke-linecap="round" stroke-dasharray="69.12" stroke-dashoffset="69.12"/></svg>${uiIcon('download', 12)}</div>
   <button id="upd-ready" hidden title="${t('Update installieren und die App neu starten', 'Install the update and restart the app', 'Installer la mise à jour et redémarrer l’app', 'Installa l’aggiornamento e riavvia l’app')}">${uiIcon('refresh', 13)}${t('Neu starten', 'Restart', 'Redémarrer', 'Riavvia')}</button>
   <div class="design-pill" id="design-toggle" title="${t('Design wechseln', 'Toggle design', 'Changer de design', 'Cambia design')}">${DESIGN_STYLE_LABEL[designStyle]}</div>
@@ -773,6 +800,24 @@ const STYLE_LABEL=${JSON.stringify(DESIGN_STYLE_LABEL)};
 window.tabAPI.onDesignUpdate(style=>{
   document.getElementById('design-toggle').textContent=STYLE_LABEL[style]||style;
 });
+
+// Suche im Chat. Das Feld sitzt in der Tab-Leiste, gesucht wird im Hauptprozess in der aktiven View.
+const findEl=document.getElementById('find'),findIn=document.getElementById('find-input'),findCount=document.getElementById('find-count');
+const findRun=(forward,follow)=>window.tabAPI.find(findIn.value,forward,follow);
+window.tabAPI.onFindOpen(()=>{findEl.hidden=false;findIn.focus();findIn.select();if(findIn.value)findRun(true,false);});
+window.tabAPI.onFindClose(()=>{findEl.hidden=true;findEl.classList.remove('none');findCount.textContent='';});
+window.tabAPI.onFindResult(r=>{
+  findCount.textContent=findIn.value?r.n+'/'+r.total:'';
+  findEl.classList.toggle('none',!!findIn.value&&!r.total);
+});
+findIn.addEventListener('input',()=>findRun(true,false));
+findIn.addEventListener('keydown',e=>{
+  if(e.key==='Enter'){findRun(!e.shiftKey,true);e.preventDefault();}
+  else if(e.key==='Escape')window.tabAPI.findClose();
+});
+document.getElementById('find-prev').addEventListener('click',()=>findRun(false,true));
+document.getElementById('find-next').addEventListener('click',()=>findRun(true,true));
+document.getElementById('find-close').addEventListener('click',()=>window.tabAPI.findClose());
 
 // Mausrad scrollt die Tabs waagerecht, eine senkrechte Bewegung haette hier keine Wirkung.
 tabsEl.addEventListener('wheel',e=>{
@@ -1194,6 +1239,11 @@ function setupView(view) {
     closeTab(tabs.findIndex(tab => tab.view === view));
   });
 
+  wc.on('found-in-page', (_e, r) => {
+    if (findOpen && tabs[activeTabIndex]?.view === view && mainWindow && !mainWindow.isDestroyed())
+      mainWindow.webContents.send('find-result', { n: r.activeMatchOrdinal, total: r.matches });
+  });
+
   // Tab-Titel
   wc.on('page-title-updated', (e, title) => {
     e.preventDefault();
@@ -1201,7 +1251,7 @@ function setupView(view) {
     const idx = tabs.findIndex(tab => tab.view === view);
     if (idx >= 0) {
       const clean = cleanTabTitle(title) || t('Neuer Chat', 'New Chat', 'Nouvelle conversation', 'Nuova chat');
-      if (tabs[idx].title !== clean) { tabs[idx].title = clean; sendTabsUpdate(); }
+      if (tabs[idx].title !== clean) { tabs[idx].title = clean; sendTabsUpdate(); saveWindowState(); }
     }
   });
 
@@ -1387,7 +1437,7 @@ function getPooledView() {
 // defer: Tab anlegen ohne zu laden und ohne zu aktivieren. Geladen wird beim ersten
 // Anklicken (pendingUrl in switchToTab). Fuer den Session-Restore, damit N Tabs nicht
 // gleichzeitig claude.ai anfragen.
-function createTab(url = 'https://claude.ai', defer = false) {
+function createTab(url = 'https://claude.ai', defer = false, title = '') {
   if (!mainWindow || mainWindow.isDestroyed()) return null;
   if (tabs.length >= MAX_TABS) { if (!defer) notifyTabLimit(); return null; }
   closeAppMenu();   // sonst laege die neue View ueber dem offenen Menue (Strg+T)
@@ -1401,10 +1451,34 @@ function createTab(url = 'https://claude.ai', defer = false) {
   }
 
   mainWindow.contentView.addChildView(view);
-  tabs.push({ id: ++tabSeq, view, title: t('Neuer Chat', 'New Chat', 'Nouvelle conversation', 'Nuova chat'), url, crashCount: 0, pendingUrl: defer ? url : null });
+  tabs.push({ id: ++tabSeq, view, title: title || t('Neuer Chat', 'New Chat', 'Nouvelle conversation', 'Nuova chat'), url, crashCount: 0, pendingUrl: defer ? url : null });
   if (!defer) switchToTab(tabs.length - 1);
   else sendTabsUpdate();
   return tabs[tabs.length - 1];
+}
+
+// Die uebrigen Tabs der letzten Sitzung laden nach dem aktiven im Hintergrund, einer nach dem anderen,
+// damit der erste Wechsel nicht auf das Laden wartet. Begrenzt, weil jeder geladene Tab rund 250 MB
+// kostet (gemessen); der Rest laedt wie bisher beim Anklicken.
+// Eine versteckt geladene View hat die Groesse 0x0 und zeichnet nie, der erste Wechsel baute die
+// Seite dann sichtbar auf. Darum liegt sie beim Laden in voller Groesse sichtbar unter dem aktiven
+// Tab und wird erst danach versteckt.
+const PRELOAD_TABS = 5;
+const PRELOAD_PAINT_MS = 1500;
+function preloadNextTab(left = PRELOAD_TABS) {
+  const tab = left > 0 && tabs.find(tb => tb.pendingUrl && alive(tb.view));
+  const active = tabs[activeTabIndex];
+  if (!tab || !active || !alive(active.view) || !mainWindow || mainWindow.isDestroyed()) return;
+  const url = tab.pendingUrl;
+  tab.pendingUrl = null;
+  mainWindow.contentView.addChildView(tab.view, 0);
+  tab.view.setBounds(active.view.getBounds());
+  tab.view.setVisible(true);
+  tab.view.webContents.once('did-stop-loading', () => setTimeout(() => {
+    if (tabs[activeTabIndex] !== tab && alive(tab.view)) tab.view.setVisible(false);
+    preloadNextTab(left - 1);
+  }, PRELOAD_PAINT_MS));
+  tab.view.webContents.loadURL(url);
 }
 
 function notifyTabLimit() {
@@ -1426,8 +1500,8 @@ let lastViewBounds = '';
 // umlenken. Deferred, weil Electron den nativen Fokus nach dem Event restauriert.
 function focusActiveView() {
   setImmediate(() => {
-    // Offenes App-Menue behaelt den Tastaturfokus (Pfeiltasten, Enter, Escape).
-    if (appMenuView) return;
+    // Offenes App-Menue behaelt den Tastaturfokus (Pfeiltasten, Enter, Escape), das Suchfeld ebenso.
+    if (appMenuView || findOpen) return;
     if (!mainWindow || mainWindow.isDestroyed() || !mainWindow.isFocused()) return;
     const active = tabs[activeTabIndex];
     if (!active || !alive(active.view)) return;
@@ -1447,7 +1521,8 @@ const resizeActiveView = throttle(() => {
   const key = `${b.width}:${b.height}:${nh}`;
   if (key === lastViewBounds) return;
   lastViewBounds = key;
-  tabs[activeTabIndex].view.setBounds({ x: bw, y: topInset, width: Math.max(0, b.width - 2 * bw), height: Math.max(0, b.height - topInset - bw) });
+  const rect = { x: bw, y: topInset, width: Math.max(0, b.width - 2 * bw), height: Math.max(0, b.height - topInset - bw) };
+  tabs[activeTabIndex].view.setBounds(rect);
 }, 16);
 
 // Nach einem Resize-Burst (Tiling/Half-Screen) ein letztes autoritatives Relayout.
@@ -1555,6 +1630,7 @@ function startSurfaceWatchdog() {
 
 function switchToTab(index) {
   if (index < 0 || index >= tabs.length || !mainWindow || mainWindow.isDestroyed()) return;
+  closeFind();   // Treffer und Zaehler gehoeren zum bisherigen Tab
   const target = tabs[index];
   if (!alive(target.view)) return;
 
@@ -1627,11 +1703,30 @@ function handleTabKeys(e, input) {
   if (input.type !== 'keyDown' || !input.control || input.alt || input.meta) return false;
   const key = input.key.toLowerCase();
   if (key === 'tab') cycleTab(input.shift ? -1 : 1);
+  else if (!input.shift && key === 'f') openFind();
   else if (input.shift && key === 't') reopenTab();
   else if (input.shift && key === 'a') toggleLastTab();
   else return false;
   e.preventDefault();
   return true;
+}
+
+// Suche im Chat: das Eingabefeld liegt in der Tab-Leiste, findInPage laeuft in der aktiven View.
+function openFind() {
+  if (!mainWindow || mainWindow.isDestroyed()) return;
+  closeAppMenu();
+  findOpen = true;
+  mainWindow.webContents.focus();
+  mainWindow.webContents.send('find-open');
+}
+
+function closeFind() {
+  if (!findOpen) return;
+  findOpen = false;
+  const a = tabs[activeTabIndex];
+  if (a && alive(a.view)) a.view.webContents.stopFindInPage('clearSelection');
+  if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('find-close');
+  focusActiveView();
 }
 
 function reopenTab() {
@@ -4092,6 +4187,7 @@ ${cardDialogScript(channel)}
 
 // Gemeinsames Symbolset fuer Menue und Fenster: 24er-Raster, 2px Linie, runde Enden.
 const UI_ICONS = {
+    search:  '<circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/>',
     plus:    '<path d="M12 5v14M5 12h14"/>',
     x:       '<path d="M18 6L6 18M6 6l12 12"/>',
     download:'<path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/>',
@@ -4139,6 +4235,7 @@ function getAppMenuItems() {
     { type: 'item', action: 'close-tab', label: t('Tab schließen', 'Close Tab', 'Fermer l’onglet', 'Chiudi scheda'), accel: 'Ctrl+W', icon: 'x' },
     { type: 'item', action: 'reopen-tab', label: t('Geschlossenen Tab wiederherstellen', 'Reopen Closed Tab', 'Rouvrir l’onglet fermé', 'Riapri scheda chiusa'), accel: 'Ctrl+Shift+T', icon: 'refresh' },
     { type: 'sep' },
+    { type: 'item', action: 'find', label: t('Im Chat suchen', 'Find in Chat', 'Rechercher dans la conversation', 'Cerca nella chat'), accel: 'Ctrl+F', icon: 'search' },
     { type: 'item', action: 'export', label: t('Konversation exportieren', 'Export conversation', 'Exporter la conversation', 'Esporta la conversazione'), accel: 'Ctrl+Shift+E', icon: 'export' },
     { type: 'item', action: 'reload', label: t('Neu laden', 'Reload', 'Recharger', 'Ricarica'), accel: 'Ctrl+R', icon: 'refresh' },
     { type: 'sep' },
@@ -4474,6 +4571,7 @@ function buildAppMenu() {
       { label: t('Neuer Tab', 'New Tab', 'Nouvel onglet', 'Nuova scheda'), accelerator: 'CmdOrCtrl+T', click: () => createTab() },
       { label: t('Tab schlie\u00dfen', 'Close Tab', 'Fermer l’onglet', 'Chiudi scheda'), accelerator: 'CmdOrCtrl+W', click: () => closeTab(activeTabIndex) },
       { type: 'separator' }, ...tabItems, { type: 'separator' },
+      { label: t('Im Chat suchen', 'Find in Chat', 'Rechercher dans la conversation', 'Cerca nella chat'), accelerator: 'CmdOrCtrl+F', click: () => openFind() },
       { label: t('Konversation als Markdown exportieren\u2026', 'Export conversation as Markdown\u2026', 'Exporter la conversation en Markdown…', 'Esporta la conversazione in Markdown…'), accelerator: 'CmdOrCtrl+Shift+E', click: () => exportActiveConversation() },
       { type: 'separator' },
       { label: t('Einstellungen', 'Settings', 'Paramètres', 'Impostazioni'), click: () => {
@@ -5806,6 +5904,18 @@ ipcMain.on('official-app-info', () => showOfficialAppInfo());
 ipcMain.on('tabbar-support', () => showSupportInfo());
 ipcMain.on('bug-report', showBugReportDialog);
 ipcMain.on('export-conversation', () => exportActiveConversation());
+// follow: true fuer "naechster/vorheriger Treffer" derselben Suche, false fuer einen neuen Suchtext.
+ipcMain.on('find', (event, text, forward, follow) => {
+  const a = tabs[activeTabIndex];
+  if (!fromMainWindow(event) || !findOpen || !a || !alive(a.view)) return;
+  if (typeof text !== 'string' || !text) {
+    a.view.webContents.stopFindInPage('clearSelection');
+    event.sender.send('find-result', { n: 0, total: 0 });
+    return;
+  }
+  a.view.webContents.findInPage(text.slice(0, 200), { forward: forward !== false, findNext: !follow });
+});
+ipcMain.on('find-close', (event) => { if (fromMainWindow(event)) closeFind(); });
 ipcMain.on('app-menu-popup', (_event, x, y) => openAppMenu(x, y));
 ipcMain.on('appmenu-action', (event, name) => {
   if (!appMenuView || event.sender !== appMenuView.webContents) return;
@@ -5815,6 +5925,7 @@ ipcMain.on('appmenu-action', (event, name) => {
     case 'close-tab': closeTab(activeTabIndex); break;
     case 'reopen-tab': reopenTab(); break;
     case 'export': exportActiveConversation(); break;
+    case 'find': openFind(); break;
     case 'reload': reloadActiveTab(); break;
     case 'zoom-in': zoomContent(0.5); break;
     case 'zoom-out': zoomContent(-0.5); break;
@@ -5950,18 +6061,21 @@ function createWindow() {
     // Allowlist statt blossem https: stand die App beim Beenden auf einer OAuth-Provider-
     // Seite, wuerde dieser Fremd-Host sonst beim Start automatisch in die claude.ai-
     // Partition geladen.
+    const titles = Array.isArray(windowState.tabTitles) ? windowState.tabTitles : [];
     const restored = Array.isArray(windowState.tabs)
-      ? windowState.tabs.filter(u => typeof u === 'string' && isAllowedDomain(u)).slice(0, MAX_TABS)
+      ? windowState.tabs.map((u, i) => ({ u, title: typeof titles[i] === 'string' ? titles[i].slice(0, 200) : '' }))
+        .filter(r => typeof r.u === 'string' && isAllowedDomain(r.u)).slice(0, MAX_TABS)
       : [];
     const ai = Number.isInteger(windowState.activeTab) && windowState.activeTab >= 0 && windowState.activeTab < restored.length ? windowState.activeTab : 0;
     let tab = null;
-    restored.forEach((u, i) => { const tb = createTab(u, i !== ai); if (i === ai) tab = tb; });
+    restored.forEach((r, i) => { const tb = createTab(r.u, i !== ai, r.title); if (i === ai) tab = tb; });
     if (!restored.length) tab = createTab('https://claude.ai');
     if (tab) {
       tab.view.webContents.once('did-finish-load', () => {
         lastViewBounds = '';
         resizeActiveView();
         setTimeout(fillPool, POOL_REFILL_FIRST_TAB_MS);
+        preloadNextTab();
       });
     }
   });

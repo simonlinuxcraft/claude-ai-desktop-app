@@ -16,6 +16,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Tabs can be reordered by dragging them left or right. The new order is saved with the session.
   Dragging uses pointer events inside the tab bar, so it does not depend on the drag protocol of
   Wayland or X11.
+- Ctrl+F searches inside the current chat. The field sits in the tab bar and shows the number of
+  matches; Enter and Shift+Enter jump to the next and previous one, Esc closes it.
+- Tabs from the last session keep their titles at startup instead of all reading "New Chat", and
+  up to five of them load and render in the background one after another, so switching to them no
+  longer builds the page up first. Further tabs still load when first opened.
 - Middle-clicking a tab closes it.
 - Ctrl+Shift+T reopens the tab that was closed last, up to ten in a row.
 - Ctrl+Shift+A jumps back to the tab used before the current one. Pressing it again switches back.
@@ -47,6 +52,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The "response ready" notification and the unread dot of a tab that had been in the background for
   a few minutes could arrive up to a minute late. Chromium slows the timers of hidden pages down to
   one per minute; the end of a response is now also detected from the page change itself.
+- Under OLED, Midnight Blue and Matrix, buttons, switches and focus rings that use claude.ai's
+  accent or brand fill were dark grey and turned blue on hover. The theme treated every dark colour
+  as a surface, now only greys.
+- In the Modern style, claude.ai's own brand colour stayed orange next to the red logo. It now
+  follows the style, as it already did for Neon and Matrix.
+- The confirm button of dialogs such as "Reset verification" had its own flat orange instead of
+  the style's accent.
 - Bug reports from the snap always named Unity as the desktop.
 - Leftover temporary download files are removed at startup.
 - Ctrl+mouse wheel zoom carried over the remainder of an earlier gesture.

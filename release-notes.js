@@ -16,10 +16,25 @@ const RELEASE_NOTES = {
         it: 'Più controllo sulle schede'
       },
       text: {
-        de: 'Tabs lassen sich mit der Maus in eine neue Reihenfolge ziehen, die beim nächsten Start erhalten bleibt. Ein Mittelklick schließt einen Tab, Strg+Umschalt+T holt den zuletzt geschlossenen zurück, und Strg+Umschalt+A springt zum vorher benutzten Tab. Wer mit der Maus über einem Tab bleibt, sieht den vollen Chat-Titel. Strg+Tab wechselt jetzt zuverlässig, auch wenn die Seite die Taste selbst abfängt.',
-        en: 'Tabs can be dragged into a new order, which is kept for the next start. A middle click closes a tab, Ctrl+Shift+T brings back the one closed last, and Ctrl+Shift+A jumps to the tab used before. Hovering a tab shows the full chat title. Ctrl+Tab now switches reliably, even when the page catches the key itself.',
-        fr: 'Les onglets se réorganisent à la souris, et l’ordre est conservé au prochain démarrage. Un clic du milieu ferme un onglet, Ctrl+Maj+T rouvre le dernier onglet fermé et Ctrl+Maj+A revient à l’onglet utilisé juste avant. Le survol d’un onglet affiche le titre complet de la conversation. Ctrl+Tab change désormais d’onglet de façon fiable, même quand la page intercepte la touche.',
-        it: 'Le schede si possono trascinare in un nuovo ordine, che resta al prossimo avvio. Un clic centrale chiude una scheda, Ctrl+Maiusc+T riapre l’ultima chiusa e Ctrl+Maiusc+A torna alla scheda usata prima. Passando il mouse su una scheda si vede il titolo completo della chat. Ctrl+Tab ora cambia scheda in modo affidabile, anche quando la pagina intercetta il tasto.'
+        de: 'Tabs lassen sich mit der Maus in eine neue Reihenfolge ziehen, die beim nächsten Start erhalten bleibt. Ein Mittelklick schließt einen Tab, Strg+Umschalt+T holt den zuletzt geschlossenen zurück, und Strg+Umschalt+A springt zum vorher benutzten Tab. Wer mit der Maus über einem Tab bleibt, sieht den vollen Chat-Titel. Strg+Tab wechselt jetzt zuverlässig, auch wenn die Seite die Taste selbst abfängt. Nach dem Start tragen die Tabs gleich ihren Titel und laden im Hintergrund vor.',
+        en: 'Tabs can be dragged into a new order, which is kept for the next start. A middle click closes a tab, Ctrl+Shift+T brings back the one closed last, and Ctrl+Shift+A jumps to the tab used before. Hovering a tab shows the full chat title. Ctrl+Tab now switches reliably, even when the page catches the key itself. After startup the tabs show their titles right away and load in the background.',
+        fr: 'Les onglets se réorganisent à la souris, et l’ordre est conservé au prochain démarrage. Un clic du milieu ferme un onglet, Ctrl+Maj+T rouvre le dernier onglet fermé et Ctrl+Maj+A revient à l’onglet utilisé juste avant. Le survol d’un onglet affiche le titre complet de la conversation. Ctrl+Tab change désormais d’onglet de façon fiable, même quand la page intercepte la touche. Au démarrage, les onglets affichent tout de suite leur titre et se chargent en arrière-plan.',
+        it: 'Le schede si possono trascinare in un nuovo ordine, che resta al prossimo avvio. Un clic centrale chiude una scheda, Ctrl+Maiusc+T riapre l’ultima chiusa e Ctrl+Maiusc+A torna alla scheda usata prima. Passando il mouse su una scheda si vede il titolo completo della chat. Ctrl+Tab ora cambia scheda in modo affidabile, anche quando la pagina intercetta il tasto. All’avvio le schede mostrano subito il titolo e si caricano in background.'
+      }
+    },
+    {
+      icon: 'chat',
+      title: {
+        de: 'Suche im Chat',
+        en: 'Find in chat',
+        fr: 'Recherche dans la conversation',
+        it: 'Ricerca nella chat'
+      },
+      text: {
+        de: 'Strg+F durchsucht den aktuellen Chat. Das Suchfeld erscheint oben in der Tab-Leiste und zeigt, wie viele Treffer es gibt. Enter springt zum nächsten Treffer, Umschalt+Enter zum vorherigen, Esc schließt die Suche wieder.',
+        en: 'Ctrl+F searches the current chat. The search field appears in the tab bar at the top and shows how many matches there are. Enter jumps to the next match, Shift+Enter to the previous one, and Esc closes the search.',
+        fr: 'Ctrl+F recherche dans la conversation en cours. Le champ de recherche apparaît en haut dans la barre d’onglets et indique le nombre de résultats. Entrée passe au résultat suivant, Maj+Entrée au précédent, et Échap ferme la recherche.',
+        it: 'Ctrl+F cerca nella chat corrente. Il campo di ricerca compare in alto nella barra delle schede e mostra quanti risultati ci sono. Invio passa al risultato successivo, Maiusc+Invio a quello precedente, Esc chiude la ricerca.'
       }
     },
     {

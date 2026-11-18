@@ -25,7 +25,7 @@
 
 ---
 
-> **v1.5.5** - Tabs and Stability. Tabs can be dragged into a new order, closed with a middle click and reopened with Ctrl+Shift+T, and Ctrl+Shift+A jumps back to the tab used before. An error dialog after closing a tab and a way to lose the saved settings on exit are fixed, and a short network drop no longer replaces the open chat.
+> **v1.5.5** - Tabs and Stability. Ctrl+F searches inside the current chat. Tabs can be dragged into a new order, closed with a middle click and reopened with Ctrl+Shift+T, and Ctrl+Shift+A jumps back to the tab used before. An error dialog after closing a tab and a way to lose the saved settings on exit are fixed, and a short network drop no longer replaces the open chat.
 
 ---
 
