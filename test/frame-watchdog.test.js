@@ -9,8 +9,8 @@
 // 4. Beide Reparaturwege (Sichtbarkeits-Toggle, View neu nach oben haengen) bringen Frames
 //    zurueck, und das Neuanhaengen laedt die Seite nicht neu.
 // 5. Eine versteckte View meldet sich nicht, der Watchdog repariert also keine gewollte Pause.
-// 6. Abhaengen plus Anhaengen laesst die View unter Linux auf "hidden" stehen (Electron 44,
-//    electron/electron#54626). Schlaegt das fehl, ist der Bug behoben.
+// 6. Abhaengen plus Anhaengen liess die View unter Linux auf "hidden" stehen (electron/electron#54626,
+//    gemessen bis 44.5.1). Mit 44.11.4 ist das behoben. Schlaegt das fehl, ist der Fehler zurueck.
 //
 // Laufen mit: env -u ELECTRON_RUN_AS_NODE ./node_modules/electron/dist/electron test/frame-watchdog.test.js --no-sandbox
 const { app, BrowserWindow, WebContentsView, ipcMain } = require('electron');
@@ -59,7 +59,7 @@ app.whenReady().then(async () => {
   assert.strictEqual((await ping(view, 1000)).raf, true, 'nach dem Neuanhaengen muss die View Frames liefern');
   assert.strictEqual(await view.webContents.executeJavaScript('window.__mark'), 1, 'Neuanhaengen darf die Seite nicht neu laden');
 
-  // Der Grund, warum reattachActiveView nicht abhaengt. Eigene View, weil das Flag weiter unten
+  // Der Grund, warum reattachActiveView nicht abhaengt, solange aeltere Electron-Staende moeglich sind. Eigene View, weil das Flag weiter unten
   // das Verstecken abschaltet.
   const view2 = new WebContentsView({ webPreferences: { sandbox: true, contextIsolation: true } });
   win.contentView.addChildView(view2);
@@ -69,7 +69,7 @@ app.whenReady().then(async () => {
   win.contentView.removeChildView(view2);
   win.contentView.addChildView(view2);
   await sleep(1000);
-  assert.strictEqual(await view2.webContents.executeJavaScript('document.visibilityState'), 'hidden', 'electron#54626: ab- und wieder angehaengte View bleibt hidden');
+  assert.strictEqual(await view2.webContents.executeJavaScript('document.visibilityState'), 'visible', 'electron#54626: ab- und wieder angehaengte View muss sichtbar sein');
   win.contentView.removeChildView(view2);
   view2.webContents.close();
 

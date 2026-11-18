@@ -1494,9 +1494,9 @@ function repaintActiveView() {
 }
 
 // Letzte Eskalationsstufe: View neu nach oben haengen, ohne die Seite neu zu laden.
-// Nur addChildView, kein removeChildView davor: Electron 44 laesst eine abgehaengte und wieder
-// angehaengte View unter Linux dauerhaft auf "hidden" stehen (electron/electron#54626, erst in 45
-// behoben). Genau das liess die claude.ai-Flaeche leer zurueck.
+// Nur addChildView, kein removeChildView davor: bis Electron 44.5.1 blieb eine abgehaengte und wieder
+// angehaengte View unter Linux dauerhaft auf "hidden" stehen (electron/electron#54626, mit 44.11.4
+// als behoben gemessen). Genau das liess die claude.ai-Flaeche leer zurueck.
 function reattachActiveView() {
   const a = tabs[activeTabIndex];
   if (!a || !alive(a.view) || !mainWindow || mainWindow.isDestroyed()) return;
