@@ -125,10 +125,26 @@
       }
     }
     wasGenerating = generating;
+    watch(stopBtn);
   }
 
-  // Polling reicht aus - DOM-Mutationen sind haeufig, aber wir wollen nur den
-  // Uebergang erkennen. 700ms ist ein Kompromiss aus Latenz und CPU.
+  // In verdeckten Tabs drosselt Chromium Timer nach wenigen Minuten auf einen pro Minute (gemessen),
+  // die Meldung "Antwort fertig" kam dann bis zu 60 s zu spaet. Solange eine Antwort laeuft, prueft
+  // deshalb ein Observer bei jeder DOM-Aenderung, ob der gemerkte Stop-Button noch da ist.
+  var stopRef = null, stopByLabel = false, obs = null;
+  function stopLabel(el) { return el.getAttribute('aria-label') || el.textContent || ''; }
+  function watch(btn) {
+    stopRef = btn;
+    if (!btn) { if (obs) { obs.disconnect(); obs = null; } return; }
+    stopByLabel = STOP_RE.test(stopLabel(btn));
+    if (obs) return;
+    obs = new MutationObserver(function () {
+      if (!stopRef.isConnected || (stopByLabel && !STOP_RE.test(stopLabel(stopRef)))) tick();
+    });
+    obs.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['aria-label'] });
+  }
+
+  // Polling erkennt den Uebergang, 700ms ist ein Kompromiss aus Latenz und CPU.
   // Nach einem Neuladen kann der alte Stand noch "antwortet" sein.
   report(false);
   window._cdNotifyInterval = setInterval(tick, 700);
