@@ -503,7 +503,7 @@ const THEME = {
 // es als hsl(var(--accent-brand)), ein Hex-Wert macht die Deklaration ungueltig und die
 // Icons fallen auf Grau zurueck. Ohne brandHsl bleibt claude.ais Original stehen.
 const ACCENT = {
-  modern:  { from: '#F26A3F', to: '#E83B6E' },
+  modern:  { from: '#F26A3F', to: '#E83B6E', brandHsl: '1.2 76.9% 61%' },   // brandHsl = #E8524F, die Mitte des Verlaufs
   classic: { from: '#d4734c', to: '#d4734c' },
   neon:    { from: '#1B54BE', to: '#2A72E8', neonFrom: '#2F7FFF', neonTo: '#00E5FF', brandHsl: '217 100% 59%' },
   matrix:  { from: '#0E7A34', to: '#12833A', neonFrom: '#38C75C', neonTo: '#2EA34B', brandHsl: '135 56% 50%' },
@@ -4371,7 +4371,7 @@ function getMessageBoxHTML({ type, heading, message, detail, buttons, defaultId,
   const ac = accent();
   const w = warnColor();
   // Gefahr-Knopf: Modern/Classic behalten das Rotorange, Neon und Matrix folgen ihrem Stil.
-  const dangerBg = ac.neonFrom ? `linear-gradient(135deg, ${ac.from}, ${ac.to})` : '#d9532f';
+  const dangerBg = `linear-gradient(135deg, ${ac.from}, ${ac.to})`;
   const look = {
     success: { icon: 'check', from: ac.from, to: ac.to },
     warning: { icon: 'warn', from: w.fg, to: w.fg },

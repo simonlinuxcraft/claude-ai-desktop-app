@@ -1,13 +1,16 @@
 'use strict';
 // Sichert ab, dass das erzeugte Stylesheet fuer die bestehenden Modi Byte-gleich bleibt.
 // Baseline ist test/fixtures/theme-static.baseline.js (Kopie des Stands 2026-10-06-ring-steps30);
-// fehlt sie, scheitert der Test. Dreimal wurde sie bewusst nachgezogen: am 2026-08-17, als die
+// fehlt sie, scheitert der Test. Viermal wurde sie bewusst nachgezogen: am 2026-08-17, als die
 // Wurzelfarbe des Hell-Modus von #fff auf #000 korrigiert wurde (sie liegt unter dem
 // Invert-Filter), und am 2026-09-23, als die Ring-Animation von ease-in-out auf steps(60)
 // wechselte. Der Ring animiert background-position und lief mit 60 Frames pro Sekunde
 // dauerhaft; gemessen kostete das rund 60% eines CPU-Kerns im Leerlauf, mit steps rund 14%.
 // Am 2026-10-06 dann steps(30): steps gilt je Keyframe-Abschnitt, steps(60) lief mit 20 statt
 // der gemeinten 10 Stufen pro Sekunde.
+// Am 2026-11-18 die Flaechen-Tabelle (SURFACE_VORAB): sie enthielt auch dunkle Akzentfarben, die
+// der Scan faelschlich auf Grau gezogen hatte (--cds-blue-450, --cds-clay-emphasized und weitere).
+// Buttons und Schalter waren dadurch grau und wurden beim Hover blau.
 // Ohne einen solchen Anlass wird die Baseline nicht angefasst.
 const { test } = require('node:test');
 const assert = require('node:assert/strict');

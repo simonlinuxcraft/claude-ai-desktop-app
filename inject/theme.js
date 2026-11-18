@@ -97,6 +97,9 @@
     var pal = SURFACE_PALETTE[mode];
     if (!pal) return null;
     return function (c) {
+      // Nur Grautoene sind Flaechen. Ohne die Pruefung wurden auch dunkle Akzentfarben zu Flaechen
+      // (gemessen: --cds-fill-accent #257de0 und --cds-fill-brand wurden #2c2528, die Hover-Stufe blieb blau).
+      if (Math.max(c[0], c[1], c[2]) - Math.min(c[0], c[1], c[2]) > 40) return null;
       var sum = c[0] + c[1] + c[2];
       for (var i = 0; i < SURFACE_STEPS.length; i++) if (sum < SURFACE_STEPS[i]) return pal[i];
       return null;
