@@ -6,6 +6,38 @@
 // Reine Daten, kein Electron-Zugriff.
 
 const RELEASE_NOTES = {
+  '1.5.5': [
+    {
+      icon: 'plus',
+      title: {
+        de: 'Mehr Kontrolle über Tabs',
+        en: 'More control over tabs',
+        fr: 'Plus de contrôle sur les onglets',
+        it: 'Più controllo sulle schede'
+      },
+      text: {
+        de: 'Tabs lassen sich mit der Maus in eine neue Reihenfolge ziehen, die beim nächsten Start erhalten bleibt. Ein Mittelklick schließt einen Tab, Strg+Umschalt+T holt den zuletzt geschlossenen zurück, und Strg+Umschalt+A springt zum vorher benutzten Tab. Wer mit der Maus über einem Tab bleibt, sieht den vollen Chat-Titel. Strg+Tab wechselt jetzt zuverlässig, auch wenn die Seite die Taste selbst abfängt.',
+        en: 'Tabs can be dragged into a new order, which is kept for the next start. A middle click closes a tab, Ctrl+Shift+T brings back the one closed last, and Ctrl+Shift+A jumps to the tab used before. Hovering a tab shows the full chat title. Ctrl+Tab now switches reliably, even when the page catches the key itself.',
+        fr: 'Les onglets se réorganisent à la souris, et l’ordre est conservé au prochain démarrage. Un clic du milieu ferme un onglet, Ctrl+Maj+T rouvre le dernier onglet fermé et Ctrl+Maj+A revient à l’onglet utilisé juste avant. Le survol d’un onglet affiche le titre complet de la conversation. Ctrl+Tab change désormais d’onglet de façon fiable, même quand la page intercepte la touche.',
+        it: 'Le schede si possono trascinare in un nuovo ordine, che resta al prossimo avvio. Un clic centrale chiude una scheda, Ctrl+Maiusc+T riapre l’ultima chiusa e Ctrl+Maiusc+A torna alla scheda usata prima. Passando il mouse su una scheda si vede il titolo completo della chat. Ctrl+Tab ora cambia scheda in modo affidabile, anche quando la pagina intercetta il tasto.'
+      }
+    },
+    {
+      icon: 'shield',
+      title: {
+        de: 'Stabiler im Alltag',
+        en: 'More stable day to day',
+        fr: 'Plus stable au quotidien',
+        it: 'Più stabile ogni giorno'
+      },
+      text: {
+        de: 'Nach dem Schließen eines Tabs konnte ein Fehlerdialog erscheinen, das ist behoben. Beim Beenden gehen gespeicherte Einstellungen und Tabs nicht mehr verloren. Ein kurzer Netzausfall ersetzt den offenen Chat nicht mehr durch die Offline-Seite, ein getippter Entwurf bleibt also stehen. Die Meldung „Antwort fertig“ kommt auch bei lange verdeckten Tabs sofort. Chat-Titel mit „ - Claude“ werden im Tab nicht mehr abgeschnitten, und Strg+, öffnet die App-Einstellungen.',
+        en: 'An error dialog could appear after closing a tab, this is fixed. Saved settings and tabs are no longer lost when quitting. A short network drop no longer replaces the open chat with the offline page, so a typed draft stays where it is. The "response ready" notification arrives right away, also for tabs that were in the background for a long time. Chat titles containing " - Claude" are no longer cut off in the tab, and Ctrl+, opens the app settings.',
+        fr: 'Une boîte d’erreur pouvait apparaître après la fermeture d’un onglet, c’est corrigé. Les réglages et les onglets enregistrés ne se perdent plus à la fermeture. Une brève coupure réseau ne remplace plus la conversation ouverte par la page hors ligne, un brouillon saisi reste donc en place. La notification « réponse prête » arrive tout de suite, même pour les onglets restés longtemps en arrière-plan. Les titres contenant « - Claude » ne sont plus tronqués dans l’onglet, et Ctrl+, ouvre les paramètres de l’application.',
+        it: 'Dopo la chiusura di una scheda poteva comparire una finestra di errore, ora è risolto. Impostazioni e schede salvate non si perdono più all’uscita. Una breve interruzione di rete non sostituisce più la chat aperta con la pagina offline, quindi una bozza scritta resta al suo posto. La notifica «risposta pronta» arriva subito, anche per le schede rimaste a lungo in secondo piano. I titoli con « - Claude» non vengono più tagliati nella scheda, e Ctrl+, apre le impostazioni dell’app.'
+      }
+    }
+  ],
   '1.5.4': [
     {
       icon: 'palette',
@@ -1632,6 +1664,7 @@ const RELEASE_NOTES = {
 
 // Optionaler Update-Titel pro Version, gross im Kopf des "Was ist neu"-Fensters.
 const RELEASE_TITLES = {
+  '1.5.5': { de: 'Tabs und Stabilität', en: 'Tabs and Stability', fr: 'Onglets et stabilité', it: 'Schede e stabilità' },
   '1.5.4': { de: 'Theme-Fix Seitenleiste', en: 'Sidebar Theme Fix', fr: 'Thème de la barre latérale', it: 'Tema della barra laterale' },
   '1.5.3': { de: 'Schlankerer Code', en: 'Leaner Code', fr: 'Code allégé', it: 'Codice più snello' },
   '1.5.2': { de: 'Zoom und X11-Option', en: 'Zoom and X11 Option', fr: 'Zoom et option X11', it: 'Zoom e opzione X11' },
